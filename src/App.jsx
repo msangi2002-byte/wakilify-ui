@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, Outlet, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Heart,
@@ -15,6 +15,8 @@ import {
   MoreHorizontal,
   Plus,
 } from 'lucide-react';
+import { AppProviders } from '@/providers/AppProviders';
+import '@/styles/global.css';
 import '@/styles/landing.css';
 
 const navLinks = [
@@ -60,7 +62,7 @@ const feedPosts = [
   },
 ];
 
-export default function Welcome() {
+function LandingContent() {
   return (
     <div className="min-h-screen landing-gradient text-white overflow-x-hidden">
       {/* Soft glow orbs */}
@@ -80,11 +82,7 @@ export default function Welcome() {
         </Link>
         <div className="hidden md:flex items-center gap-8">
           {navLinks.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              className="text-white/90 hover:text-white font-medium transition-colors"
-            >
+            <a key={link.href} href={link.href} className="text-white/90 hover:text-white font-medium transition-colors">
               {link.label}
             </a>
           ))}
@@ -127,15 +125,9 @@ export default function Welcome() {
               </a>
             </div>
             <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-white/85 text-sm font-medium">
-              <span className="flex items-center gap-2">
-                <Heart size={18} /> Like
-              </span>
-              <span className="flex items-center gap-2">
-                <MessageCircle size={18} /> Comment
-              </span>
-              <span className="flex items-center gap-2">
-                <Share2 size={18} /> Share
-              </span>
+              <span className="flex items-center gap-2"><Heart size={18} /> Like</span>
+              <span className="flex items-center gap-2"><MessageCircle size={18} /> Comment</span>
+              <span className="flex items-center gap-2"><Share2 size={18} /> Share</span>
             </div>
           </motion.div>
 
@@ -258,7 +250,7 @@ export default function Welcome() {
         </div>
       </section>
 
-      {/* CONNECT – Social layer */}
+      {/* CONNECT */}
       <section id="connect" className="relative z-10 px-4 sm:px-6 py-10 md:py-12 max-w-7xl mx-auto">
         <div className="flex items-center gap-2 mb-2">
           <Users className="text-[#7c3aed]" size={24} />
@@ -281,9 +273,7 @@ export default function Welcome() {
                 <img src={post.author.avatar} alt="" className="w-10 h-10 rounded-full object-cover border border-white/20" />
                 <div className="min-w-0">
                   <p className="font-semibold text-sm truncate">{post.author.name}</p>
-                  {post.author.isBusiness && (
-                    <span className="text-[10px] text-[#f59e0b]">Business</span>
-                  )}
+                  {post.author.isBusiness && <span className="text-[10px] text-[#f59e0b]">Business</span>}
                 </div>
               </div>
               <p className="text-sm text-white/90 mb-3 line-clamp-2">{post.text}</p>
@@ -300,12 +290,10 @@ export default function Welcome() {
             </motion.article>
           ))}
         </div>
-        <p className="mt-5 text-base font-medium text-white/95">
-          Products show up right in the feed – tap to shop without leaving the app.
-        </p>
+        <p className="mt-5 text-base font-medium text-white/95">Products show up right in the feed – tap to shop without leaving the app.</p>
       </section>
 
-      {/* TRADE – Ecommerce layer */}
+      {/* TRADE */}
       <section id="trade" className="relative z-10 px-4 sm:px-6 py-10 md:py-12 max-w-7xl mx-auto">
         <div className="flex items-center gap-2 mb-2">
           <ShoppingBag className="text-[#d946ef]" size={24} />
@@ -334,7 +322,7 @@ export default function Welcome() {
         </div>
       </section>
 
-      {/* EARN – Agent / affiliate layer */}
+      {/* EARN */}
       <section id="earn" className="relative z-10 px-4 sm:px-6 py-10 md:py-12 max-w-7xl mx-auto">
         <div className="flex items-center gap-2 mb-2">
           <DollarSign className="text-[#f59e0b]" size={24} />
@@ -354,16 +342,10 @@ export default function Welcome() {
           </div>
         </div>
         <div className="mt-6 flex flex-wrap gap-3">
-          <Link
-            to="/auth/login"
-            className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-[#f59e0b] hover:bg-[#f59e0b]/90 text-gray-900 font-semibold transition-colors"
-          >
+          <Link to="/auth/login" className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-[#f59e0b] hover:bg-[#f59e0b]/90 text-gray-900 font-semibold transition-colors">
             Join as Agent
           </Link>
-          <Link
-            to="/auth/login"
-            className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-[#ec4899] hover:bg-[#d946ef] text-white font-semibold transition-colors border border-white/20"
-          >
+          <Link to="/auth/login" className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-[#ec4899] hover:bg-[#d946ef] text-white font-semibold transition-colors border border-white/20">
             Start Selling
           </Link>
         </div>
@@ -387,11 +369,7 @@ export default function Welcome() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-10 flex flex-col items-center justify-center gap-6">
           <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
             {footerLinks.map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                className="text-white/85 hover:text-white text-sm font-medium transition-colors"
-              >
+              <a key={link.label} href={link.href} className="text-white/85 hover:text-white text-sm font-medium transition-colors">
                 {link.label}
               </a>
             ))}
@@ -402,5 +380,16 @@ export default function Welcome() {
         </div>
       </footer>
     </div>
+  );
+}
+
+export default function App() {
+  const location = useLocation();
+  const isLanding = location.pathname === '/';
+
+  return (
+    <AppProviders>
+      {isLanding ? <LandingContent /> : <Outlet />}
+    </AppProviders>
   );
 }

@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import App from './App';
+import App from '../App';
 import AuthLayout from '@/layouts/AuthLayout';
 import UserLayout from '@/layouts/UserLayout';
 import BusinessLayout from '@/layouts/BusinessLayout';
@@ -11,7 +11,6 @@ import { RoleGuard } from '@/app/guards/RoleGuard';
 import { GuestOnly } from '@/app/guards/GuestOnly';
 import { ROLES } from '@/types/roles';
 
-const Welcome = lazy(() => import('@/pages/auth/Welcome'));
 const Register = lazy(() => import('@/pages/auth/Register'));
 const Otp = lazy(() => import('@/pages/auth/Otp'));
 const Login = lazy(() => import('@/pages/auth/Login'));
@@ -75,15 +74,10 @@ const router = createBrowserRouter([
           </GuestOnly>
         ),
         children: [
-          { path: 'welcome', element: <Suspense fallback={<Fallback />}><Welcome /></Suspense> },
           { path: 'register', element: <Suspense fallback={<Fallback />}><Register /></Suspense> },
           { path: 'otp', element: <Suspense fallback={<Fallback />}><Otp /></Suspense> },
           { path: 'login', element: <Suspense fallback={<Fallback />}><Login /></Suspense> },
         ],
-      },
-      {
-        path: '/',
-        element: <Suspense fallback={<Fallback />}><Welcome /></Suspense>,
       },
       {
         path: 'app',
