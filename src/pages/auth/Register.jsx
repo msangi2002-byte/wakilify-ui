@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { register as registerApi } from '@/lib/api/auth';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
-
+ 
 const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
