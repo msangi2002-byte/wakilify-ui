@@ -112,7 +112,7 @@ function LandingContent() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Link
-                to="/auth/login"
+                to="/auth/register"
                 className="inline-flex items-center justify-center px-8 py-4 rounded-2xl bg-gradient-to-r from-[#4078D0] via-[#7c3aed] to-[#d946ef] text-white font-bold text-lg shadow-[0_0_30px_rgba(124,58,237,0.4)] hover:shadow-[0_0_40px_rgba(217,70,239,0.35)] transition-all hover:scale-[1.02] border border-white/20"
               >
                 Sign Up Now

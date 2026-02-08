@@ -16,6 +16,7 @@
 }
 
 @import './tokens.css';
+@import './auth.css';
 
 *,
 *::before,
