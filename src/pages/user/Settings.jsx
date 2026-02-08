@@ -1,7 +1,21 @@
 import { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/auth.store';
 import { useUIStore, setUI, subscribeUI } from '@/store/ui.store';
-import { User, Mail, Lock, Eye, EyeOff, Bell, Moon, Sun, Shield, Trash2 } from 'lucide-react';
+import {
+  User,
+  Eye,
+  EyeOff,
+  Bell,
+  Moon,
+  Sun,
+  Shield,
+  Trash2,
+  ShoppingBag,
+  MapPin,
+  CreditCard,
+  Package,
+} from 'lucide-react';
 
 function SettingRow({ label, description, children }) {
   return (
@@ -32,6 +46,7 @@ function Toggle({ checked, onChange, ariaLabel }) {
 
 export default function Settings() {
   const { user } = useAuthStore();
+  const location = useLocation();
   const ui = useUIStore();
   const [theme, setTheme] = useState(ui.theme);
   const [showPassword, setShowPassword] = useState(false);
@@ -40,6 +55,13 @@ export default function Settings() {
     const unsub = subscribeUI((s) => setTheme(s.theme));
     return unsub;
   }, []);
+
+  useEffect(() => {
+    if (location.hash === '#marketplace') {
+      const el = document.getElementById('marketplace');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [location.hash]);
 
   const handleThemeChange = (next) => {
     setUI({ theme: next });
@@ -52,6 +74,16 @@ export default function Settings() {
   };
   const [notifState, setNotifState] = useState(notifications);
   const setNotif = (key, value) => setNotifState((s) => ({ ...s, [key]: value }));
+
+  const marketplacePrefs = {
+    newListings: true,
+    priceDrops: true,
+    orderUpdates: true,
+    promotions: false,
+    savedSearches: true,
+  };
+  const [marketplaceState, setMarketplacePref] = useState(marketplacePrefs);
+  const setMarketplace = (key, value) => setMarketplacePref((s) => ({ ...s, [key]: value }));
 
   const displayName = user?.name ?? '';
   const displayEmail = user?.email ?? '';
@@ -170,6 +202,94 @@ export default function Settings() {
             ariaLabel="Marketing notifications"
           />
         </SettingRow>
+      </section>
+
+      <section id="marketplace" className="user-app-card settings-section">
+        <h2 className="settings-section-title">
+          <ShoppingBag size={20} />
+          Marketplace
+        </h2>
+        <SettingRow
+          label="New listings"
+          description="When sellers you follow list new items"
+        >
+          <Toggle
+            checked={marketplaceState.newListings}
+            onChange={(v) => setMarketplace('newListings', v)}
+            ariaLabel="New listings notifications"
+          />
+        </SettingRow>
+        <SettingRow
+          label="Price drops"
+          description="When items in your wishlist go on sale"
+        >
+          <Toggle
+            checked={marketplaceState.priceDrops}
+            onChange={(v) => setMarketplace('priceDrops', v)}
+            ariaLabel="Price drop notifications"
+          />
+        </SettingRow>
+        <SettingRow
+          label="Order updates"
+          description="Shipping and delivery status for your orders"
+        >
+          <Toggle
+            checked={marketplaceState.orderUpdates}
+            onChange={(v) => setMarketplace('orderUpdates', v)}
+            ariaLabel="Order update notifications"
+          />
+        </SettingRow>
+        <SettingRow
+          label="Promotions"
+          description="Deals and offers from sellers you follow"
+        >
+          <Toggle
+            checked={marketplaceState.promotions}
+            onChange={(v) => setMarketplace('promotions', v)}
+            ariaLabel="Promotion notifications"
+          />
+        </SettingRow>
+        <SettingRow
+          label="Saved searches"
+          description="Get notified when new items match your saved searches"
+        >
+          <Toggle
+            checked={marketplaceState.savedSearches}
+            onChange={(v) => setMarketplace('savedSearches', v)}
+            ariaLabel="Saved search notifications"
+          />
+        </SettingRow>
+        <SettingRow
+          label="Default address"
+          description="Used at checkout when no address is selected"
+        >
+          <select className="settings-select" aria-label="Default address">
+            <option value="">None set</option>
+            <option value="1">Home — 123 Main St, City</option>
+            <option value="2">Work — 456 Office Rd</option>
+          </select>
+        </SettingRow>
+        <SettingRow
+          label="Default payment"
+          description="Card or wallet used at checkout by default"
+        >
+          <select className="settings-select" aria-label="Default payment">
+            <option value="">None set</option>
+            <option value="card">•••• 4242</option>
+            <option value="wallet">Wallet balance</option>
+          </select>
+        </SettingRow>
+        <div className="settings-section-actions">
+          <button type="button" className="settings-btn settings-btn-secondary">
+            Manage addresses
+          </button>
+          <button type="button" className="settings-btn settings-btn-secondary">
+            Manage payment methods
+          </button>
+          <Link to="/app/shop" className="settings-btn settings-btn-primary" style={{ textDecoration: 'none' }}>
+            Browse marketplace
+          </Link>
+        </div>
       </section>
 
       <section className="user-app-card settings-section">

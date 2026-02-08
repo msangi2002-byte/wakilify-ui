@@ -3,6 +3,7 @@
   min-height: 100vh;
   background: #f0f2f5;
   color: #050505;
+  overflow-x: hidden;
 }
 
 .user-app-header {
@@ -11,13 +12,17 @@
   left: 0;
   right: 0;
   height: 56px;
+  padding-top: env(safe-area-inset-top, 0);
   background: #fff;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
+  padding-left: 16px;
+  padding-right: 16px;
+  padding-bottom: 0;
   z-index: 100;
+  overflow: visible;
 }
 
 .user-app-header-left {
@@ -162,6 +167,7 @@
   grid-template-columns: 1fr minmax(0, 680px) 1fr;
   gap: 16px;
   padding: 56px 16px 24px;
+  padding-top: calc(56px + env(safe-area-inset-top, 0));
   max-width: 1280px;
   margin: 0 auto;
 }
@@ -1297,6 +1303,7 @@
 /* Dropdown */
 .user-app-dropdown {
   position: relative;
+  z-index: 101;
 }
 
 .user-app-dropdown-menu {
@@ -1309,8 +1316,10 @@
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   padding: 8px;
-  z-index: 200;
+  z-index: 1000;
   list-style: none;
+  margin-left: 0;
+  margin-right: 0;
 }
 
 .user-app-dropdown-menu button,
@@ -1354,10 +1363,107 @@
   }
 }
 
+/* Bottom nav (mobile only) */
+.user-app-bottom-nav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .user-app-bottom-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+    background: #fff;
+    border-top: 1px solid #e4e6eb;
+    z-index: 99;
+    box-shadow: 0 -1px 4px rgba(0, 0, 0, 0.06);
+  }
+
+  .user-app-bottom-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 6px 4px;
+    min-height: 44px;
+    color: #65676b;
+    text-decoration: none;
+    font-size: 0.625rem;
+    font-weight: 500;
+    transition: color 0.15s;
+  }
+
+  .user-app-bottom-nav-item:hover,
+  .user-app-bottom-nav-item.active {
+    color: #7c3aed;
+  }
+
+  .user-app-body {
+    padding-bottom: calc(56px + env(safe-area-inset-bottom, 0) + 24px);
+  }
+
+  .user-app-nav {
+    display: none;
+  }
+
+  .user-app-header {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .user-app-header-right .user-app-icon-btn:last-child {
+    display: none;
+  }
+}
+
 @media (max-width: 600px) {
-  .user-app-search { display: none; }
-  .user-app-nav { gap: 0; }
-  .user-app-nav-item { width: 40px; height: 40px; }
+  .user-app-search {
+    display: none;
+  }
+
+  .user-app-logo span {
+    display: none;
+  }
+
+  .user-app-logo {
+    padding: 4px 0;
+  }
+
+  .user-app-dropdown-menu {
+    right: 0;
+    left: auto;
+    min-width: 200px;
+    max-width: calc(100vw - 24px);
+  }
+
+  .user-app-body {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .user-app-header {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .user-app-body {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .user-app-dropdown-menu {
+    max-width: calc(100vw - 20px);
+  }
 }
 
 /* ========== Profile page ========== */
@@ -1846,7 +1952,34 @@
   border-bottom: 1px solid #e4e6eb;
 }
 
+.messages-chat-back {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin: -8px 0 -8px -8px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  color: #050505;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.messages-chat-back:hover {
+  background: #f0f2f5;
+}
+
+.messages-chat-header-avatar {
+  flex-shrink: 0;
+}
+
 .messages-chat-header-name {
+  flex: 1;
+  min-width: 0;
   font-size: 1rem;
   font-weight: 600;
   color: #050505;
@@ -1946,10 +2079,72 @@
   margin: 0;
 }
 
+/* Mobile: one view at a time like Messenger/WhatsApp */
 @media (max-width: 768px) {
   .messages-page {
     grid-template-columns: 1fr;
-    min-height: 60vh;
+    grid-template-rows: 1fr;
+    position: fixed;
+    top: calc(56px + env(safe-area-inset-top, 0));
+    bottom: calc(56px + env(safe-area-inset-bottom, 0));
+    left: 0;
+    right: 0;
+    height: auto;
+    max-height: none;
+    min-height: 0;
+    border-radius: 0;
+    box-shadow: none;
+    z-index: 50;
+  }
+
+  .messages-sidebar {
+    display: flex;
+    border-right: none;
+  }
+
+  .messages-chat-panel {
+    display: none;
+    position: absolute;
+    inset: 0;
+    flex-direction: column;
+    background: #f0f2f5;
+  }
+
+  .messages-mobile-chat-open .messages-sidebar {
+    display: none;
+  }
+
+  .messages-mobile-chat-open .messages-chat-panel {
+    display: flex;
+  }
+
+  .messages-chat-back {
+    display: flex;
+  }
+
+  .messages-chat-header {
+    padding: 10px 12px 10px 8px;
+    flex-shrink: 0;
+  }
+
+  .messages-chat-messages {
+    padding: 12px;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .messages-chat-input-wrap {
+    padding: 10px 12px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0));
+  }
+
+  .messages-chat-input {
+    font-size: 16px;
+  }
+
+  .messages-conversation-item {
+    padding: 14px 16px;
+    min-height: 44px;
   }
 }
 
@@ -2650,5 +2845,180 @@
 
   .shop-category-btn {
     flex-shrink: 0;
+  }
+}
+
+/* ========== Mobile refinements (global) ========== */
+@media (max-width: 768px) {
+  .user-app-main {
+    padding-bottom: 8px;
+  }
+
+  .user-app-card {
+    margin-bottom: 12px;
+  }
+
+  .settings-page,
+  .shop-page,
+  .notif-page {
+    padding-bottom: 16px;
+  }
+
+  .settings-header,
+  .shop-header,
+  .groups-feed-header {
+    margin-bottom: 16px;
+  }
+
+  .settings-title,
+  .shop-title,
+  .groups-feed-title {
+    font-size: 1.25rem;
+  }
+
+  .settings-section,
+  .notif-list-section {
+    padding: 16px;
+  }
+
+  .notif-header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .notif-filter {
+    align-self: flex-start;
+  }
+
+  .notif-mark-all,
+  .notif-settings-link {
+    justify-content: center;
+  }
+
+  .notif-item {
+    padding: 12px 16px;
+  }
+
+  .notif-item-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .shop-settings-link {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .shop-search-input {
+    font-size: 16px;
+  }
+
+  .groups-sidebar {
+    padding: 12px;
+  }
+
+  .groups-create-btn {
+    min-height: 44px;
+  }
+
+  .group-post-header,
+  .feed-post-header {
+    padding: 10px 12px;
+  }
+
+  .group-post-description,
+  .feed-post-description {
+    padding: 0 12px 10px;
+  }
+
+  .group-post-engagement,
+  .feed-post-engagement {
+    padding: 8px 12px 10px;
+  }
+
+  .group-post-action,
+  .feed-post-action {
+    padding: 10px 8px;
+    font-size: 0.875rem;
+  }
+
+  .profile-avatar-wrap {
+    padding: 24px 16px 12px;
+  }
+
+  .profile-avatar {
+    width: 96px;
+    height: 96px;
+    font-size: 2.25rem;
+  }
+
+  .profile-stats {
+    gap: 24px;
+    padding: 12px 16px 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .profile-stat {
+    min-width: 80px;
+  }
+
+  .settings-btn,
+  .shop-empty-btn {
+    min-height: 44px;
+    padding: 12px 20px;
+  }
+
+  .settings-toggle {
+    width: 48px;
+    height: 26px;
+  }
+
+  .settings-toggle-thumb {
+    width: 22px;
+    height: 22px;
+  }
+
+  .settings-toggle.on .settings-toggle-thumb {
+    transform: translateX(22px);
+  }
+}
+
+@media (max-width: 480px) {
+  .shop-grid {
+    gap: 10px;
+  }
+
+  .shop-product-info {
+    padding: 10px;
+  }
+
+  .shop-product-title {
+    font-size: 0.875rem;
+  }
+
+  .groups-list-item {
+    padding: 12px 8px;
+    min-height: 44px;
+  }
+
+  .settings-section {
+    padding: 14px;
+  }
+
+  .settings-row {
+    padding: 12px 0;
+  }
+
+  .profile-name {
+    font-size: 1.25rem;
+  }
+
+  .feed-post-media-placeholder {
+    height: 240px;
+  }
+
+  .group-post-media-placeholder {
+    min-height: 120px;
   }
 }

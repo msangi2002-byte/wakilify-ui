@@ -59,7 +59,7 @@ export default function Shop() {
             <h1 className="shop-title">Marketplace</h1>
             <p className="shop-subtitle">Discover and buy from people in your network</p>
           </div>
-          <Link to="/app/shop/settings" className="shop-settings-link">
+          <Link to="/app/settings#marketplace" className="shop-settings-link">
             <Settings size={18} />
             Settings
           </Link>

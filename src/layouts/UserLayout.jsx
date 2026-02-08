@@ -23,7 +23,6 @@ const leftNav = [
   { to: '/app/friends', icon: Users, label: 'Friends' },
   { to: '/app/groups', icon: Users, label: 'Groups' },
   { to: '/app/shop', icon: ShoppingBag, label: 'Marketplace' },
-  { to: '/app/shop/settings', icon: Settings, label: 'Marketplace settings' },
   { to: '/app/notifications', icon: Bell, label: 'Notifications' },
   { to: '/app/settings', icon: Settings, label: 'Settings' },
 ];
@@ -94,12 +93,18 @@ export default function UserLayout() {
   const isHome = location.pathname === '/app' || location.pathname === '/app/';
 
   useEffect(() => {
+    if (!menuOpen) return;
     function handleClickOutside(e) {
       if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
     }
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, []);
+    const id = setTimeout(() => {
+      document.addEventListener('click', handleClickOutside);
+    }, 0);
+    return () => {
+      clearTimeout(id);
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [menuOpen]);
 
   const handleLogout = async () => {
     setMenuOpen(false);
@@ -213,6 +218,29 @@ export default function UserLayout() {
         <main className="user-app-main">
           <Outlet />
         </main>
+
+        <nav className="user-app-bottom-nav" aria-label="Main navigation">
+          <Link to="/app" className={`user-app-bottom-nav-item ${isHome ? 'active' : ''}`} aria-label="Home">
+            <Home size={24} />
+            <span>Home</span>
+          </Link>
+          <Link to="/app/friends" className="user-app-bottom-nav-item" aria-label="Friends">
+            <Users size={24} />
+            <span>Friends</span>
+          </Link>
+          <Link to="/app/reels" className={`user-app-bottom-nav-item ${location.pathname === '/app/reels' ? 'active' : ''}`} aria-label="Reels">
+            <PlayCircle size={24} />
+            <span>Reels</span>
+          </Link>
+          <Link to="/app/shop" className={`user-app-bottom-nav-item ${location.pathname.startsWith('/app/shop') ? 'active' : ''}`} aria-label="Marketplace">
+            <ShoppingBag size={24} />
+            <span>Shop</span>
+          </Link>
+          <Link to="/app/messages" className="user-app-bottom-nav-item" aria-label="Messages">
+            <MessageCircle size={24} />
+            <span>Chat</span>
+          </Link>
+        </nav>
 
         <aside className="user-app-sidebar">
           <div className="user-app-right-section">

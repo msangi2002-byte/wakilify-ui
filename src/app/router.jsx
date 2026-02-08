@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 import App from '../App';
 import AuthLayout from '@/layouts/AuthLayout';
 import UserLayout from '@/layouts/UserLayout';
@@ -33,7 +33,6 @@ const Profile = lazy(() => import('@/pages/user/Profile'));
 const Friends = lazy(() => import('@/pages/user/Friends'));
 const Groups = lazy(() => import('@/pages/user/Groups'));
 const UserSettings = lazy(() => import('@/pages/user/Settings'));
-const MarketplaceSettings = lazy(() => import('@/pages/user/MarketplaceSettings'));
 const Notifications = lazy(() => import('@/pages/user/Notifications'));
 
 const BusinessDashboard = lazy(() => import('@/pages/business/Dashboard'));
@@ -97,7 +96,7 @@ const router = createBrowserRouter([
           { path: 'reels', element: <Suspense fallback={<Fallback />}><Reels /></Suspense> },
           { path: 'stories', element: <Suspense fallback={<Fallback />}><Stories /></Suspense> },
           { path: 'shop', element: <Suspense fallback={<Fallback />}><Shop /></Suspense> },
-          { path: 'shop/settings', element: <Suspense fallback={<Fallback />}><MarketplaceSettings /></Suspense> },
+          { path: 'shop/settings', element: <Navigate to="/app/settings#marketplace" replace /> },
           { path: 'shop/:id', element: <Suspense fallback={<Fallback />}><ProductDetails /></Suspense> },
           { path: 'notifications', element: <Suspense fallback={<Fallback />}><Notifications /></Suspense> },
           { path: 'cart', element: <Suspense fallback={<Fallback />}><Cart /></Suspense> },

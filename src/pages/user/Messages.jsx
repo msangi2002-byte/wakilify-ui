@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Send } from 'lucide-react';
+import { Send, ArrowLeft } from 'lucide-react';
 
 // Mock data – replace with API later
 const ONLINE_USERS = [
@@ -95,7 +95,7 @@ export default function Messages() {
   };
 
   return (
-    <div className="messages-page">
+    <div className={`messages-page ${selected ? 'messages-mobile-chat-open' : ''}`}>
       <div className="messages-sidebar">
         <div className="messages-online-row">
           <span className="messages-online-label">Online</span>
@@ -141,7 +141,15 @@ export default function Messages() {
         {selected ? (
           <>
             <div className="messages-chat-header">
-              <Avatar user={selected.user} size={40} />
+              <button
+                type="button"
+                className="messages-chat-back"
+                onClick={() => setSelectedId(null)}
+                aria-label="Back to conversations"
+              >
+                <ArrowLeft size={24} />
+              </button>
+              <Avatar user={selected.user} size={40} className="messages-chat-header-avatar" />
               <span className="messages-chat-header-name">{selected.user.name}</span>
             </div>
             <div className="messages-chat-messages">
