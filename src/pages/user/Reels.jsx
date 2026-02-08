@@ -3,7 +3,7 @@ import { ThumbsUp, MessageCircle, Share2, MoreHorizontal, Play } from 'lucide-re
 
 // Mock short videos – replace with API (e.g. /api/v1/posts/reels) later
 const MOCK_VIDEOS = [
-  { id: '1', author: { name: 'Wakilify Official' }, time: '2 hrs', description: 'Quick tips for selling on the feed. Connect with buyers in your area.', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4', likes: 420, comments: 28, shares: 5 },
+  { id: '1', author: { name: 'Wakilfy Official' }, time: '2 hrs', description: 'Quick tips for selling on the feed. Connect with buyers in your area.', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4', likes: 420, comments: 28, shares: 5 },
   { id: '2', author: { name: 'Sarah M.' }, time: '5 hrs', description: 'Weekend market haul – supporting local sellers.', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4', likes: 189, comments: 12, shares: 2 },
   { id: '3', author: { name: 'Tech Gadgets Store' }, time: '1 d', description: 'New drop unboxing. Link in bio.', videoUrl: null, likes: 560, comments: 44, shares: 18 },
 ];

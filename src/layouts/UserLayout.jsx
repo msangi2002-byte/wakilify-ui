@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
 import { logout as logoutApi } from '@/lib/api/auth';
+import { APP_NAME, LOGO_PNG, LOGO_ICON } from '@/lib/constants/brand';
 import { clearAuth } from '@/store/auth.store';
 import '@/styles/user-app.css';
 
@@ -29,6 +30,21 @@ const sponsored = [
   { title: 'Dummy Ads', desc: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.' },
   { title: 'Dummy Ads', desc: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.' },
 ];
+
+function BrandLogo({ size = 40, className = '' }) {
+  const [src, setSrc] = useState(LOGO_PNG);
+  return (
+    <img
+      src={src}
+      alt=""
+      width={size}
+      height={size}
+      className={className}
+      style={{ objectFit: 'contain', borderRadius: 8 }}
+      onError={() => setSrc(LOGO_ICON)}
+    />
+  );
+}
 
 const contacts = [
   'Kold Manes',
@@ -97,8 +113,8 @@ export default function UserLayout() {
       <header className="user-app-header">
         <div className="user-app-header-left">
           <Link to="/app" className="user-app-logo">
-            <img src="/wakify-icon.svg" alt="" width={40} height={40} />
-            <span>Wakilify</span>
+            <BrandLogo size={40} />
+            <span>{APP_NAME}</span>
           </Link>
           <div className="user-app-search">
             <Search size={20} className="text-[#65676b]" />

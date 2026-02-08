@@ -15,9 +15,26 @@ import {
   MoreHorizontal,
   Plus,
 } from 'lucide-react';
+import { useState } from 'react';
 import { AppProviders } from '@/providers/AppProviders';
+import { APP_NAME, LOGO_PNG, LOGO_ICON } from '@/lib/constants/brand';
 import '@/styles/global.css';
 import '@/styles/landing.css';
+
+function BrandLogo({ size = 40, className = '' }) {
+  const [src, setSrc] = useState(LOGO_PNG);
+  return (
+    <img
+      src={src}
+      alt={APP_NAME}
+      width={size}
+      height={size}
+      className={className}
+      style={{ objectFit: 'contain', borderRadius: 8 }}
+      onError={() => setSrc(LOGO_ICON)}
+    />
+  );
+}
 
 const navLinks = [
   { label: 'Home', href: '#' },
@@ -75,10 +92,10 @@ function LandingContent() {
       {/* Nav */}
       <nav className="relative z-10 flex items-center justify-between px-4 sm:px-6 py-4 sm:py-5 max-w-7xl mx-auto min-w-0">
         <Link to="/" className="flex items-center gap-2">
-          <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur flex items-center justify-center">
-            <img src="/wakify-icon.svg" alt="Wakilfy" className="w-7 h-7" />
+          <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur flex items-center justify-center overflow-hidden">
+            <BrandLogo size={40} className="w-8 h-8" />
           </div>
-          <span className="text-xl font-bold">Wakilfy</span>
+          <span className="text-xl font-bold">{APP_NAME}</span>
         </Link>
         <div className="hidden md:flex items-center gap-8">
           {navLinks.map((link) => (
@@ -105,7 +122,7 @@ function LandingContent() {
             className="space-y-6 md:space-y-8 min-w-0"
           >
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
-              Connect, Trade, and Earn with Wakilfy.
+              Connect, Trade, and Earn with {APP_NAME}.
             </h1>
             <p className="text-base sm:text-lg md:text-xl text-white/90 max-w-lg font-medium">
               A social network where you share, follow, and discover – and shop straight from your feed. Like Facebook, plus marketplace and ways to earn.
@@ -143,7 +160,7 @@ function LandingContent() {
               <div className="rounded-[2.25rem] border-[8px] border-gray-800 bg-gray-900 overflow-hidden">
                 <div className="relative aspect-[9/19] bg-[#FDFAFE] overflow-hidden">
                   <div className="h-9 px-2.5 flex items-center justify-between border-b border-gray-200 bg-white">
-                    <span className="font-bold text-[11px] bg-gradient-to-r from-[#7c3aed] to-[#4078D0] bg-clip-text text-transparent">Wakilfy</span>
+                    <span className="font-bold text-[11px] bg-gradient-to-r from-[#7c3aed] to-[#4078D0] bg-clip-text text-transparent">{APP_NAME}</span>
                     <div className="flex items-center gap-1.5 text-gray-500">
                       <Search size={14} strokeWidth={2} />
                       <MessageCircle size={14} strokeWidth={2} />
@@ -184,7 +201,7 @@ function LandingContent() {
                       <div className="flex items-center gap-1.5">
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#d946ef] flex items-center justify-center text-white font-bold text-[10px]">W</div>
                         <div>
-                          <p className="text-[9px] font-semibold text-gray-800">Wakilfy Official</p>
+                          <p className="text-[9px] font-semibold text-gray-800">{APP_NAME} Official</p>
                           <p className="text-[7px] text-gray-500">29 hrs</p>
                         </div>
                       </div>
@@ -206,7 +223,7 @@ function LandingContent() {
               <div className="rounded-[2.25rem] border-[8px] border-gray-800 bg-gray-900 overflow-hidden">
                 <div className="relative aspect-[9/19] bg-[#FDFAFE] overflow-hidden">
                   <div className="h-9 px-2.5 flex items-center justify-between border-b border-gray-200 bg-white">
-                    <span className="font-bold text-[11px] bg-gradient-to-r from-[#7c3aed] to-[#4078D0] bg-clip-text text-transparent">Wakilfy</span>
+                    <span className="font-bold text-[11px] bg-gradient-to-r from-[#7c3aed] to-[#4078D0] bg-clip-text text-transparent">{APP_NAME}</span>
                     <div className="flex items-center gap-1.5 text-gray-500">
                       <Search size={14} strokeWidth={2} />
                       <MessageCircle size={14} strokeWidth={2} />
@@ -376,7 +393,7 @@ function LandingContent() {
           </div>
         </div>
         <div className="text-center pb-6 text-white/70 text-sm font-medium">
-          © {new Date().getFullYear()} Wakilfy. Social + Marketplace + Agent. Tanzania&apos;s Super App.
+          © {new Date().getFullYear()} {APP_NAME}. Social + Marketplace + Agent. Tanzania&apos;s Super App.
         </div>
       </footer>
     </div>

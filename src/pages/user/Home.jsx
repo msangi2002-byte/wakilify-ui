@@ -175,7 +175,7 @@ export default function Home() {
 
       {/* Feed post – profile, name, description, time → media → like/comment/share */}
       <FeedPost
-        author={{ name: 'Wakilify Official' }}
+        author={{ name: 'Wakilfy Official' }}
         time="29 hrs"
         description="Connect, trade, and earn in one place. Discover products from your feed and support local businesses."
         mediaPlaceholder

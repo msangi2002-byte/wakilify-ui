@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { APP_NAME } from '@/lib/constants/brand';
 import { login as loginApi } from '@/lib/api/auth';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 
@@ -56,7 +57,7 @@ export default function Login() {
 
   return (
     <div className="auth-form">
-      <h2>Log in to Wakilify</h2>
+      <h2>Log in to {APP_NAME}</h2>
       {error && <div className="auth-error" role="alert">{error}</div>}
       <form onSubmit={handleSubmit} noValidate>
         <div className="auth-field">

@@ -15,7 +15,7 @@ const MOCK_PHOTOS = [
 ];
 
 const MOCK_VIDEOS = [
-  { id: '1', title: 'Introduction to Wakilify', thumbnail: 'https://picsum.photos/seed/v1/320/180', views: 1240, date: '2 days ago', duration: '2:45' },
+  { id: '1', title: 'Introduction to Wakilfy', thumbnail: 'https://picsum.photos/seed/v1/320/180', views: 1240, date: '2 days ago', duration: '2:45' },
   { id: '2', title: 'Marketplace tour', thumbnail: 'https://picsum.photos/seed/v2/320/180', views: 892, date: '1 week ago', duration: '5:12' },
   { id: '3', title: 'Quick tips', thumbnail: 'https://picsum.photos/seed/v3/320/180', views: 456, date: '2 weeks ago', duration: '1:30' },
 ];
