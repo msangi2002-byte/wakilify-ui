@@ -83,6 +83,10 @@ const router = createBrowserRouter([
       },
       {
         path: '/',
+        element: <Suspense fallback={<Fallback />}><Welcome /></Suspense>,
+      },
+      {
+        path: 'app',
         element: (
           <AuthGuard>
             <UserLayout />

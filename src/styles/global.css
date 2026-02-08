@@ -1,3 +1,20 @@
+@import 'tailwindcss';
+
+/* Wakify theme colors */
+@theme {
+  --color-wk-midnight: #0f0c29;
+  --color-wk-indigo: #302b63;
+  --color-wk-violet: #7c3aed;
+  --color-wk-fuchsia: #d946ef;
+  --color-wk-pink: #ec4899;
+  --color-wk-blue: #4078D0;
+  --color-wk-sky: #2890D8;
+  --color-wk-gold: #f59e0b;
+  --color-wk-purple: #4c1d95;
+  --color-wk-gold-light: #fbbf24;
+  --background-image-landing-gradient: linear-gradient(to right, #1e1b4b 0%, #312e81 25%, #4c1d95 50%, #831843 75%, #be185d 100%);
+}
+
 @import './tokens.css';
 
 *,
@@ -9,8 +26,8 @@
 body {
   margin: 0;
   font-family: system-ui, -apple-system, sans-serif;
-  background: var(--color-background);
-  color: var(--color-text);
+  background: #0f0c29;
+  color: #fff;
 }
 
 #root {
