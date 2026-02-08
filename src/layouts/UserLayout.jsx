@@ -21,7 +21,7 @@ import '@/styles/user-app.css';
 const leftNav = [
   { to: '/app/profile', icon: User, label: 'Profile' },
   { to: '/app/friends', icon: Users, label: 'Friends' },
-  { to: '/app', icon: Users, label: 'Groups' },
+  { to: '/app/groups', icon: Users, label: 'Groups' },
   { to: '/app/shop', icon: ShoppingBag, label: 'Marketplace' },
   { to: '/app/settings', icon: Settings, label: 'Settings' },
 ];
