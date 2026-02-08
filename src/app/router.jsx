@@ -33,6 +33,8 @@ const Profile = lazy(() => import('@/pages/user/Profile'));
 const Friends = lazy(() => import('@/pages/user/Friends'));
 const Groups = lazy(() => import('@/pages/user/Groups'));
 const UserSettings = lazy(() => import('@/pages/user/Settings'));
+const MarketplaceSettings = lazy(() => import('@/pages/user/MarketplaceSettings'));
+const Notifications = lazy(() => import('@/pages/user/Notifications'));
 
 const BusinessDashboard = lazy(() => import('@/pages/business/Dashboard'));
 const BusinessProducts = lazy(() => import('@/pages/business/Products'));
@@ -95,7 +97,9 @@ const router = createBrowserRouter([
           { path: 'reels', element: <Suspense fallback={<Fallback />}><Reels /></Suspense> },
           { path: 'stories', element: <Suspense fallback={<Fallback />}><Stories /></Suspense> },
           { path: 'shop', element: <Suspense fallback={<Fallback />}><Shop /></Suspense> },
+          { path: 'shop/settings', element: <Suspense fallback={<Fallback />}><MarketplaceSettings /></Suspense> },
           { path: 'shop/:id', element: <Suspense fallback={<Fallback />}><ProductDetails /></Suspense> },
+          { path: 'notifications', element: <Suspense fallback={<Fallback />}><Notifications /></Suspense> },
           { path: 'cart', element: <Suspense fallback={<Fallback />}><Cart /></Suspense> },
           { path: 'checkout', element: <Suspense fallback={<Fallback />}><Checkout /></Suspense> },
           { path: 'live', element: <Suspense fallback={<Fallback />}><Live /></Suspense> },

@@ -23,6 +23,8 @@ const leftNav = [
   { to: '/app/friends', icon: Users, label: 'Friends' },
   { to: '/app/groups', icon: Users, label: 'Groups' },
   { to: '/app/shop', icon: ShoppingBag, label: 'Marketplace' },
+  { to: '/app/shop/settings', icon: Settings, label: 'Marketplace settings' },
+  { to: '/app/notifications', icon: Bell, label: 'Notifications' },
   { to: '/app/settings', icon: Settings, label: 'Settings' },
 ];
 
@@ -179,7 +181,7 @@ export default function UserLayout() {
               </ul>
             )}
           </div>
-          <Link to="/app" className="user-app-icon-btn" aria-label="Notifications">
+          <Link to="/app/notifications" className="user-app-icon-btn" aria-label="Notifications">
             <Bell size={20} />
             <span className="badge">1</span>
           </Link>
