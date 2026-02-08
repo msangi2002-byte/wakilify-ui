@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Users, ChevronRight, Plus, Search } from 'lucide-react';
 import { GroupPost } from '@/components/social/GroupPost';
@@ -67,6 +68,11 @@ const dummyFeed = [
 ];
 
 export default function Groups() {
+  const [groupSearch, setGroupSearch] = useState('');
+  const filteredGroups = dummyGroups.filter((g) =>
+    g.name.toLowerCase().includes(groupSearch.trim().toLowerCase())
+  );
+
   return (
     <div className="groups-page">
       <div className="groups-layout">
@@ -80,23 +86,35 @@ export default function Groups() {
           </div>
           <div className="groups-sidebar-search">
             <Search size={18} className="groups-search-icon" />
-            <input type="text" placeholder="Search groups" aria-label="Search groups" />
+            <input
+              type="text"
+              placeholder="Search groups"
+              aria-label="Search groups"
+              value={groupSearch}
+              onChange={(e) => setGroupSearch(e.target.value)}
+            />
           </div>
           <ul className="groups-list">
-            {dummyGroups.map((g) => (
-              <li key={g.id}>
-                <Link to={`/app/groups/${g.id}`} className="groups-list-item">
-                  <div className="groups-list-avatar">
-                    <Users size={24} />
-                  </div>
-                  <div className="groups-list-info">
-                    <span className="groups-list-name">{g.name}</span>
-                    <span className="groups-list-meta">{g.memberCount.toLocaleString()} members</span>
-                  </div>
-                  <ChevronRight size={18} className="groups-list-chevron" />
-                </Link>
+            {filteredGroups.length === 0 ? (
+              <li className="groups-list-empty">
+                {groupSearch.trim() ? 'No groups match your search.' : 'No groups yet.'}
               </li>
-            ))}
+            ) : (
+              filteredGroups.map((g) => (
+                <li key={g.id}>
+                  <Link to={`/app/groups/${g.id}`} className="groups-list-item">
+                    <div className="groups-list-avatar">
+                      <Users size={24} />
+                    </div>
+                    <div className="groups-list-info">
+                      <span className="groups-list-name">{g.name}</span>
+                      <span className="groups-list-meta">{g.memberCount.toLocaleString()} members</span>
+                    </div>
+                    <ChevronRight size={18} className="groups-list-chevron" />
+                  </Link>
+                </li>
+              ))
+            )}
           </ul>
           <Link to="/app/groups/create" className="groups-create-btn">
             <Plus size={20} />
