@@ -16,20 +16,40 @@ function formatEmailOrPhone(value) {
   return trimmed;
 }
 
+function isPhoneLike(value) {
+  if (!value || typeof value !== 'string') return false;
+  const trimmed = value.trim();
+  return trimmed.startsWith('+') || /^\d{9,}$/.test(trimmed.replace(/\D/g, ''));
+}
+
+function isNotVerifiedResponse(res) {
+  const msg = (res?.message || res?.error || '').toLowerCase();
+  return /verif|verified|verify/.test(msg) || res?.data?.verified === false;
+}
+
+function isNotVerifiedError(err) {
+  const data = err?.response?.data;
+  const msg = (data?.message || data?.error || '').toLowerCase();
+  return /verif|verified|verify/.test(msg);
+}
+
 export default function Login() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [notVerifiedPhone, setNotVerifiedPhone] = useState(null);
   const [form, setForm] = useState({ emailOrPhone: '', password: '' });
 
   const update = (name, value) => {
     setError('');
+    setNotVerifiedPhone(null);
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setNotVerifiedPhone(null);
     const emailOrPhone = formatEmailOrPhone(form.emailOrPhone);
     if (!emailOrPhone) {
       setError('Email or phone is required.');
@@ -45,11 +65,21 @@ export default function Login() {
       const ok = res?.success === true && res?.data?.accessToken != null && res?.data?.user != null;
       if (ok) {
         navigate('/app', { replace: true });
+      } else if (isNotVerifiedResponse(res)) {
+        setError("Your account is not verified. Please verify your phone.");
+        setNotVerifiedPhone(isPhoneLike(emailOrPhone) ? emailOrPhone : null);
       } else {
         setError(res?.message || getApiErrorMessage({ response: { data: res } }, 'Login failed. Please check your email/phone and password.'));
       }
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Login failed. Please check your email/phone and password.'));
+      if (isNotVerifiedError(err)) {
+        setError("Your account is not verified. Please verify your phone.");
+        const data = err?.response?.data;
+        const emailOrPhoneRaw = form.emailOrPhone?.trim();
+        setNotVerifiedPhone(isPhoneLike(emailOrPhoneRaw) ? formatEmailOrPhone(emailOrPhoneRaw) : null);
+      } else {
+        setError(getApiErrorMessage(err, 'Login failed. Please check your email/phone and password.'));
+      }
     } finally {
       setLoading(false);
     }
@@ -58,7 +88,18 @@ export default function Login() {
   return (
     <div className="auth-form">
       <h2>Log in to {APP_NAME}</h2>
-      {error && <div className="auth-error" role="alert">{error}</div>}
+      {error && (
+        <div className="auth-error" role="alert">
+          {error}
+          {notVerifiedPhone != null && (
+            <div style={{ marginTop: '0.75rem' }}>
+              <Link to="/auth/otp" state={{ phone: notVerifiedPhone }} className="auth-error-verify-link">
+                Verify phone now
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
       <form onSubmit={handleSubmit} noValidate>
         <div className="auth-field">
           <label htmlFor="emailOrPhone">Email or Phone</label>
@@ -89,6 +130,12 @@ export default function Login() {
       </form>
       <p className="auth-link-row">
         Don&apos;t have an account? <Link to="/auth/register">Sign up</Link>
+        {notVerifiedPhone != null && (
+          <>
+            {' · '}
+            <Link to="/auth/otp" state={{ phone: notVerifiedPhone }}>Verify phone</Link>
+          </>
+        )}
       </p>
     </div>
   );

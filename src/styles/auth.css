@@ -236,6 +236,16 @@
   border-radius: 0.5rem;
 }
 
+.auth-error-verify-link {
+  color: #a21caf;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.auth-error-verify-link:hover {
+  text-decoration: underline;
+}
+
 .auth-success {
   font-size: 0.875rem;
   color: #059669;
