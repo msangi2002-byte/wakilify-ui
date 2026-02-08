@@ -50,6 +50,15 @@ export async function verifyOtp(payload) {
 }
 
 /**
+ * POST /api/v1/auth/resend-otp
+ * Request body: { phone }
+ */
+export async function resendOtp(phone) {
+  const { data } = await api.post('/auth/resend-otp', { phone });
+  return data;
+}
+
+/**
  * POST /api/v1/auth/forgot-password
  * Request body (route.txt): { phone }
  */
