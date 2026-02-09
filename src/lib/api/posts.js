@@ -3,10 +3,10 @@ import { api } from './client';
 const defaultPage = 0;
 const defaultSize = 20;
 
-/** Chunk size for resumable upload (1MB). Each chunk stays under Nginx 1MB limit. */
-const CHUNK_SIZE = 1024 * 1024;
+/** Chunk size for resumable upload (500KB). Stays under Nginx default 1MB limit including multipart overhead. */
+const CHUNK_SIZE = 512 * 1024;
 
-/** Use chunked upload when file exceeds this (1MB) */
+/** Use chunked upload when file exceeds this (500KB) */
 const CHUNK_THRESHOLD = CHUNK_SIZE;
 
 function toList(data) {
