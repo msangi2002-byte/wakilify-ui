@@ -112,6 +112,9 @@ export default function StoryViewer() {
   const viewedStoryIdsRef = useRef(new Set());
   const timerRef = useRef(null);
   const startTimeRef = useRef(null);
+  const videoRef = useRef(null);
+  const [videoMuted, setVideoMuted] = useState(false);
+  const stallTimeoutRef = useRef(null);
 
   const fetchStories = useCallback(async () => {
     setLoading(true);
@@ -198,6 +201,60 @@ export default function StoryViewer() {
       navigate(-1);
     }
   }, [currentStoryIndex, currentGroupIndex, groups, navigate]);
+
+  // Reset mute when switching to a new story so we try sound again
+  useEffect(() => {
+    if (isVideo && mediaUrl) setVideoMuted(false);
+  }, [mediaUrl, isVideo]);
+
+  // Ensure story video plays with sound when possible; avoid stuck playback
+  useEffect(() => {
+    if (!isVideo || !mediaUrl) return;
+    const video = videoRef.current;
+    if (!video) return;
+
+    const tryPlay = (muted = videoMuted) => {
+      video.muted = muted;
+      const p = video.play();
+      if (p && typeof p.then === 'function') {
+        p.catch(() => {
+          if (!muted) {
+            setVideoMuted(true);
+            video.muted = true;
+            video.play().catch(() => {});
+          }
+        });
+      }
+    };
+
+    const onCanPlay = () => tryPlay();
+    const onError = () => {
+      if (stallTimeoutRef.current) clearTimeout(stallTimeoutRef.current);
+      goNext();
+    };
+    const onStalled = () => {
+      if (stallTimeoutRef.current) clearTimeout(stallTimeoutRef.current);
+      stallTimeoutRef.current = setTimeout(() => {
+        const v = videoRef.current;
+        if (v && v.readyState < 2) {
+          v.load();
+          v.play().catch(() => goNext());
+        }
+        stallTimeoutRef.current = null;
+      }, 2500);
+    };
+
+    video.addEventListener('canplay', onCanPlay);
+    video.addEventListener('error', onError);
+    video.addEventListener('stalled', onStalled);
+    tryPlay(false);
+    return () => {
+      if (stallTimeoutRef.current) clearTimeout(stallTimeoutRef.current);
+      video.removeEventListener('canplay', onCanPlay);
+      video.removeEventListener('error', onError);
+      video.removeEventListener('stalled', onStalled);
+    };
+  }, [isVideo, mediaUrl, currentStoryIndex, currentGroupIndex, goNext, videoMuted]);
 
   useEffect(() => {
     if (!currentStory || paused) return;
@@ -321,12 +378,14 @@ export default function StoryViewer() {
           isVideo ? (
             <video
               key={mediaUrl}
+              ref={videoRef}
               src={mediaUrl}
               autoPlay
               playsInline
-              muted
+              muted={videoMuted}
               loop={false}
               onEnded={goNext}
+              preload="auto"
               className="story-viewer-media"
             />
           ) : (
