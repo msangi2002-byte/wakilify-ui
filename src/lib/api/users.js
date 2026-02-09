@@ -81,3 +81,24 @@ export async function getSuggestedUsers(params = {}) {
   });
   return data?.data ?? data;
 }
+
+// ——— Block user ———
+/** POST /api/v1/users/:userId/block */
+export async function blockUser(userId) {
+  const { data } = await api.post(`/users/${userId}/block`);
+  return data?.data ?? data;
+}
+
+/** DELETE /api/v1/users/:userId/block */
+export async function unblockUser(userId) {
+  const { data } = await api.delete(`/users/${userId}/block`);
+  return data?.data ?? data;
+}
+
+/** GET /api/v1/users/me/blocked?page=0&size=20 - list blocked users */
+export async function getBlockedUsers(params = {}) {
+  const { data } = await api.get('/users/me/blocked', {
+    params: { page: 0, size: 20, ...params },
+  });
+  return data?.data ?? data;
+}

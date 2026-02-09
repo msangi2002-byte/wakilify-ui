@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { X } from 'lucide-react';
-import { getStories } from '@/lib/api/posts';
+import { X, Eye } from 'lucide-react';
+import { getStories, recordStoryView, getStoryViewers } from '@/lib/api/posts';
 import { useAuthStore } from '@/store/auth.store';
 import '@/styles/user-app.css';
 
@@ -106,6 +106,10 @@ export default function StoryViewer() {
   const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [viewersOpen, setViewersOpen] = useState(false);
+  const [viewers, setViewers] = useState([]);
+  const [viewersLoading, setViewersLoading] = useState(false);
+  const viewedStoryIdsRef = useRef(new Set());
   const timerRef = useRef(null);
   const startTimeRef = useRef(null);
 
@@ -141,6 +145,27 @@ export default function StoryViewer() {
   const mediaUrl = currentStory ? getMediaUrl(currentStory) : null;
   const isVideo = currentStory ? getMediaType(currentStory) === 'video' : false;
   const isTextOnly = currentStory && !mediaUrl && (currentStory.caption ?? '').trim().length > 0;
+  const isMyStory = currentUser?.id && currentGroup?.authorId === currentUser.id;
+
+  useEffect(() => {
+    if (!currentStory?.id || viewedStoryIdsRef.current.has(currentStory.id)) return;
+    viewedStoryIdsRef.current.add(currentStory.id);
+    recordStoryView(currentStory.id).catch(() => {});
+  }, [currentStory?.id]);
+
+  const openViewers = useCallback(async () => {
+    if (!currentStory?.id) return;
+    setViewersOpen(true);
+    setViewersLoading(true);
+    try {
+      const list = await getStoryViewers(currentStory.id, { page: 0, size: 50 });
+      setViewers(Array.isArray(list) ? list : list?.content ?? []);
+    } catch {
+      setViewers([]);
+    } finally {
+      setViewersLoading(false);
+    }
+  }, [currentStory?.id]);
 
   const goNext = useCallback(() => {
     if (currentStoryIndex < currentStories.length - 1) {
@@ -160,7 +185,7 @@ export default function StoryViewer() {
   const goPrev = useCallback(() => {
     if (currentStoryIndex > 0) {
       setCurrentStoryIndex((i) => i - 1);
-      progressRef.current = 0;
+      setProgress(0);
       startTimeRef.current = Date.now();
     } else if (currentGroupIndex > 0) {
       const prevGroup = groups[currentGroupIndex - 1];
@@ -254,7 +279,42 @@ export default function StoryViewer() {
           <span className="story-viewer-name">{currentGroup.author?.name ?? 'User'}</span>
           <span className="story-viewer-time">{formatStoryTime(currentStory?.createdAt)}</span>
         </div>
+        {isMyStory && currentStory?.id && (
+          <button type="button" className="story-viewer-viewers-btn" onClick={openViewers} aria-label="Viewers">
+            <Eye size={20} />
+            Viewers
+          </button>
+        )}
       </div>
+
+      {viewersOpen && (
+        <div className="story-viewer-modal-overlay" onClick={() => setViewersOpen(false)} role="dialog" aria-label="Story viewers">
+          <div className="story-viewer-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="story-viewer-modal-header">
+              <h3>Watu walioona story / Viewers</h3>
+              <button type="button" className="story-viewer-modal-close" onClick={() => setViewersOpen(false)} aria-label="Close">
+                <X size={24} />
+              </button>
+            </div>
+            <div className="story-viewer-modal-body">
+              {viewersLoading ? (
+                <p>Loading…</p>
+              ) : viewers.length === 0 ? (
+                <p>Hakuna mtu ameona bado.</p>
+              ) : (
+                <ul className="story-viewer-viewers-list">
+                  {viewers.map((v) => (
+                    <li key={v.id} className="story-viewer-viewer-item">
+                      <Avatar user={v} size={40} />
+                      <span className="story-viewer-viewer-name">{v.name ?? 'User'}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="story-viewer-media-wrap">
         {mediaUrl && (

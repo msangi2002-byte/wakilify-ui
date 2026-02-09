@@ -139,18 +139,61 @@ export async function deleteComment(commentId) {
 /**
  * Create a post (text-only, with image(s), or multiple files).
  * Uses multipart/form-data: field "data" (JSON) and optional "files" (one or more).
- *
+ * For repost: pass originalPostId and postType 'POST'.
  * POST /api/v1/posts
- * - data: { caption, visibility, postType }
- * - files: optional File[] (e.g. images)
  */
-export async function createPost({ caption = '', visibility = 'PUBLIC', postType = 'POST', files = [] }) {
+export async function createPost({ caption = '', visibility = 'PUBLIC', postType = 'POST', originalPostId = null, files = [] }) {
   const formData = new FormData();
   const dataPayload = { caption, visibility, postType };
+  if (originalPostId) dataPayload.originalPostId = originalPostId;
   formData.append('data', new Blob([JSON.stringify(dataPayload)], { type: 'application/json' }));
   for (const file of files) {
     if (file instanceof File) formData.append('files', file);
   }
   const { data } = await api.post('/posts', formData);
   return data;
+}
+
+// ——— Save post (Hifadhi) ———
+/** POST /api/v1/posts/:postId/save */
+export async function savePost(postId) {
+  const { data } = await api.post(`/posts/${postId}/save`);
+  return data?.data ?? data;
+}
+
+/** DELETE /api/v1/posts/:postId/save */
+export async function unsavePost(postId) {
+  const { data } = await api.delete(`/posts/${postId}/save`);
+  return data?.data ?? data;
+}
+
+/** GET /api/v1/posts/saved?page=0&size=20 - returns { content, page, size, totalElements, totalPages } */
+export async function getSavedPosts(params = {}) {
+  const { data } = await api.get('/posts/saved', {
+    params: { page: defaultPage, size: defaultSize, ...params },
+  });
+  return data?.data ?? data;
+}
+
+// ——— Share to story ———
+/** POST /api/v1/posts/:postId/share-to-story  Body optional: { caption: "..." } */
+export async function sharePostToStory(postId, caption = '') {
+  const { data } = await api.post(`/posts/${postId}/share-to-story`, caption ? { caption } : {});
+  return data?.data ?? data;
+}
+
+// ——— Story viewers ———
+/** POST /api/v1/posts/:postId/view - record that current user viewed this story */
+export async function recordStoryView(postId) {
+  const { data } = await api.post(`/posts/${postId}/view`);
+  return data?.data ?? data;
+}
+
+/** GET /api/v1/posts/:postId/viewers?page=0&size=50 - list of UserSummary (story author only) */
+export async function getStoryViewers(postId, params = {}) {
+  const { data } = await api.get(`/posts/${postId}/viewers`, {
+    params: { page: 0, size: 50, ...params },
+  });
+  const res = data?.data ?? data;
+  return res?.content ?? toList(data);
 }

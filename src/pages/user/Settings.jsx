@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuthStore, setAuth, getToken } from '@/store/auth.store';
 import { useUIStore, setUI, subscribeUI } from '@/store/ui.store';
-import { uploadProfilePic, uploadCoverPic } from '@/lib/api/users';
+import { uploadProfilePic, uploadCoverPic, getBlockedUsers, unblockUser } from '@/lib/api/users';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import {
   User,
@@ -12,6 +12,7 @@ import {
   Moon,
   Sun,
   Shield,
+  UserX,
   Trash2,
   ShoppingBag,
   MapPin,
@@ -87,6 +88,31 @@ export default function Settings() {
   };
   const [marketplaceState, setMarketplacePref] = useState(marketplacePrefs);
   const setMarketplace = (key, value) => setMarketplacePref((s) => ({ ...s, [key]: value }));
+
+  const [blockedUsers, setBlockedUsers] = useState([]);
+  const [blockedLoading, setBlockedLoading] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    setBlockedLoading(true);
+    getBlockedUsers({ page: 0, size: 50 })
+      .then((res) => {
+        if (!cancelled) setBlockedUsers(res?.content ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setBlockedUsers([]);
+      })
+      .finally(() => {
+        if (!cancelled) setBlockedLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleUnblock = async (userId) => {
+    try {
+      await unblockUser(userId);
+      setBlockedUsers((prev) => prev.filter((u) => u.id !== userId));
+    } catch (_) {}
+  };
 
   const displayName = user?.name ?? '';
   const displayEmail = user?.email ?? '';
@@ -421,6 +447,39 @@ export default function Settings() {
             Set up 2FA
           </button>
         </SettingRow>
+      </section>
+
+      <section className="user-app-card settings-section">
+        <h2 className="settings-section-title">
+          <UserX size={20} />
+          Blocked users
+        </h2>
+        <p className="settings-row-desc" style={{ marginBottom: 12 }}>
+          Watu uliofunga. Hauona posts/stories zao; wao hawanaona zako.
+        </p>
+        {blockedLoading ? (
+          <p className="settings-loading">Loading…</p>
+        ) : blockedUsers.length === 0 ? (
+          <p className="settings-empty">Hakuna watu uliofunga.</p>
+        ) : (
+          <ul className="settings-blocked-list">
+            {blockedUsers.map((u) => (
+              <li key={u.id} className="settings-blocked-item">
+                <div className="settings-blocked-info">
+                  {u.profilePic ? (
+                    <img src={u.profilePic} alt="" className="settings-blocked-avatar" />
+                  ) : (
+                    <div className="settings-blocked-avatar settings-blocked-avatar-initial">{u.name?.charAt(0) ?? '?'}</div>
+                  )}
+                  <span className="settings-blocked-name">{u.name ?? 'User'}</span>
+                </div>
+                <button type="button" className="settings-btn settings-btn-secondary" onClick={() => handleUnblock(u.id)}>
+                  Unblock
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section className="user-app-card settings-section settings-section-danger">

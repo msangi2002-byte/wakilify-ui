@@ -94,6 +94,7 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <Suspense fallback={<Fallback />}><Home /></Suspense> },
           { path: 'explore', element: <Suspense fallback={<Fallback />}><Explore /></Suspense> },
+          { path: 'explore/hashtag/:tagName', element: <Suspense fallback={<Fallback />}><Explore /></Suspense> },
           { path: 'create', element: <Suspense fallback={<Fallback />}><Create /></Suspense> },
           { path: 'reels', element: <Suspense fallback={<Fallback />}><Reels /></Suspense> },
           { path: 'stories', element: <Suspense fallback={<Fallback />}><Stories /></Suspense> },

@@ -7,6 +7,7 @@ import {
   ThumbsUp,
   MessageCircle,
   Share2,
+  Bookmark,
   Plus,
   Globe,
   Pencil,
@@ -17,9 +18,12 @@ import { getMe, updateMe, uploadProfilePic, uploadCoverPic } from '@/lib/api/use
 import { getFriends } from '@/lib/api/friends';
 import {
   getPostsByUser,
+  getSavedPosts,
   createPost,
   likePost,
   unlikePost,
+  savePost,
+  unsavePost,
   getComments,
   addComment,
   deleteComment,
@@ -97,12 +101,16 @@ function normalizePost(post) {
     likesCount: post.reactionsCount ?? post.likesCount ?? 0,
     commentsCount: post.commentsCount ?? 0,
     sharesCount: post.sharesCount ?? 0,
+    saved: !!post.saved,
+    hashtags: post.hashtags ?? [],
   };
 }
 
-function ProfileFeedPost({ post, currentUser }) {
+function ProfileFeedPost({ post, currentUser, saved: initialSaved = false, onSaveChange }) {
   const [liked, setLiked] = useState(!!post.liked);
   const [likesCount, setLikesCount] = useState(post.likesCount ?? 0);
+  const [saved, setSaved] = useState(!!(post.saved ?? initialSaved));
+  const [saveLoading, setSaveLoading] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
@@ -141,6 +149,22 @@ function ProfileFeedPost({ post, currentUser }) {
     } catch {
       setLiked(!next);
       setLikesCount((c) => (next ? c - 1 : c + 1));
+    }
+  };
+
+  const handleSave = async () => {
+    if (!post.id || saveLoading) return;
+    const next = !saved;
+    setSaveLoading(true);
+    try {
+      if (next) await savePost(post.id);
+      else await unsavePost(post.id);
+      setSaved(next);
+      onSaveChange?.(post.id, next);
+    } catch {
+      // keep previous state
+    } finally {
+      setSaveLoading(false);
     }
   };
 
@@ -184,6 +208,16 @@ function ProfileFeedPost({ post, currentUser }) {
               See more
             </button>
           )}
+          {Array.isArray(post.hashtags) && post.hashtags.length > 0 && (
+            <span className="profile-fb-post-hashtags">
+              {' '}
+              {post.hashtags.map((tag) => (
+                <Link key={tag} to={`/app/explore/hashtag/${tag}`} className="profile-fb-post-hashtag">
+                  #{tag}
+                </Link>
+              ))}
+            </span>
+          )}
         </div>
       )}
       {post.media?.length > 0 && (
@@ -226,6 +260,16 @@ function ProfileFeedPost({ post, currentUser }) {
           <button type="button" className="profile-fb-post-action">
             <Share2 size={20} />
             Share
+          </button>
+          <button
+            type="button"
+            className={`profile-fb-post-action ${saved ? 'active' : ''}`}
+            onClick={handleSave}
+            disabled={saveLoading}
+            title={saved ? 'Ondoa kwenye Hifadhi' : 'Hifadhi'}
+          >
+            <Bookmark size={20} fill={saved ? 'currentColor' : 'none'} />
+            {saved ? 'Saved' : 'Save'}
           </button>
         </div>
       </div>
@@ -289,7 +333,9 @@ export default function Profile() {
   const [profile, setProfile] = useState(null);
   const [friends, setFriends] = useState([]);
   const [posts, setPosts] = useState([]);
-  const [postFilter, setPostFilter] = useState('all'); // all | photos | videos
+  const [postFilter, setPostFilter] = useState('all'); // all | photos | videos | saved
+  const [savedPosts, setSavedPosts] = useState([]);
+  const [savedLoading, setSavedLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [composerText, setComposerText] = useState('');
@@ -380,12 +426,34 @@ export default function Profile() {
   };
 
   const displayProfile = profile ?? authUser;
+
+  useEffect(() => {
+    if (postFilter !== 'saved' || !userId) return;
+    let cancelled = false;
+    setSavedLoading(true);
+    getSavedPosts({ page: 0, size: 50 })
+      .then((res) => {
+        if (cancelled) return;
+        const list = res?.content ?? (Array.isArray(res) ? res : []);
+        setSavedPosts(list.map(normalizePost));
+      })
+      .catch(() => {
+        if (!cancelled) setSavedPosts([]);
+      })
+      .finally(() => {
+        if (!cancelled) setSavedLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [postFilter, userId]);
+
   const filteredPosts =
-    postFilter === 'photos'
-      ? posts.filter((p) => p.media?.length > 0 && !p.hasVideo)
-      : postFilter === 'videos'
-        ? posts.filter((p) => p.hasVideo)
-        : posts;
+    postFilter === 'saved'
+      ? savedPosts
+      : postFilter === 'photos'
+        ? posts.filter((p) => p.media?.length > 0 && !p.hasVideo)
+        : postFilter === 'videos'
+          ? posts.filter((p) => p.hasVideo)
+          : posts;
 
   const photoUrls = posts
     .filter((p) => p.media?.length > 0)
@@ -574,6 +642,13 @@ export default function Profile() {
             >
               Videos
             </button>
+            <button
+              type="button"
+              className={`profile-fb-filter ${postFilter === 'saved' ? 'active' : ''}`}
+              onClick={() => setPostFilter('saved')}
+            >
+              Saved
+            </button>
           </div>
 
           {/* What's on your mind */}
@@ -604,9 +679,16 @@ export default function Profile() {
           </div>
 
           {/* Posts feed */}
-          {filteredPosts.length === 0 && (
+          {postFilter === 'saved' && savedLoading && (
+            <div className="profile-fb-posts-empty">Loading saved posts…</div>
+          )}
+          {filteredPosts.length === 0 && !(postFilter === 'saved' && savedLoading) && (
             <div className="profile-fb-posts-empty">
-              {posts.length === 0 ? 'No posts yet. Share something!' : `No ${postFilter} posts.`}
+              {postFilter === 'saved'
+                ? 'Hakuna post zilizohifadhiwa. / No saved posts.'
+                : posts.length === 0
+                  ? 'No posts yet. Share something!'
+                  : `No ${postFilter} posts.`}
             </div>
           )}
           {filteredPosts.map((post) => (
@@ -614,6 +696,10 @@ export default function Profile() {
               key={post.id}
               post={post}
               currentUser={authUser}
+              saved={post.saved}
+              onSaveChange={(postId, nowSaved) => {
+                if (postFilter === 'saved' && !nowSaved) setSavedPosts((prev) => prev.filter((p) => p.id !== postId));
+              }}
             />
           ))}
         </div>
