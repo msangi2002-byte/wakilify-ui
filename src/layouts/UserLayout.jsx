@@ -232,9 +232,9 @@ export default function UserLayout() {
             <PlayCircle size={24} />
             <span>Reels</span>
           </Link>
-          <Link to="/app/shop" className={`user-app-bottom-nav-item ${location.pathname.startsWith('/app/shop') ? 'active' : ''}`} aria-label="Marketplace">
-            <ShoppingBag size={24} />
-            <span>Shop</span>
+          <Link to="/app/groups" className={`user-app-bottom-nav-item ${location.pathname.startsWith('/app/groups') ? 'active' : ''}`} aria-label="Groups">
+            <Users size={24} />
+            <span>Groups</span>
           </Link>
           <Link to="/app/messages" className="user-app-bottom-nav-item" aria-label="Messages">
             <MessageCircle size={24} />
