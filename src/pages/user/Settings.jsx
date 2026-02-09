@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useAuthStore } from '@/store/auth.store';
+import { useAuthStore, setAuth, getToken } from '@/store/auth.store';
 import { useUIStore, setUI, subscribeUI } from '@/store/ui.store';
+import { uploadProfilePic, uploadCoverPic } from '@/lib/api/users';
+import { getApiErrorMessage } from '@/lib/utils/apiError';
 import {
   User,
   Eye,
@@ -15,6 +17,7 @@ import {
   MapPin,
   CreditCard,
   Package,
+  Camera,
 } from 'lucide-react';
 
 function SettingRow({ label, description, children }) {
@@ -87,6 +90,45 @@ export default function Settings() {
 
   const displayName = user?.name ?? '';
   const displayEmail = user?.email ?? '';
+  const avatarInputRef = useRef(null);
+  const coverInputRef = useRef(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [coverUploading, setCoverUploading] = useState(false);
+  const [photoError, setPhotoError] = useState('');
+
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    setAvatarUploading(true);
+    setPhotoError('');
+    try {
+      const updated = await uploadProfilePic(file);
+      const token = getToken();
+      if (token) setAuth(updated, token);
+    } catch (err) {
+      setPhotoError(getApiErrorMessage(err, 'Failed to update profile picture'));
+    } finally {
+      setAvatarUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleCoverChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    setCoverUploading(true);
+    setPhotoError('');
+    try {
+      const updated = await uploadCoverPic(file);
+      const token = getToken();
+      if (token) setAuth(updated, token);
+    } catch (err) {
+      setPhotoError(getApiErrorMessage(err, 'Failed to update cover photo'));
+    } finally {
+      setCoverUploading(false);
+      e.target.value = '';
+    }
+  };
 
   return (
     <div className="settings-page">
@@ -94,6 +136,70 @@ export default function Settings() {
         <h1 className="settings-title">Settings</h1>
         <p className="settings-subtitle">Manage your account and preferences</p>
       </header>
+
+      <section className="user-app-card settings-section">
+        <h2 className="settings-section-title">
+          <Camera size={20} />
+          Profile photos
+        </h2>
+        <input
+          type="file"
+          ref={avatarInputRef}
+          accept="image/*"
+          className="settings-input-hidden"
+          aria-label="Upload profile picture"
+          onChange={handleAvatarChange}
+        />
+        <input
+          type="file"
+          ref={coverInputRef}
+          accept="image/*"
+          className="settings-input-hidden"
+          aria-label="Upload cover photo"
+          onChange={handleCoverChange}
+        />
+        <SettingRow label="Profile picture" description="Photo shown on your profile and posts">
+          <div className="settings-photo-row">
+            <div
+              className="settings-photo-preview settings-photo-preview-avatar"
+              style={{ backgroundImage: user?.profilePic ? `url(${user.profilePic})` : undefined }}
+            >
+              {!user?.profilePic && <User size={32} />}
+            </div>
+            <button
+              type="button"
+              className="settings-btn settings-btn-secondary"
+              onClick={() => avatarInputRef.current?.click()}
+              disabled={avatarUploading}
+            >
+              {avatarUploading ? 'Uploading…' : 'Change photo'}
+            </button>
+          </div>
+        </SettingRow>
+        <SettingRow label="Cover photo" description="Banner at the top of your profile">
+          <div className="settings-photo-row">
+            <div
+              className="settings-photo-preview settings-photo-preview-cover"
+              style={{ backgroundImage: user?.coverPic ? `url(${user.coverPic})` : undefined }}
+            >
+              {!user?.coverPic && <span>No cover</span>}
+            </div>
+            <button
+              type="button"
+              className="settings-btn settings-btn-secondary"
+              onClick={() => coverInputRef.current?.click()}
+              disabled={coverUploading}
+            >
+              {coverUploading ? 'Uploading…' : 'Change cover'}
+            </button>
+          </div>
+        </SettingRow>
+        {photoError && (
+          <p className="settings-error" role="alert">
+            {photoError}
+          </p>
+        )}
+      </section>
 
       <section className="user-app-card settings-section">
         <h2 className="settings-section-title">

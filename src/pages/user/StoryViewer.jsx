@@ -140,6 +140,7 @@ export default function StoryViewer() {
   const currentStory = currentStories[currentStoryIndex] ?? null;
   const mediaUrl = currentStory ? getMediaUrl(currentStory) : null;
   const isVideo = currentStory ? getMediaType(currentStory) === 'video' : false;
+  const isTextOnly = currentStory && !mediaUrl && (currentStory.caption ?? '').trim().length > 0;
 
   const goNext = useCallback(() => {
     if (currentStoryIndex < currentStories.length - 1) {
@@ -174,7 +175,7 @@ export default function StoryViewer() {
   }, [currentStoryIndex, currentGroupIndex, groups, navigate]);
 
   useEffect(() => {
-    if (!currentStory || paused || !mediaUrl) return;
+    if (!currentStory || paused) return;
     const duration = isVideo ? STORY_DURATION_MS * 2 : STORY_DURATION_MS;
     const start = startTimeRef.current ?? Date.now();
     startTimeRef.current = start;
@@ -272,9 +273,14 @@ export default function StoryViewer() {
             <img key={mediaUrl} src={mediaUrl} alt="" className="story-viewer-media" />
           )
         )}
+        {isTextOnly && (
+          <div className="story-viewer-text-story" style={{ background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 50%, #4c1d95 100%)' }}>
+            <p className="story-viewer-text-story-content">{currentStory.caption}</p>
+          </div>
+        )}
       </div>
 
-      {currentStory?.caption && (
+      {currentStory?.caption && mediaUrl && (
         <div className="story-viewer-caption">{currentStory.caption}</div>
       )}
 
