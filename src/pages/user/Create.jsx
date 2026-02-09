@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ImagePlus, X, Loader2 } from 'lucide-react';
-import { createPost } from '@/lib/api/posts';
+import { createPost, uploadChunked, CHUNK_THRESHOLD_BYTES } from '@/lib/api/posts';
+import { UploadProgressBar } from '@/components/ui/UploadProgressBar';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 
 const VISIBILITY_OPTIONS = [
@@ -19,6 +20,7 @@ export default function Create() {
   const [previews, setPreviews] = useState([]);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const handleFileChange = (e) => {
     const chosen = Array.from(e.target.files || []);
@@ -51,13 +53,32 @@ export default function Create() {
       return;
     }
     setSubmitting(true);
+    setUploadProgress(0);
     try {
-      await createPost({
-        caption: caption.trim(),
-        visibility,
-        postType: 'POST',
-        files,
-      });
+      const hasLargeFile = files.some((f) => f.size > CHUNK_THRESHOLD_BYTES);
+      if (hasLargeFile && files.length > 0) {
+        const mediaUrls = [];
+        const total = files.length;
+        for (let i = 0; i < files.length; i++) {
+          const url = await uploadChunked(files[i], 'posts', (pct) =>
+            setUploadProgress(((i + pct / 100) / total) * 100)
+          );
+          mediaUrls.push(url);
+        }
+        await createPost({
+          caption: caption.trim(),
+          visibility,
+          postType: 'POST',
+          mediaUrls,
+        });
+      } else {
+        await createPost({
+          caption: caption.trim(),
+          visibility,
+          postType: 'POST',
+          files,
+        });
+      }
       navigate('/app');
     } catch (err) {
       const msg = getApiErrorMessage(err, 'Failed to create post.');
@@ -69,6 +90,7 @@ export default function Create() {
       );
     } finally {
       setSubmitting(false);
+      setUploadProgress(0);
     }
   };
 
@@ -139,6 +161,9 @@ export default function Create() {
             )}
           </div>
           {error && <p className="user-app-create-error">{error}</p>}
+          {submitting && uploadProgress > 0 && uploadProgress < 100 && (
+            <UploadProgressBar progress={uploadProgress} label="Uploading…" />
+          )}
           <div className="user-app-create-actions">
             <button
               type="button"
@@ -154,10 +179,14 @@ export default function Create() {
               disabled={submitting}
             >
               {submitting ? (
-                <>
-                  <Loader2 size={18} className="user-app-create-spinner" />
-                  Posting…
-                </>
+                uploadProgress > 0 && uploadProgress < 100 ? (
+                  <>Uploading {Math.round(uploadProgress)}%…</>
+                ) : (
+                  <>
+                    <Loader2 size={18} className="user-app-create-spinner" />
+                    Posting…
+                  </>
+                )
               ) : (
                 'Post'
               )}

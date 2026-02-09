@@ -3,7 +3,8 @@ import { useParams } from 'react-router-dom';
 import { Users, LogOut, Loader2, Settings, X, ImagePlus } from 'lucide-react';
 import { GroupPost } from '@/components/social/GroupPost';
 import { getCommunity, joinCommunity, leaveCommunity, updateCommunitySettings } from '@/lib/api/communities';
-import { getPostsByCommunity, createPost } from '@/lib/api/posts';
+import { getPostsByCommunity, createPost, uploadChunked, CHUNK_THRESHOLD_BYTES } from '@/lib/api/posts';
+import { UploadProgressBar } from '@/components/ui/UploadProgressBar';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import '@/styles/user-app.css';
 
@@ -53,6 +54,7 @@ export default function GroupDetail() {
   const [createCaption, setCreateCaption] = useState('');
   const [createFiles, setCreateFiles] = useState([]);
   const [createSubmitting, setCreateSubmitting] = useState(false);
+  const [createUploadProgress, setCreateUploadProgress] = useState(0);
   const [createError, setCreateError] = useState('');
 
   useEffect(() => {
@@ -132,12 +134,30 @@ export default function GroupDetail() {
     if (!id || !createCaption.trim() || createSubmitting) return;
     setCreateError('');
     setCreateSubmitting(true);
+    setCreateUploadProgress(0);
     try {
-      await createPost({
-        caption: createCaption.trim(),
-        communityId: id,
-        files: createFiles,
-      });
+      const hasLargeFile = createFiles.some((f) => f.size > CHUNK_THRESHOLD_BYTES);
+      if (hasLargeFile && createFiles.length > 0) {
+        const mediaUrls = [];
+        const total = createFiles.length;
+        for (let i = 0; i < createFiles.length; i++) {
+          const url = await uploadChunked(createFiles[i], 'posts', (pct) =>
+            setCreateUploadProgress(((i + pct / 100) / total) * 100)
+          );
+          mediaUrls.push(url);
+        }
+        await createPost({
+          caption: createCaption.trim(),
+          communityId: id,
+          mediaUrls,
+        });
+      } else {
+        await createPost({
+          caption: createCaption.trim(),
+          communityId: id,
+          files: createFiles,
+        });
+      }
       setCreateCaption('');
       setCreateFiles([]);
       const list = await getPostsByCommunity(id, { size: 50 });
@@ -146,6 +166,7 @@ export default function GroupDetail() {
       setCreateError(getApiErrorMessage(err, 'Failed to post'));
     } finally {
       setCreateSubmitting(false);
+      setCreateUploadProgress(0);
     }
   };
 
@@ -289,6 +310,9 @@ export default function GroupDetail() {
         <div className="group-create-post-section">
           <form onSubmit={handleCreatePost} className="group-create-post-form">
             {createError && <p className="group-create-post-error" role="alert">{createError}</p>}
+            {createSubmitting && createUploadProgress > 0 && createUploadProgress < 100 && (
+              <UploadProgressBar progress={createUploadProgress} label="Uploading…" />
+            )}
             <textarea
               placeholder="Write something to the group..."
               value={createCaption}
@@ -310,7 +334,13 @@ export default function GroupDetail() {
                 Photo
               </label>
               <button type="submit" className="group-detail-btn group-detail-btn-join" disabled={createSubmitting || !createCaption.trim()}>
-                {createSubmitting ? <Loader2 size={18} className="spin" /> : null}
+                {createSubmitting ? (
+                  createUploadProgress > 0 && createUploadProgress < 100 ? (
+                    `${Math.round(createUploadProgress)}%`
+                  ) : (
+                    <Loader2 size={18} className="spin" />
+                  )
+                ) : null}
                 Post
               </button>
             </div>

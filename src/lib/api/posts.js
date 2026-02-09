@@ -3,6 +3,12 @@ import { api } from './client';
 const defaultPage = 0;
 const defaultSize = 20;
 
+/** Chunk size for resumable upload (1MB). Each chunk stays under Nginx 1MB limit. */
+const CHUNK_SIZE = 1024 * 1024;
+
+/** Use chunked upload when file exceeds this (1MB) */
+const CHUNK_THRESHOLD = CHUNK_SIZE;
+
 function toList(data) {
   if (Array.isArray(data)) return data;
   // { success, data: { content: [...] } } (wakilfy API)
@@ -148,17 +154,106 @@ export async function deleteComment(commentId) {
 }
 
 /**
+ * Chunked upload – 3-step flow with Upload Ticket (backend-generated unique ID).
+ * 1. Start: obtain uploadId from backend (avoids conflicts when many users upload "video.mp4")
+ * 2. Chunks: send file in 1MB pieces
+ * 3. Complete: merge and get final URL
+ *
+ * @param {File} file
+ * @param {string} subdirectory - e.g. 'posts', 'avatars'
+ * @param {(pct: number) => void} [onProgress] - 0–100, called as chunks upload
+ */
+export async function uploadChunked(file, subdirectory = 'posts', onProgress) {
+  const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+
+  // Step 1: Obtain Upload Ticket (backend generates unique uploadId)
+  const startRes = await api.post('/upload/start', {
+    filename: file.name,
+    subdirectory,
+    totalChunks,
+  });
+  const uploadId = startRes.data?.data?.uploadId ?? startRes.data?.uploadId;
+  if (!uploadId) throw new Error('Failed to obtain upload ticket');
+
+  if (onProgress) onProgress(2); // "Preparing..."
+
+  // Step 2: Send chunks
+  for (let i = 0; i < totalChunks; i++) {
+    const start = i * CHUNK_SIZE;
+    const end = Math.min(start + CHUNK_SIZE, file.size);
+    const chunk = file.slice(start, end);
+
+    const formData = new FormData();
+    formData.append('uploadId', uploadId);
+    formData.append('chunkIndex', String(i));
+    formData.append('totalChunks', String(totalChunks));
+    formData.append('filename', file.name);
+    formData.append('chunk', chunk);
+
+    await api.post('/upload/chunk', formData);
+    const progress = Math.round(((i + 1) / totalChunks) * 98); // 2–100% for chunks
+    if (onProgress) onProgress(Math.min(98, progress + 2));
+  }
+
+  // Step 3: Finalize
+  const { data } = await api.post('/upload/complete', {
+    uploadId,
+    filename: file.name,
+    subdirectory,
+  });
+  if (onProgress) onProgress(100);
+
+  const url = data?.data?.url ?? data?.url;
+  if (!url) throw new Error('Upload complete but no URL returned');
+  return url;
+}
+
+/**
+ * Upload a file: chunked if large, otherwise not used here (caller uses createPost with files).
+ * @returns {Promise<string>} public URL
+ */
+export async function uploadFileSmart(file, subdirectory = 'posts', onProgress) {
+  if (file.size > CHUNK_THRESHOLD) {
+    return uploadChunked(file, subdirectory, onProgress);
+  }
+  return null; // Caller should use createPost with files for small files
+}
+
+/** Threshold in bytes – use chunked upload when file exceeds this */
+export const CHUNK_THRESHOLD_BYTES = CHUNK_THRESHOLD;
+
+/**
  * Create a post (text-only, with image(s), or multiple files).
- * Uses multipart/form-data: field "data" (JSON) and optional "files" (one or more).
+ * - If mediaUrls provided: POST JSON (use after chunked upload).
+ * - Else if files provided and all small: multipart/form-data.
  * For repost: pass originalPostId and postType 'POST'.
  * For group post: pass communityId (UUID string).
  * POST /api/v1/posts
  */
-export async function createPost({ caption = '', visibility = 'PUBLIC', postType = 'POST', originalPostId = null, communityId = null, files = [] }) {
+export async function createPost({
+  caption = '',
+  visibility = 'PUBLIC',
+  postType = 'POST',
+  originalPostId = null,
+  communityId = null,
+  productTags = null,
+  files = [],
+  mediaUrls = null,
+}) {
+  if (mediaUrls && mediaUrls.length > 0) {
+    const payload = { caption, visibility, postType, mediaUrls };
+    if (originalPostId) payload.originalPostId = originalPostId;
+    if (communityId) payload.communityId = communityId;
+    if (productTags?.length) payload.productTags = productTags;
+    const { data } = await api.post('/posts', payload);
+    return data;
+  }
+
   const formData = new FormData();
   const dataPayload = { caption, visibility, postType };
   if (originalPostId) dataPayload.originalPostId = originalPostId;
   if (communityId) dataPayload.communityId = communityId;
+  if (productTags?.length) dataPayload.productTags = productTags;
   formData.append('data', new Blob([JSON.stringify(dataPayload)], { type: 'application/json' }));
   for (const file of files) {
     if (file instanceof File) formData.append('files', file);

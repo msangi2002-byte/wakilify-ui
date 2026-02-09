@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, ImagePlus, Type, Loader2, Settings } from 'lucide-react';
-import { createPost } from '@/lib/api/posts';
+import { createPost, uploadChunked, CHUNK_THRESHOLD_BYTES } from '@/lib/api/posts';
+import { UploadProgressBar } from '@/components/ui/UploadProgressBar';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import { useAuthStore } from '@/store/auth.store';
 import { APP_NAME, LOGO_PNG, LOGO_ICON } from '@/lib/constants/brand';
@@ -69,6 +70,7 @@ export default function StoryCreate() {
   const [textStory, setTextStory] = useState('');
   const [textGradient, setTextGradient] = useState(TEXT_GRADIENTS[0]);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState('');
 
   const handleFileChange = (e) => {
@@ -100,20 +102,33 @@ export default function StoryCreate() {
       return;
     }
     setUploading(true);
+    setUploadProgress(0);
     setError('');
     try {
-      await createPost({
-        caption: caption.trim(),
-        postType: 'STORY',
-        visibility: 'PUBLIC',
-        files: [file],
-      });
+      let mediaUrl = null;
+      if (file.size > CHUNK_THRESHOLD_BYTES) {
+        mediaUrl = await uploadChunked(file, 'posts', (pct) => setUploadProgress(pct));
+        await createPost({
+          caption: caption.trim(),
+          postType: 'STORY',
+          visibility: 'PUBLIC',
+          mediaUrls: [mediaUrl],
+        });
+      } else {
+        await createPost({
+          caption: caption.trim(),
+          postType: 'STORY',
+          visibility: 'PUBLIC',
+          files: [file],
+        });
+      }
       goBack();
       navigate('/app', { replace: true });
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to post story. Try again.'));
     } finally {
       setUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -158,10 +173,18 @@ export default function StoryCreate() {
             onClick={handleSharePhoto}
             disabled={uploading}
           >
-            {uploading ? <Loader2 size={20} className="spin" /> : 'Share to story'}
+            {uploading ? (
+              uploadProgress > 0 && uploadProgress < 100 ? (
+                <span>{Math.round(uploadProgress)}%</span>
+              ) : (
+                <Loader2 size={20} className="spin" />
+              )
+            ) : (
+              'Share to story'
+            )}
           </button>
         </header>
-        <div className="story-create-body">
+        <div className="story-create-body" style={{ position: 'relative' }}>
           <div className="story-create-preview-wrap">
             <div className="story-create-preview">
               {isVideo ? (
@@ -184,6 +207,14 @@ export default function StoryCreate() {
               </div>
             </div>
           </div>
+          {uploading && uploadProgress > 0 && (
+            <div className="story-create-progress-wrap">
+              <UploadProgressBar
+                progress={uploadProgress}
+                label={uploadProgress >= 100 ? 'Finalizing…' : 'Uploading…'}
+              />
+            </div>
+          )}
         </div>
         {error && <div className="story-create-error" role="alert">{error}</div>}
       </div>
