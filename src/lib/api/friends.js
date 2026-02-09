@@ -1,0 +1,41 @@
+import { api } from './client';
+
+const defaultPage = 0;
+const defaultSize = 20;
+
+function toList(data) {
+  if (Array.isArray(data)) return data;
+  if (data?.data?.content && Array.isArray(data.data.content)) return data.data.content;
+  if (data?.content && Array.isArray(data.content)) return data.content;
+  if (data?.data && Array.isArray(data.data)) return data.data;
+  return [];
+}
+
+/**
+ * Get my friends (auth required)
+ * GET /api/v1/friends?page=0&size=20
+ */
+export async function getFriends(params = {}) {
+  const { data } = await api.get('/friends', {
+    params: { page: defaultPage, size: defaultSize, ...params },
+  });
+  return toList(data);
+}
+
+/**
+ * Follow user (auth required)
+ * POST /api/v1/social/follow/:userId
+ */
+export async function followUser(userId) {
+  const { data } = await api.post(`/social/follow/${userId}`);
+  return data?.data ?? data;
+}
+
+/**
+ * Unfollow user (auth required)
+ * DELETE /api/v1/social/follow/:userId
+ */
+export async function unfollowUser(userId) {
+  const { data } = await api.delete(`/social/follow/${userId}`);
+  return data?.data ?? data;
+}

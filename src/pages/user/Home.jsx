@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ImagePlus, Users, Video, MoreHorizontal, Plus, ThumbsUp, MessageCircle, Share2 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
+import { getPublicFeed, likePost, unlikePost, getComments, addComment, deleteComment } from '@/lib/api/posts';
 
 const storyFriends = [
   { name: 'Bruittun Friends', id: '1' },
@@ -35,11 +36,109 @@ function Avatar({ user, size = 40, className = '' }) {
   );
 }
 
-function FeedPost({ author, time, description, mediaPlaceholder, likesCount = 0, commentsCount = 0, sharesCount = 0 }) {
-  const [liked, setLiked] = useState(false);
+function formatPostTime(createdAt) {
+  if (!createdAt) return '';
+  const date = new Date(createdAt);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m`;
+  if (diffHours < 24) return `${diffHours}h`;
+  if (diffDays < 7) return `${diffDays}d`;
+  return date.toLocaleDateString();
+}
+
+function formatCommentTime(createdAt) {
+  if (!createdAt) return '';
+  const date = new Date(createdAt);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m`;
+  if (diffHours < 24) return `${diffHours}h`;
+  if (diffDays < 7) return `${diffDays}d`;
+  return date.toLocaleDateString();
+}
+
+function FeedPost({ id, author, time, description, media = [], liked: initialLiked = false, likesCount: initialLikesCount = 0, commentsCount: initialCommentsCount = 0, sharesCount = 0 }) {
+  const { user: currentUser } = useAuthStore();
+  const [liked, setLiked] = useState(!!initialLiked);
+  const [likesCount, setLikesCount] = useState(initialLikesCount);
+  const [likeLoading, setLikeLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+  const [comments, setComments] = useState([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [commentSubmitting, setCommentSubmitting] = useState(false);
+  const [commentsCount, setCommentsCount] = useState(initialCommentsCount);
   const shortDesc = description && description.length > 120 ? description.slice(0, 120) + '...' : description;
   const showSeeMore = description && description.length > 120 && !expanded;
+
+  const handleLikeClick = async () => {
+    if (!id || likeLoading) return;
+    const nextLiked = !liked;
+    setLiked(nextLiked);
+    setLikesCount((c) => (nextLiked ? c + 1 : Math.max(0, c - 1)));
+    setLikeLoading(true);
+    try {
+      if (nextLiked) await likePost(id);
+      else await unlikePost(id);
+    } catch {
+      setLiked(!nextLiked);
+      setLikesCount((c) => (nextLiked ? c - 1 : c + 1));
+    } finally {
+      setLikeLoading(false);
+    }
+  };
+
+  const loadComments = async () => {
+    if (!id) return;
+    setCommentsLoading(true);
+    try {
+      const list = await getComments(id, { page: 0, size: 20 });
+      setComments(Array.isArray(list) ? list : []);
+    } catch {
+      setComments([]);
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
+
+  const handleCommentClick = () => {
+    const next = !showComments;
+    setShowComments(next);
+    if (next && comments.length === 0) loadComments();
+  };
+
+  const handleSubmitComment = async (e) => {
+    e.preventDefault();
+    const content = commentText.trim();
+    if (!id || !content || commentSubmitting) return;
+    setCommentSubmitting(true);
+    try {
+      await addComment(id, content);
+      setCommentText('');
+      setCommentsCount((c) => c + 1);
+      await loadComments();
+    } finally {
+      setCommentSubmitting(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    try {
+      await deleteComment(commentId);
+      setComments((prev) => prev.filter((c) => c.id !== commentId));
+      setCommentsCount((c) => Math.max(0, c - 1));
+    } catch (_) {}
+  };
 
   return (
     <div className="user-app-card feed-post">
@@ -66,13 +165,13 @@ function FeedPost({ author, time, description, mediaPlaceholder, likesCount = 0,
           )}
         </div>
       )}
-      <div className="feed-post-body">
-        {mediaPlaceholder && (
-          <div className="feed-post-media-placeholder">
-            <div className="feed-post-media-inner" />
-          </div>
-        )}
-      </div>
+      {(media?.length > 0) && (
+        <div className="feed-post-body">
+          {media.map((url, i) => (
+            <img key={i} src={url} alt="" />
+          ))}
+        </div>
+      )}
       <div className="feed-post-engagement">
         <div className="feed-post-counts">
           {likesCount > 0 && (
@@ -82,7 +181,9 @@ function FeedPost({ author, time, description, mediaPlaceholder, likesCount = 0,
             </span>
           )}
           <span className="feed-post-comments-share">
-            {commentsCount > 0 && <span>{commentsCount} comments</span>}
+            <button type="button" className="feed-post-comments-link" onClick={handleCommentClick}>
+              {commentsCount} comments
+            </button>
             {sharesCount > 0 && <span>{sharesCount} shares</span>}
           </span>
         </div>
@@ -90,12 +191,17 @@ function FeedPost({ author, time, description, mediaPlaceholder, likesCount = 0,
           <button
             type="button"
             className={`feed-post-action ${liked ? 'active' : ''}`}
-            onClick={() => setLiked(!liked)}
+            onClick={handleLikeClick}
+            disabled={likeLoading}
           >
             <ThumbsUp size={20} />
             Like
           </button>
-          <button type="button" className="feed-post-action">
+          <button
+            type="button"
+            className={`feed-post-action ${showComments ? 'active' : ''}`}
+            onClick={handleCommentClick}
+          >
             <MessageCircle size={20} />
             Comment
           </button>
@@ -105,12 +211,113 @@ function FeedPost({ author, time, description, mediaPlaceholder, likesCount = 0,
           </button>
         </div>
       </div>
+      {showComments && (
+        <div className="feed-post-comments">
+          {commentsLoading ? (
+            <p className="feed-post-comments-loading">Loading comments…</p>
+          ) : (
+            <ul className="feed-post-comments-list">
+              {comments.map((c) => {
+                const commentAuthor = c.author ?? c.user ?? {};
+                const name = commentAuthor.name ?? commentAuthor.username ?? 'User';
+                const profilePic = commentAuthor.profilePic ?? commentAuthor.avatar ?? commentAuthor.image;
+                const isOwn = currentUser?.id && (commentAuthor.id === currentUser.id || c.userId === currentUser.id);
+                return (
+                  <li key={c.id} className="feed-post-comment-item">
+                    <Avatar user={{ name, profilePic }} size={32} className="feed-post-comment-avatar" />
+                    <div className="feed-post-comment-body">
+                      <div className="feed-post-comment-bubble">
+                        <span className="feed-post-comment-author">{name}</span>
+                        <span className="feed-post-comment-content">{c.content ?? c.text ?? ''}</span>
+                      </div>
+                      <div className="feed-post-comment-meta">
+                        <span className="feed-post-comment-time">{formatCommentTime(c.createdAt ?? c.created_at)}</span>
+                        {isOwn && (
+                          <button
+                            type="button"
+                            className="feed-post-comment-delete"
+                            onClick={() => handleDeleteComment(c.id)}
+                            aria-label="Delete comment"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <form onSubmit={handleSubmitComment} className="feed-post-comment-form">
+            <Avatar user={currentUser} size={32} className="feed-post-comment-form-avatar" />
+            <div className="feed-post-comment-form-wrap">
+              <input
+                type="text"
+                className="feed-post-comment-input"
+                placeholder="Write a comment..."
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                maxLength={2000}
+              />
+              <button type="submit" className="feed-post-comment-submit" disabled={!commentText.trim() || commentSubmitting}>
+                {commentSubmitting ? '…' : 'Comment'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
 
+function normalizePost(post) {
+  const author = post.author ?? post.user ?? {};
+  const name = author.name ?? author.username ?? 'User';
+  const profilePic = author.profilePic ?? author.avatar ?? author.image;
+  const media =
+    post.media ??
+    post.attachments ??
+    post.images ??
+    (post.mediaUrls ? (Array.isArray(post.mediaUrls) ? post.mediaUrls : [post.mediaUrls]) : []);
+  const urls = Array.isArray(media)
+    ? media.map((m) => (typeof m === 'string' ? m : m?.url ?? m?.src))
+    : [];
+  return {
+    id: post.id,
+    author: { name, profilePic },
+    time: formatPostTime(post.createdAt ?? post.created_at),
+    description: post.caption ?? post.content ?? post.description ?? '',
+    media: urls.filter(Boolean),
+    liked: !!post.userReaction,
+    likesCount: post.reactionsCount ?? post.likesCount ?? post.likes_count ?? post.likeCount ?? 0,
+    commentsCount: post.commentsCount ?? post.comments_count ?? post.commentCount ?? 0,
+    sharesCount: post.sharesCount ?? post.shares_count ?? 0,
+  };
+}
+
 export default function Home() {
   const { user } = useAuthStore();
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError('');
+    getPublicFeed({ page: 0, size: 20 })
+      .then((list) => {
+        if (!cancelled) setPosts(Array.isArray(list) ? list.map(normalizePost) : []);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err.response?.data?.message || err.message || 'Failed to load posts');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <>
@@ -144,21 +351,15 @@ export default function Home() {
 
       {/* What's on your mind? */}
       <div className="user-app-card">
-        <div className="user-app-composer">
+        <Link to="/app/create" className="user-app-composer">
           <Avatar user={user} size={40} className="user-app-composer-avatar" />
-          <input
-            type="text"
-            placeholder="What's on your mind?"
-            className="user-app-composer-input"
-            readOnly
-            aria-label="Create post"
-          />
-        </div>
+          <span className="user-app-composer-input user-app-composer-placeholder">What's on your mind?</span>
+        </Link>
         <div className="user-app-composer-actions">
-          <button type="button" className="user-app-composer-btn post">
+          <Link to="/app/create" className="user-app-composer-btn post">
             <ImagePlus size={24} />
             Post
-          </button>
+          </Link>
           <button type="button" className="user-app-composer-btn trade">
             <Users size={24} />
             Trade
@@ -173,16 +374,36 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Feed post – profile, name, description, time → media → like/comment/share */}
-      <FeedPost
-        author={{ name: 'Wakilfy Official' }}
-        time="29 hrs"
-        description="Connect, trade, and earn in one place. Discover products from your feed and support local businesses."
-        mediaPlaceholder
-        likesCount={1400}
-        commentsCount={34}
-        sharesCount={2}
-      />
+      {/* Feed posts */}
+      {error && (
+        <div className="user-app-card" style={{ padding: 16, color: '#b91c1c' }}>
+          {error}
+        </div>
+      )}
+      {loading && (
+        <div className="user-app-card" style={{ padding: 24, textAlign: 'center', color: '#65676b' }}>
+          Loading posts…
+        </div>
+      )}
+      {!loading && !error && posts.length === 0 && (
+        <div className="user-app-card" style={{ padding: 24, textAlign: 'center', color: '#65676b' }}>
+          No posts yet. Be the first to post!
+        </div>
+      )}
+      {!loading && posts.length > 0 && posts.map((p) => (
+        <FeedPost
+          key={p.id ?? p.time + p.description?.slice(0, 20)}
+          id={p.id}
+          author={p.author}
+          time={p.time}
+          description={p.description}
+          media={p.media}
+          liked={p.liked}
+          likesCount={p.likesCount}
+          commentsCount={p.commentsCount}
+          sharesCount={p.sharesCount}
+        />
+      ))}
     </>
   );
 }

@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 
 let state = {
   user: null,
-  token: null,
+  token: null, // access token
+  refreshToken: null,
   isAuthenticated: false,
 };
 
@@ -29,26 +30,65 @@ export function useAuthStore() {
 }
 
 const TOKEN_KEY = 'wakilify_token';
+const REFRESH_TOKEN_KEY = 'wakilify_refresh_token';
 const USER_KEY = 'wakilify_user';
+
+/** Returns current access token (in-memory or localStorage). For API client use. */
+export function getToken() {
+  if (state.token) return state.token;
+  if (typeof window !== 'undefined') {
+    try {
+      return window.localStorage.getItem(TOKEN_KEY);
+    } catch (_) {}
+  }
+  return null;
+}
+
+/** Returns refresh token for token refresh. */
+export function getRefreshToken() {
+  if (state.refreshToken) return state.refreshToken;
+  if (typeof window !== 'undefined') {
+    try {
+      return window.localStorage.getItem(REFRESH_TOKEN_KEY);
+    } catch (_) {}
+  }
+  return null;
+}
+
+/** Current user (for refresh flow). */
+export function getAuthUser() {
+  return state.user;
+}
 
 function rehydrate() {
   if (typeof window === 'undefined') return;
   try {
     const token = window.localStorage.getItem(TOKEN_KEY);
+    const refreshToken = window.localStorage.getItem(REFRESH_TOKEN_KEY);
     const userJson = window.localStorage.getItem(USER_KEY);
     if (token && userJson) {
       const user = JSON.parse(userJson);
-      state = { user, token, isAuthenticated: true };
+      state = { user, token, refreshToken, isAuthenticated: true };
     }
   } catch (_) {}
 }
 rehydrate();
 
-export function setAuth(user, token) {
-  state = { user, token, isAuthenticated: !!user && !!token };
-  if (typeof window !== 'undefined' && token) {
+/**
+ * Set auth state after login. Use accessToken for API requests; refreshToken for refreshing when access expires.
+ */
+export function setAuth(user, accessToken, refreshToken = null) {
+  state = {
+    user,
+    token: accessToken,
+    refreshToken: refreshToken ?? state.refreshToken,
+    isAuthenticated: !!(user && accessToken),
+  };
+  if (typeof window !== 'undefined' && accessToken) {
     try {
-      window.localStorage.setItem(TOKEN_KEY, token);
+      window.localStorage.setItem(TOKEN_KEY, accessToken);
+      if (state.refreshToken)
+        window.localStorage.setItem(REFRESH_TOKEN_KEY, state.refreshToken);
       if (user) window.localStorage.setItem(USER_KEY, JSON.stringify(user));
     } catch (_) {}
   }
@@ -56,10 +96,11 @@ export function setAuth(user, token) {
 }
 
 export function clearAuth() {
-  state = { user: null, token: null, isAuthenticated: false };
+  state = { user: null, token: null, refreshToken: null, isAuthenticated: false };
   if (typeof window !== 'undefined') {
     try {
       window.localStorage.removeItem(TOKEN_KEY);
+      window.localStorage.removeItem(REFRESH_TOKEN_KEY);
       window.localStorage.removeItem(USER_KEY);
     } catch (_) {}
   }

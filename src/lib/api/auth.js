@@ -1,5 +1,8 @@
+import axios from 'axios';
 import { api } from './client';
-import { setAuth } from '@/store/auth.store';
+import { setAuth, getRefreshToken, getAuthUser } from '@/store/auth.store';
+
+const baseURL = import.meta.env.VITE_API_URL || '/api/v1';
 
 // Auth API request/response shapes follow route.txt (Wakify API)
 
@@ -22,7 +25,7 @@ export async function register(payload) {
 
 /**
  * POST /api/v1/auth/login
- * Request body (route.txt): { emailOrPhone, password }
+ * Request: { emailOrPhone, password }
  * Response: { success, message, data: { accessToken, refreshToken, user } }
  */
 export async function login(payload) {
@@ -32,7 +35,7 @@ export async function login(payload) {
   };
   const { data } = await api.post('/auth/login', body);
   if (data?.data?.accessToken != null && data?.data?.user != null) {
-    setAuth(data.data.user, data.data.accessToken);
+    setAuth(data.data.user, data.data.accessToken, data.data.refreshToken ?? null);
   }
   return data;
 }
@@ -78,6 +81,27 @@ export async function resetPassword(payload) {
     newPassword: payload.newPassword,
   });
   return data;
+}
+
+/**
+ * POST /api/v1/auth/refresh
+ * Request: { refreshToken }
+ * Response: { data: { accessToken, refreshToken? } } or { accessToken, refreshToken? }
+ * Used by API client on 401 to get a new access token.
+ */
+export async function refreshTokens() {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) return null;
+  const { data } = await axios.post(`${baseURL}/auth/refresh`, { refreshToken }, {
+    headers: { 'Content-Type': 'application/json' },
+  });
+  const accessToken = data?.data?.accessToken ?? data?.accessToken;
+  const newRefresh = data?.data?.refreshToken ?? data?.refreshToken ?? refreshToken;
+  if (accessToken) {
+    setAuth(getAuthUser(), accessToken, newRefresh);
+    return accessToken;
+  }
+  return null;
 }
 
 /**

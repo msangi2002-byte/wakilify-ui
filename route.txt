@@ -1,0 +1,2658 @@
+# Auth Routes
+route: /api/v1/auth/register
+method: POST
+example: {
+    "name": "John Doe",
+    "phone": "+1234567890",
+    "password": "password123",
+    "role": "USER"
+}
+output: {
+    "success": true,
+    "message": "User registered successfully",
+    "data": {
+        "id": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+        "name": "John Doe",
+        "email": null,
+        "phone": "+1234567890",
+        "role": "USER",
+        "isVerified": false,
+        "isActive": true,
+        "createdAt": "2023-10-27T10:00:00",
+        "updatedAt": "2023-10-27T10:00:00"
+    }
+}
+----------------------
+
+route: /api/v1/auth/resend-otp
+method: POST
+example: {
+    "phone": "+1234567890"
+}
+output: {
+    "success": true,
+    "message": "OTP resent successfully"
+}
+----------------------
+
+route: /api/v1/auth/verify-otp
+method: POST
+example: {
+    "phone": "+1234567890",
+    "otp": "123456"
+}
+output: {
+    "success": true,
+    "message": "Phone verified successfully",
+    "data": {
+        "verified": true
+    }
+}
+----------------------
+
+route: /api/v1/auth/login
+method: POST
+example: {
+    "emailOrPhone": "+255678165524",
+    "password": "password123"
+}
+output: {
+    "success": true,
+    "message": "Login successful",
+    "data": {
+        "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+        "refreshToken": "d7e8f9a0-b1c2-4d3e-5f6g-7h8i9j0k1l2",
+        "user": {
+            "id": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+            "name": "John Doe",
+            "email": "john.doe@example.com",
+            "phone": "+1234567890",
+            "role": "USER",
+            "profilePic": "https://example.com/profiles/john.jpg",
+            "isVerified": true
+        }
+    }
+}
+----------------------
+
+route: /api/v1/auth/refresh
+method: POST
+example: {
+    "refreshToken": "d7e8f9a0-b1c2-4d3e-5f6g-7h8i9j0k1l2"
+}
+output: {
+    "success": true,
+    "data": {
+        "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.new.token"
+    }
+}
+----------------------
+
+route: /api/v1/auth/forgot-password
+method: POST
+example: {
+    "phone": "+1234567890"
+}
+output: {
+    "success": true,
+    "message": "Password reset OTP sent"
+}
+----------------------
+
+route: /api/v1/auth/reset-password
+method: POST
+example: {
+    "phone": "+1234567890",
+    "otp": "123456",
+    "newPassword": "newPassword123"
+}
+output: {
+    "success": true,
+    "message": "Password reset successfully"
+}
+----------------------
+
+route: /api/v1/auth/logout
+method: POST
+example: {}
+output: {
+    "success": true,
+    "message": "Logged out successfully"
+}
+----------------------
+
+# User Routes
+route: /api/v1/users/me
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "id": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+        "name": "John Doe",
+        "email": "john.doe@example.com",
+        "phone": "+1234567890",
+        "bio": "Software Developer",
+        "profilePic": "https://example.com/profiles/john.jpg",
+        "coverPic": "https://example.com/covers/john.jpg",
+        "role": "USER",
+        "followersCount": 150,
+        "followingCount": 45,
+        "postsCount": 12,
+        "isVerified": true,
+        "isActive": true,
+        "createdAt": "2023-10-27T10:00:00"
+    }
+}
+----------------------
+
+route: /api/v1/users/me
+method: PUT
+example: {
+    "name": "Jane Doe",
+    "bio": "Updated bio"
+}
+output: {
+    "success": true,
+    "message": "Profile updated successfully",
+    "data": {
+        "id": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+        "name": "Jane Doe",
+        "email": "john.doe@example.com",
+        "phone": "+1234567890",
+        "bio": "Updated bio",
+        "role": "USER",
+        "isVerified": true
+    }
+}
+----------------------
+
+route: /api/v1/users/{userId}
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "id": "b2ffcd11-8d2a-4ef8-cc7e-8cc9bd380b22",
+        "name": "Alice Smith",
+        "bio": "Digital Artist",
+        "profilePic": "https://example.com/profiles/alice.jpg",
+        "role": "USER",
+        "followersCount": 1200,
+        "followingCount": 300,
+        "postsCount": 85,
+        "isFollowing": false
+    }
+}
+----------------------
+
+route: /api/v1/users/search
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": "b2ffcd11-8d2a-4ef8-cc7e-8cc9bd380b22",
+                "name": "Alice Smith",
+                "profilePic": "https://example.com/profiles/alice.jpg",
+                "role": "USER"
+            }
+        ],
+        "pageable": {
+            "pageNumber": 0,
+            "pageSize": 20,
+            "sort": { "sorted": false, "unsorted": true, "empty": true }
+        },
+        "totalPages": 1,
+        "totalElements": 1,
+        "last": true,
+        "size": 20,
+        "number": 0,
+        "empty": false
+    }
+}
+----------------------
+
+# Business Routes
+route: /api/v1/businesses/{id}
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "id": "c3eefd22-9e3b-5fa9-dd8f-9dd0ce491c33",
+        "name": "Tech Gadgets Store",
+        "description": "Best gadgets in town",
+        "category": "Electronics",
+        "logo": "https://example.com/logos/tech.jpg",
+        "coverImage": "https://example.com/covers/tech.jpg",
+        "region": "Dar es Salaam",
+        "district": "Kinondoni",
+        "ward": "Kijitonyama",
+        "street": "Mwai Kibaki Rd",
+        "phone": "+255712345678",
+        "email": "info@techgadgets.com",
+        "website": "https://techgadgets.com",
+        "status": "active",
+        "isVerified": true,
+        "rating": 4.5,
+        "reviewsCount": 120,
+        "followersCount": 500,
+        "owner": {
+            "id": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+            "name": "John Doe"
+        }
+    }
+}
+----------------------
+
+route: /api/v1/businesses
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": "c3eefd22-9e3b-5fa9-dd8f-9dd0ce491c33",
+                "name": "Tech Gadgets Store",
+                "category": "Electronics",
+                "logo": "https://example.com/logos/tech.jpg",
+                "rating": 4.5,
+                "isVerified": true
+            }
+        ],
+        "totalPages": 5,
+        "totalElements": 98,
+        "size": 20,
+        "number": 0
+    }
+}
+----------------------
+
+route: /api/v1/businesses/search
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": "c3eefd22-9e3b-5fa9-dd8f-9dd0ce491c33",
+                "name": "Tech Gadgets Store",
+                "category": "Electronics"
+            }
+        ],
+        "totalPages": 1,
+        "totalElements": 1
+    }
+}
+----------------------
+
+route: /api/v1/businesses/category/{category}
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": "c3eefd22-9e3b-5fa9-dd8f-9dd0ce491c33",
+                "name": "Tech Gadgets Store",
+                "category": "Electronics"
+            }
+        ],
+        "totalPages": 2,
+        "totalElements": 30
+    }
+}
+----------------------
+
+route: /api/v1/businesses/region/{region}
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": "c3eefd22-9e3b-5fa9-dd8f-9dd0ce491c33",
+                "name": "Tech Gadgets Store",
+                "region": "Dar es Salaam"
+            }
+        ],
+        "totalPages": 3,
+        "totalElements": 50
+    }
+}
+----------------------
+
+route: /api/v1/business/me
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "id": "c3eefd22-9e3b-5fa9-dd8f-9dd0ce491c33",
+        "name": "Tech Gadgets Store",
+        "ownerId": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+        "status": "APPROVED",
+        "isVerified": true,
+        "subscription": {
+            "plan": "PREMIUM",
+            "status": "ACTIVE",
+            "expiresAt": "2024-10-27T10:00:00"
+        }
+    }
+}
+----------------------
+
+route: /api/v1/business/dashboard
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "totalOrders": 150,
+        "pendingOrders": 12,
+        "totalRevenue": 2500000.00,
+        "productsCount": 45
+    }
+}
+----------------------
+
+route: /api/v1/business/me
+method: PUT
+example: {
+    "name": "Tech Gadgets Store Updated",
+    "description": "Updated description",
+    "phone": "+255712345678"
+}
+output: {
+    "success": true,
+    "message": "Business updated successfully",
+    "data": { "id": "c3eefd22...", "name": "Tech Gadgets Store Updated" }
+}
+----------------------
+
+route: /api/v1/business/products
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            { "id": "uuid", "name": "Smart Watch", "price": 130000.00, "stockQuantity": 10 }
+        ],
+        "totalPages": 1,
+        "totalElements": 15
+    }
+}
+----------------------
+
+route: /api/v1/business/orders
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            { "id": "uuid", "orderNumber": "ORD-001", "total": 52000.00, "status": "PENDING" }
+        ],
+        "totalPages": 2,
+        "totalElements": 25
+    }
+}
+----------------------
+
+# Agent Routes
+route: /api/v1/agent/register
+method: POST
+example: {
+    "nationalId": "12345678",
+    "licenseNumber": "LIC-001",
+    "region": "Dar es Salaam"
+}
+output: {
+    "success": true,
+    "message": "Agent registration initiated",
+    "data": {
+        "id": "d4fffe33-0f4c-6ab0-ee90-0ee1de502d44",
+        "agentCode": "AGT-8821",
+        "status": "PENDING",
+        "nationalId": "12345678",
+        "region": "Dar es Salaam",
+        "userId": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
+    }
+}
+----------------------
+
+route: /api/v1/agent/me
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "id": "d4fffe33-0f4c-6ab0-ee90-0ee1de502d44",
+        "agentCode": "AGT-8821",
+        "status": "APPROVED",
+        "totalEarnings": 150000.00,
+        "availableBalance": 50000.00,
+        "businessesActivated": 15,
+        "totalReferrals": 20
+    }
+}
+----------------------
+
+route: /api/v1/agent/code/{agentCode}
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "id": "d4fffe33-0f4c-6ab0-ee90-0ee1de502d44",
+        "agentCode": "AGT-8821",
+        "name": "John Doe"
+        "status": "APPROVED",
+        "region": "Dar es Salaam"
+    }
+}
+----------------------
+
+route: /api/v1/agent/activate-business
+method: POST
+example: {
+    "businessName": "Mama Ntilie Food",
+    "ownerPhone": "+255787654321",
+    "category": "Food & Beverage"
+}
+output: {
+    "success": true,
+    "message": "Business activation initiated",
+    "data": {
+        "id": "e5aaaf44-105d-7bc1-ff01-1ff2ef613e55",
+        "name": "Mama Ntilie Food",
+        "status": "PENDING",
+        "ownerPhone": "+255787654321"
+    }
+}
+----------------------
+
+route: /api/v1/agent/businesses
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": "e5aaaf44-105d-7bc1-ff01-1ff2ef613e55",
+                "name": "Mama Ntilie Food",
+                "status": "active",
+                "activatedAt": "2023-11-15T14:30:00"
+            }
+        ],
+        "totalPages": 1,
+        "totalElements": 5
+    }
+}
+----------------------
+
+route: /api/v1/agent/commissions
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": "f6bbbg55-216e-8cd2-0012-2003fg724f66",
+                "amount": 10000.00,
+                "type": "ACTIVATION",
+                "description": "Commission for activating Mama Ntilie Food",
+                "status": "PAID",
+                "createdAt": "2023-11-15T14:30:00"
+            }
+        ],
+        "totalPages": 1,
+        "totalElements": 15
+    }
+}
+----------------------
+
+route: /api/v1/agent/search
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": "d4fffe33-0f4c-6ab0-ee90-0ee1de502d44",
+                "agentCode": "AGT-8821",
+                "name": "John Doe"
+            }
+        ],
+        "totalPages": 1,
+        "totalElements": 1
+    }
+}
+----------------------
+
+route: /api/v1/agent/withdrawals
+method: POST
+example: {
+    "amount": 50000.00,
+    "phone": "+255712345678"
+}
+output: {
+    "success": true,
+    "message": "Withdrawal request submitted",
+    "data": { "id": "uuid", "amount": 50000.00, "status": "PENDING" }
+}
+----------------------
+
+route: /api/v1/agent/withdrawals
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            { "id": "uuid", "amount": 50000.00, "status": "PENDING", "createdAt": "2023-11-20T10:00:00" }
+        ],
+        "totalPages": 1,
+        "totalElements": 5
+    }
+}
+----------------------
+
+route: /api/v1/agent/withdrawals/{id}
+method: DELETE
+example: {}
+output: {
+    "success": true,
+    "message": "Withdrawal request cancelled"
+}
+----------------------
+
+route: /api/v1/agent/webhooks/payment-callback
+method: POST
+example: { "orderId": "HP123", "status": "completed", "amount": 10000 }
+output: { "success": true, "message": "Callback received" }
+----------------------
+
+# Product Routes
+route: /api/v1/products
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": "g7ccch66-327f-9de3-1123-3114gh835g77",
+                "name": "Wireless Headphones",
+                "price": 50000.00,
+                "thumbnail": "https://example.com/products/headphones.jpg",
+                "business": { "id": "c3eefd22...", "name": "Tech Gadgets Store" },
+                "rating": 4.8,
+                "reviewsCount": 42
+            }
+        ],
+        "totalPages": 10,
+        "totalElements": 200
+    }
+}
+----------------------
+
+route: /api/v1/products/{id}
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "id": "g7ccch66-327f-9de3-1123-3114gh835g77",
+        "name": "Wireless Headphones",
+        "description": "Noise cancelling wireless headphones with 20h battery life.",
+        "price": 50000.00,
+        "compareAtPrice": 65000.00,
+        "stockQuantity": 15,
+        "sku": "WH-001",
+        "thumbnail": "https://example.com/products/headphones.jpg",
+        "images": [
+            { "id": "uuid1", "url": "https://example.com/products/headphones_1.jpg" },
+            { "id": "uuid2", "url": "https://example.com/products/headphones_2.jpg" }
+        ],
+        "business": {
+            "id": "c3eefd22-9e3b-5fa9-dd8f-9dd0ce491c33",
+            "name": "Tech Gadgets Store",
+            "logo": "https://example.com/logos/tech.jpg"
+        },
+        "rating": 4.8,
+        "reviewsCount": 42,
+        "isFeatured": true
+    }
+}
+----------------------
+
+route: /api/v1/products/search
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": "g7ccch66-327f-9de3-1123-3114gh835g77",
+                "name": "Wireless Headphones",
+                "price": 50000.00
+            }
+        ],
+        "totalPages": 1,
+        "totalElements": 5
+    }
+}
+----------------------
+
+route: /api/v1/products/category/{category}
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": "g7ccch66-327f-9de3-1123-3114gh835g77",
+                "name": "Wireless Headphones",
+                "category": "Electronics"
+            }
+        ],
+        "totalPages": 2,
+        "totalElements": 25
+    }
+}
+----------------------
+
+route: /api/v1/products/trending
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": "g7ccch66-327f-9de3-1123-3114gh835g77",
+                "name": "Wireless Headphones",
+                "ordersCount": 150
+            }
+        ],
+        "totalPages": 1,
+        "totalElements": 10
+    }
+}
+----------------------
+
+route: /api/v1/products/region/{region}
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": "g7ccch66-327f-9de3-1123-3114gh835g77",
+                "name": "Wireless Headphones",
+                "business": { "region": "Dar es Salaam" }
+            }
+        ],
+        "totalPages": 5,
+        "totalElements": 100
+    }
+}
+----------------------
+
+route: /api/v1/products/business/{businessId}
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": "g7ccch66-327f-9de3-1123-3114gh835g77",
+                "name": "Wireless Headphones",
+                "price": 50000.00
+            }
+        ],
+        "totalPages": 1,
+        "totalElements": 50
+    }
+}
+----------------------
+
+route: /api/v1/business/products
+method: POST
+example: {
+    "name": "Smart Watch",
+    "price": 120000.00,
+    "description": "Fitness tracker with heart rate monitor",
+    "category": "Electronics",
+    "stockQuantity": 10
+}
+output: {
+    "success": true,
+    "message": "Product created successfully",
+    "data": {
+        "id": "h8dddi77-438g-0ef4-2234-4225hi946h88",
+        "name": "Smart Watch",
+        "price": 120000.00,
+        "description": "Fitness tracker with heart rate monitor",
+        "stockQuantity": 10,
+        "sku": null,
+        "isActive": true
+    }
+}
+----------------------
+
+route: /api/v1/business/products/{id}
+method: PUT
+example: {
+    "name": "Smart Watch Pro",
+    "price": 130000.00
+}
+output: {
+    "success": true,
+    "message": "Product updated successfully",
+    "data": {
+        "id": "h8dddi77-438g-0ef4-2234-4225hi946h88",
+        "name": "Smart Watch Pro",
+        "price": 130000.00,
+        "updatedAt": "2023-12-01T09:00:00"
+    }
+}
+----------------------
+
+route: /api/v1/business/products/{id}
+method: DELETE
+example: {}
+output: {
+    "success": true,
+    "message": "Product deleted successfully"
+}
+----------------------
+
+route: /api/v1/business/products
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": "h8dddi77-438g-0ef4-2234-4225hi946h88",
+                "name": "Smart Watch Pro",
+                "price": 130000.00,
+                "stockQuantity": 10
+            }
+        ],
+        "totalPages": 1,
+        "totalElements": 15
+    }
+}
+----------------------
+
+route: /api/v1/products/my
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            { "id": "uuid", "name": "My Product", "price": 50000.00 }
+        ],
+        "totalPages": 1,
+        "totalElements": 5
+    }
+}
+----------------------
+
+# Order Routes
+route: /api/v1/orders
+method: POST
+example: {
+    "businessId": "c3eefd22-9e3b-5fa9-dd8f-9dd0ce491c33",
+    "items": [
+        { "productId": "g7ccch66-327f-9de3-1123-3114gh835g77", "quantity": 1 }
+    ],
+    "deliveryAddress": "Plot 42, Kijitonyama, Dar es Salaam",
+    "deliveryPhone": "+255712345678"
+}
+output: {
+    "success": true,
+    "message": "Order placed successfully",
+    "data": {
+        "id": "i9eeej88-549h-1fg5-3345-5336ij057i99",
+        "orderNumber": "ORD-20231201-0001",
+        "subtotal": 50000.00,
+        "deliveryFee": 2000.00,
+        "total": 52000.00,
+        "status": "PENDING",
+        "items": [
+            {
+                "id": "uuid_item",
+                "productName": "Wireless Headphones",
+                "quantity": 1,
+                "unitPrice": 50000.00,
+                "total": 50000.00
+            }
+        ]
+    }
+}
+----------------------
+
+route: /api/v1/orders/incoming
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": "i9eeej88-549h-1fg5-3345-5336ij057i99",
+                "orderNumber": "ORD-20231201-0001",
+                "total": 52000.00,
+                "status": "PENDING",
+                "buyer": { "name": "John Doe" }
+            }
+        ],
+        "totalPages": 2,
+        "totalElements": 25
+    }
+}
+----------------------
+
+route: /api/v1/orders/my
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": "i9eeej88-549h-1fg5-3345-5336ij057i99",
+                "orderNumber": "ORD-20231201-0001",
+                "total": 52000.00,
+                "status": "PENDING",
+                "createdAt": "2023-12-01T10:30:00"
+            }
+        ],
+        "totalPages": 1,
+        "totalElements": 5
+    }
+}
+----------------------
+
+route: /api/v1/orders/{id}
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "id": "i9eeej88-549h-1fg5-3345-5336ij057i99",
+        "orderNumber": "ORD-20231201-0001",
+        "total": 52000.00,
+        "status": "PENDING",
+        "deliveryAddress": "Plot 42, Kijitonyama",
+        "buyer": { "id": "a0eebc99...", "name": "John Doe" },
+        "business": { "id": "c3eefd22...", "name": "Tech Gadgets Store" }
+    }
+}
+----------------------
+
+route: /api/v1/orders/{id}/cancel
+method: POST
+example: {
+    "reason": "Found cheaper price elsewhere"
+}
+output: {
+    "success": true,
+    "message": "Order cancelled successfully",
+    "data": {
+        "id": "i9eeej88-549h-1fg5-3345-5336ij057i99",
+        "orderNumber": "ORD-20231201-0001",
+        "status": "CANCELLED",
+        "cancellationReason": "Found cheaper price elsewhere"
+    }
+}
+----------------------
+
+route: /api/v1/business/orders/{id}/status
+method: PUT
+example: {
+    "status": "PROCESSING",
+    "sellerNotes": "Package is being prepared"
+}
+output: {
+    "success": true,
+    "message": "Order status updated",
+    "data": {
+        "id": "i9eeej88-549h-1fg5-3345-5336ij057i99",
+        "status": "PROCESSING",
+        "sellerNotes": "Package is being prepared"
+    }
+}
+----------------------
+
+route: /api/v1/business/orders/{id}/confirm
+method: POST
+example: {}
+output: {
+    "success": true,
+    "message": "Order confirmed",
+    "data": {
+        "id": "i9eeej88-549h-1fg5-3345-5336ij057i99",
+        "status": "CONFIRMED"
+    }
+}
+----------------------
+
+route: /api/v1/business/orders/{id}/ship
+method: POST
+example: {
+    "trackingNumber": "TRK-987654321"
+}
+output: {
+    "success": true,
+    "message": "Order marked as shipped",
+    "data": {
+        "id": "i9eeej88-549h-1fg5-3345-5336ij057i99",
+        "status": "SHIPPED",
+        "trackingNumber": "TRK-987654321",
+        "shippedAt": "2023-12-02T09:00:00"
+    }
+}
+----------------------
+
+route: /api/v1/business/orders/{id}/deliver
+method: POST
+example: {}
+output: {
+    "success": true,
+    "message": "Order marked as delivered",
+    "data": {
+        "id": "i9eeej88-549h-1fg5-3345-5336ij057i99",
+        "status": "DELIVERED",
+        "deliveredAt": "2023-12-03T11:00:00"
+    }
+}
+----------------------
+
+# Subscription Routes
+route: /api/v1/subscriptions/plans
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "plans": [
+            { "id": "BASIC_MONTHLY", "name": "Basic Monthly", "price": 25000.00, "durationDays": 30 },
+            { "id": "PREMIUM_MONTHLY", "name": "Premium Monthly", "price": 50000.00, "durationDays": 30 },
+            { "id": "BASIC_YEARLY", "name": "Basic Yearly", "price": 250000.00, "durationDays": 365 }
+        ]
+    }
+}
+----------------------
+
+route: /api/v1/business/subscription
+method: POST
+example: {
+    "planId": "BASIC_MONTHLY",
+    "paymentMethod": "MOBILE_MONEY"
+}
+output: {
+    "success": true,
+    "message": "Subscription created",
+    "data": {
+        "id": "j0fffk99-650i-2gh6-4456-6447jk168j00",
+        "plan": "BASIC_MONTHLY",
+        "amount": 25000.00,
+        "status": "PENDING",
+        "startDate": "2023-12-01T12:00:00",
+        "endDate": "2023-12-31T12:00:00"
+    }
+}
+----------------------
+
+route: /api/v1/business/subscription
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "id": "j0fffk99-650i-2gh6-4456-6447jk168j00",
+        "plan": "BASIC_MONTHLY",
+        "status": "ACTIVE",
+        "autoRenew": false,
+        "startDate": "2023-12-01T12:00:00",
+        "endDate": "2023-12-31T12:00:00"
+    }
+}
+----------------------
+
+route: /api/v1/business/subscription/cancel
+method: POST
+example: {}
+output: {
+    "success": true,
+    "message": "Subscription cancelled",
+    "data": {
+        "id": "j0fffk99-650i-2gh6-4456-6447jk168j00",
+        "status": "CANCELLED"
+    }
+}
+----------------------
+
+route: /api/v1/business/subscription/auto-renew
+method: PUT
+example: {
+    "autoRenew": true
+}
+output: {
+    "success": true,
+    "message": "Auto-renew enabled",
+    "data": {
+        "id": "j0fffk99-650i-2gh6-4456-6447jk168j00",
+        "autoRenew": true
+    }
+}
+----------------------
+
+route: /api/v1/business/subscription/renew
+method: POST
+example: {
+    "paymentMethod": "MOBILE_MONEY"
+}
+output: {
+    "success": true,
+    "message": "Renewal initiated",
+    "data": {
+        "id": "new_sub_uuid",
+        "status": "PENDING",
+        "amount": 25000.00
+    }
+}
+----------------------
+
+# Post Routes
+route: /api/v1/posts
+method: POST
+example: {
+    "caption": "Check out our new products!",
+    "visibility": "PUBLIC",
+    "postType": "POST"
+}
+output: {
+    "success": true,
+    "message": "Post created successfully",
+    "data": {
+        "id": "k1gggl00-761j-3hi7-5567-7558kl279k11",
+        "caption": "Check out our new products!",
+        "author": { "id": "a0eebc99...", "name": "John Doe", "profilePic": "url" },
+        "likesCount": 0,
+        "commentsCount": 0,
+        "media": [],
+        "createdAt": "2023-12-01T13:00:00"
+    }
+}
+----------------------
+
+route: /api/v1/posts/feed
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": "k1gggl00-761j-3hi7-5567-7558kl279k11",
+                "caption": "Check out our new products!",
+                "author": { "name": "Tech Gadgets Store" },
+                "likesCount": 15,
+                "commentsCount": 3
+            }
+        ],
+        "totalPages": 5,
+        "totalElements": 50
+    }
+}
+----------------------
+
+route: /api/v1/posts/public/feed
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": "k1gggl00-761j-3hi7-5567-7558kl279k11",
+                "caption": "Amazing deals!",
+                "likesCount": 120
+            }
+        ],
+        "totalPages": 10,
+        "totalElements": 200
+    }
+}
+----------------------
+
+route: /api/v1/posts/trending
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": "k1gggl00-761j-3hi7-5567-7558kl279k11",
+                "caption": "Viral post",
+                "likesCount": 5000
+            }
+        ],
+        "totalPages": 2,
+        "totalElements": 20
+    }
+}
+----------------------
+
+route: /api/v1/posts/reels
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": "k1gggl00-761j-3hi7-5567-7558kl279k11",
+                "caption": "Funny video",
+                "postType": "REEL",
+                "media": [{ "url": "video.mp4", "type": "VIDEO" }]
+            }
+        ],
+        "totalPages": 5,
+        "totalElements": 50
+    }
+}
+----------------------
+
+route: /api/v1/posts/user/{userId}
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": "k1gggl00-761j-3hi7-5567-7558kl279k11",
+                "caption": "My post",
+                "likesCount": 10
+            }
+        ],
+        "totalPages": 2,
+        "totalElements": 15
+    }
+}
+----------------------
+
+route: /api/v1/posts/{postId}
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "id": "k1gggl00-761j-3hi7-5567-7558kl279k11",
+        "caption": "Check out our new products!",
+        "author": { "id": "a0eebc99...", "name": "John Doe", "profilePic": "url" },
+        "likesCount": 25,
+        "commentsCount": 5,
+        "isLiked": true,
+        "media": [
+            { "id": "med1", "url": "image.jpg", "type": "IMAGE" }
+        ],
+        "createdAt": "2023-12-01T13:00:00"
+    }
+}
+----------------------
+
+route: /api/v1/posts/{postId}
+method: DELETE
+example: {}
+output: {
+    "success": true,
+    "message": "Post deleted successfully"
+}
+----------------------
+
+route: /api/v1/posts/{postId}/like
+method: POST
+example: {}
+output: {
+    "success": true,
+    "message": "Post liked",
+    "data": {
+        "likesCount": 26
+    }
+}
+----------------------
+
+route: /api/v1/posts/{postId}/like
+method: DELETE
+example: {}
+output: {
+    "success": true,
+    "message": "Post unliked",
+    "data": {
+        "likesCount": 25
+    }
+}
+----------------------
+
+route: /api/v1/posts/{postId}/comments
+method: POST
+example: {
+    "content": "Great post! Where can I buy?"
+}
+output: {
+    "success": true,
+    "data": {
+        "id": "l2hhhm11-872k-4ij8-6678-8669lm380l22",
+        "content": "Great post! Where can I buy?",
+        "author": { "id": "b2ffcd11...", "name": "Alice Smith", "profilePic": "url" },
+        "createdAt": "2023-12-01T13:30:00",
+        "likesCount": 0
+    }
+}
+----------------------
+
+route: /api/v1/posts/{postId}/comments
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": "l2hhhm11-872k-4ij8-6678-8669lm380l22",
+                "content": "Nice product",
+                "author": { "name": "Alice Smith" },
+                "likesCount": 2
+            }
+        ],
+        "totalPages": 1,
+        "totalElements": 5
+    }
+}
+----------------------
+
+route: /api/v1/posts/comments/{commentId}
+method: DELETE
+example: {}
+output: {
+    "success": true,
+    "message": "Comment deleted successfully"
+}
+----------------------
+
+route: /api/v1/posts/with-products
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            { "id": "uuid", "caption": "...", "products": [{ "id": "uuid", "name": "Product" }] }
+        ],
+        "totalPages": 1,
+        "totalElements": 10
+    }
+}
+----------------------
+
+route: /api/v1/posts/{postId}/tags/{productId}
+method: POST
+example: {}
+output: {
+    "success": true,
+    "message": "Product tagged on post"
+}
+----------------------
+
+route: /api/v1/posts/{postId}/tags/{productId}
+method: DELETE
+example: {}
+output: {
+    "success": true,
+    "message": "Product tag removed"
+}
+----------------------
+
+# Message Routes (Chat)
+route: /api/v1/messages
+method: POST
+example: {
+    "recipientId": "b2ffcd11-8d2a-4ef8-cc7e-8cc9bd380b22",
+    "content": "Yes, it is available!"
+}
+output: {
+    "success": true,
+    "data": {
+        "id": "o5kkkp44-105n-7lm1-9901-1992op613o55",
+        "senderId": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+        "content": "Yes, it is available!",
+        "type": "TEXT",
+        "createdAt": "2023-12-01T14:05:00",
+        "isRead": false
+    }
+}
+----------------------
+
+route: /api/v1/messages/{otherUserId}
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": "n4jjjo33-094m-6kl0-8890-0881no502n44",
+                "senderId": "b2ffcd11...",
+                "content": "Hello, is this available?",
+                "type": "TEXT",
+                "createdAt": "2023-12-01T14:00:00",
+                "isRead": false
+            }
+        ],
+        "totalPages": 1,
+        "totalElements": 20
+    }
+}
+----------------------
+
+route: /api/v1/messages/unread-count
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": 3
+}
+----------------------
+
+# Social Routes
+route: /api/v1/social/follow/{userId}
+method: POST
+example: {}
+output: {
+    "success": true,
+    "message": "You are now following this user"
+}
+----------------------
+
+route: /api/v1/social/follow/{userId}
+method: DELETE
+example: {}
+output: {
+    "success": true,
+    "message": "You have unfollowed this user"
+}
+----------------------
+
+route: /api/v1/social/followers/{userId}
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": "b2ffcd11-8d2a-4ef8-cc7e-8cc9bd380b22",
+                "name": "Alice Smith",
+                "profilePic": "url"
+            }
+        ],
+        "totalPages": 2,
+        "totalElements": 150
+    }
+}
+----------------------
+
+route: /api/v1/social/following/{userId}
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": "c3eefd22-9e3b-5fa9-dd8f-9dd0ce491c33",
+                "name": "Tech Gadgets Store",
+                "profilePic": "url"
+            }
+        ],
+        "totalPages": 1,
+        "totalElements": 45
+    }
+}
+----------------------
+
+route: /api/v1/posts/{postId}/react
+method: POST
+params: type=LOVE (LIKE, LOVE, HAHA, WOW, SAD, ANGRY)
+auth: Bearer Token (Required)
+description: React to a post with specific emotion
+example: {}
+output: {
+    "success": true,
+    "message": "Reaction added",
+    "data": {
+        "reactionsCount": 15
+    }
+}
+----------------------
+
+route: /api/v1/posts/{postId}/react
+method: DELETE
+auth: Bearer Token (Required)
+description: Remove reaction from a post
+example: {}
+output: {
+    "success": true,
+    "message": "Reaction removed",
+    "data": {
+        "reactionsCount": 14
+    }
+}
+----------------------
+
+
+# Friend Routes (Facebook Style)
+route: /api/v1/friends/request/{userId}
+method: POST
+auth: Bearer Token (Required)
+description: Send a friend request
+example: {}
+output: {
+    "success": true,
+    "message": "Friend request sent",
+    "data": { "status": "PENDING" }
+}
+----------------------
+
+route: /api/v1/friends/requests
+method: GET
+auth: Bearer Token (Required)
+description: Get pending friend requests (Incoming)
+example: {}
+output: {
+    "success": true,
+    "data": { "content": [...] }
+}
+----------------------
+
+route: /api/v1/friends/accept/{requestId}
+method: POST
+auth: Bearer Token (Required)
+description: Accept a friend request (Also auto-follows)
+example: {}
+output: {
+    "success": true,
+    "message": "Friend request accepted"
+}
+----------------------
+
+route: /api/v1/friends/decline/{requestId}
+method: DELETE
+auth: Bearer Token (Required)
+description: Decline a friend request
+example: {}
+output: {
+    "success": true,
+    "message": "Friend request declined"
+}
+----------------------
+
+route: /api/v1/friends
+method: GET
+auth: Bearer Token (Required)
+description: Get all friends
+example: {}
+output: {
+    "success": true,
+    "data": { "content": [...] }
+}
+----------------------
+
+----------------------
+
+# 👥 Community Routes (Groups & Channels)
+route: /api/v1/communities
+method: POST
+auth: Bearer Token (Required)
+description: Create a new community (Group or Channel)
+example: { "name": "Developers", "type": "GROUP", "privacy": "PUBLIC" } (Multipart for coverImage)
+output: {
+    "success": true,
+    "data": { "id": "uuid", "name": "Developers", "type": "GROUP", "membersCount": 1 }
+}
+----------------------
+
+route: /api/v1/communities/{id}/join
+method: POST
+auth: Bearer Token (Required)
+description: Join a community
+example: {}
+output: {
+    "success": true,
+    "message": "Joined community successfully"
+}
+----------------------
+
+route: /api/v1/communities/{id}/leave
+method: POST
+auth: Bearer Token (Required)
+description: Leave a community
+example: {}
+output: {
+    "success": true,
+    "message": "Left community successfully"
+}
+----------------------
+
+route: /api/v1/communities
+method: GET
+auth: Bearer Token (Required)
+description: List all communities
+example: {}
+output: {
+    "success": true,
+    "data": { "content": [...] }
+}
+----------------------
+
+route: /api/v1/communities/me
+method: GET
+auth: Bearer Token (Required)
+description: List my joined communities
+example: {}
+output: {
+    "success": true,
+    "data": { "content": [...] }
+}
+----------------------
+
+# 📱 Payment Routes (HarakaPay Integration)
+
+route: /api/v1/payments/initiate
+method: POST
+auth: Bearer Token (Required)
+description: Anza malipo kupitia HarakaPay - USSD push itatumwa kwa simu
+example: {
+    "amount": 10000,
+    "type": "AGENT_REGISTRATION",
+    "phone": "0712345678",
+    "description": "Agent registration fee"
+}
+output: {
+    "success": true,
+    "message": "Ombi la malipo limetumwa",
+    "data": {
+        "orderId": "HP1706123456789",
+        "message": "USSD push imetumwa kwa simu yako. Fuata maelekezo kukamilisha malipo.",
+        "amount": 10000
+    }
+}
+notes: |
+    Payment Types:
+    - AGENT_REGISTRATION: Ada ya kusajili agent (TZS 10,000)
+    - BUSINESS_ACTIVATION: Ada ya kuanzisha biashara (TZS 20,000)
+    - SUBSCRIPTION: Ada ya subscription (kulingana na plan)
+    - PROMOTION: Ada ya kutangaza/boost
+    - ORDER: Malipo ya order
+    
+    Baada ya malipo kukamilika, mfumo unaaktivisha agent/business/subscription automatically
+----------------------
+
+route: /api/v1/payments/status/{orderId}
+method: GET
+auth: Bearer Token (Required)
+description: Angalia hali ya malipo
+example: {}
+output: {
+    "success": true,
+    "message": "Malipo yamekamilika!",
+    "data": {
+        "orderId": "HP1706123456789",
+        "status": "SUCCESS",
+        "amount": 10000,
+        "type": "AGENT_REGISTRATION",
+        "paidAt": "2026-02-06T14:35:00",
+        "createdAt": "2026-02-06T14:30:00"
+    }
+}
+notes: |
+    Payment Status:
+    - PENDING: Malipo yanasubiri kukamilishwa
+    - PROCESSING: Malipo yanashughulikiwa
+    - SUCCESS: Malipo yamekamilika
+    - FAILED: Malipo yameshindikana
+    - CANCELLED: Malipo yameghairiwa
+    - REFUNDED: Malipo yamerudishwa
+----------------------
+
+route: /api/v1/payments/balance
+method: GET
+auth: Bearer Token (Required, ADMIN only)
+description: Angalia salio la HarakaPay wallet
+example: {}
+output: {
+    "success": true,
+    "message": "Salio limepatikana",
+    "data": {
+        "success": true,
+        "wallet_balance": 94000,
+        "float_balance": 50000
+    }
+}
+----------------------
+
+route: /api/v1/payments/{paymentId}
+method: GET
+auth: Bearer Token (Required)
+description: Pata malipo kwa ID yake
+example: {}
+output: {
+    "success": true,
+    "message": "Malipo yamepatikana",
+    "data": {
+        "orderId": "HP1706123456789",
+        "status": "SUCCESS",
+        "amount": 10000,
+        "type": "AGENT_REGISTRATION",
+        "paidAt": "2026-02-06T14:35:00",
+        "createdAt": "2026-02-06T14:30:00"
+    }
+}
+----------------------
+
+# 🔔 Webhook Routes
+
+route: /api/v1/webhooks/harakapay
+method: POST
+auth: None (Public endpoint for HarakaPay callbacks)
+description: HarakaPay callback endpoint - inapokea arifa za malipo
+example: {
+    "order_id": "HP1706123456789",
+    "status": "completed",
+    "amount": 10000
+}
+output: {
+    "success": true,
+    "message": "Callback received"
+}
+----------------------
+
+route: /api/v1/webhooks/payment/status/{orderId}
+method: GET
+auth: None (Public)
+description: Angalia hali ya malipo (public endpoint kwa mobile apps)
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "orderId": "HP1706123456789",
+        "status": "SUCCESS",
+        "amount": 10000,
+        "type": "AGENT_REGISTRATION",
+        "paidAt": "2026-02-06T14:35:00",
+        "createdAt": "2026-02-06T14:30:00"
+    }
+}
+----------------------
+
+route: /api/v1/webhooks/payment/refresh/{orderId}
+method: POST
+auth: None (Public)
+description: Refresh hali ya malipo kutoka HarakaPay
+example: {}
+output: {
+    "success": true,
+    "message": "Malipo yamekamilika!",
+    "data": {
+        "orderId": "HP1706123456789",
+        "status": "SUCCESS",
+        "amount": 10000,
+        "type": "AGENT_REGISTRATION",
+        "paidAt": "2026-02-06T14:35:00"
+    }
+}
+----------------------
+
+# 🔐 Admin Routes
+
+route: /api/v1/admin/dashboard
+method: GET
+auth: Bearer Token (Required, ADMIN only)
+description: Pata statistiki za dashboard ya admin
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "totalUsers": 1500,
+        "activeUsers": 1200,
+        "newUsersToday": 25,
+        "totalBusinesses": 450,
+        "activeBusinesses": 380,
+        "totalAgents": 120,
+        "activeAgents": 95,
+        "pendingAgents": 15,
+        "totalOrders": 3500,
+        "completedOrders": 3200,
+        "pendingOrders": 150,
+        "totalRevenue": 5000000.00,
+        "revenueToday": 150000.00,
+        "totalPosts": 12000,
+        "totalProducts": 8500,
+        "pendingReports": 12,
+        "pendingWithdrawals": 5,
+        "activeSubscriptions": 380,
+        "expiringSubscriptions": 25
+    }
+}
+----------------------
+
+route: /api/v1/admin/users
+method: GET
+auth: Bearer Token (Required, ADMIN only)
+description: Orodha ya watumiaji wote
+params: page=0, size=20, role=USER, search=john
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": "uuid",
+                "name": "John Doe",
+                "email": "john@example.com",
+                "phone": "+255712345678",
+                "role": "USER",
+                "isActive": true,
+                "isVerified": true,
+                "createdAt": "2026-01-15T10:00:00"
+            }
+        ],
+        "page": 0,
+        "size": 20,
+        "totalElements": 1500,
+        "totalPages": 75
+    }
+}
+----------------------
+
+route: /api/v1/admin/users/{userId}/status
+method: PUT
+auth: Bearer Token (Required, ADMIN only)
+description: Badilisha hali ya mtumiaji (activate/deactivate)
+example: {
+    "isActive": false
+}
+output: {
+    "success": true,
+    "message": "User status updated successfully"
+}
+----------------------
+
+route: /api/v1/admin/users/{userId}/role
+method: PUT
+auth: Bearer Token (Required, ADMIN only)
+description: Badilisha role ya mtumiaji
+example: {
+    "role": "ADMIN"
+}
+output: {
+    "success": true,
+    "message": "User role updated successfully"
+}
+----------------------
+
+route: /api/v1/admin/businesses
+method: GET
+auth: Bearer Token (Required, ADMIN only)
+description: Orodha ya biashara zote
+params: page=0, size=20, status=ACTIVE, search=store
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": "uuid",
+                "name": "Tech Store",
+                "status": "ACTIVE",
+                "isVerified": true,
+                "owner": { "id": "uuid", "name": "John Doe" },
+                "createdAt": "2026-01-15T10:00:00"
+            }
+        ],
+        "totalElements": 450,
+        "totalPages": 23
+    }
+}
+----------------------
+
+route: /api/v1/admin/businesses/{businessId}/status
+method: PUT
+auth: Bearer Token (Required, ADMIN only)
+description: Badilisha hali ya biashara
+example: {
+    "status": "SUSPENDED"
+}
+output: {
+    "success": true,
+    "message": "Business status updated successfully"
+}
+----------------------
+
+route: /api/v1/admin/businesses/{businessId}/verify
+method: POST
+auth: Bearer Token (Required, ADMIN only)
+description: Thibitisha biashara (verification badge)
+example: {}
+output: {
+    "success": true,
+    "message": "Business verified successfully"
+}
+----------------------
+
+route: /api/v1/admin/agents
+method: GET
+auth: Bearer Token (Required, ADMIN only)
+description: Orodha ya agents wote
+params: page=0, size=20, status=PENDING, search=agent
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": "uuid",
+                "agentCode": "AGENT001",
+                "user": { "id": "uuid", "name": "Agent Name" },
+                "status": "ACTIVE",
+                "isVerified": true,
+                "totalEarnings": 500000.00,
+                "businessesActivated": 25,
+                "createdAt": "2026-01-15T10:00:00"
+            }
+        ],
+        "totalElements": 120,
+        "totalPages": 6
+    }
+}
+----------------------
+
+route: /api/v1/admin/agents/{agentId}/status
+method: PUT
+auth: Bearer Token (Required, ADMIN only)
+description: Badilisha hali ya agent
+example: {
+    "status": "SUSPENDED"
+}
+output: {
+    "success": true,
+    "message": "Agent status updated successfully"
+}
+----------------------
+
+route: /api/v1/admin/agents/{agentId}/verify
+method: POST
+auth: Bearer Token (Required, ADMIN only)
+description: Thibitisha agent
+example: {}
+output: {
+    "success": true,
+    "message": "Agent verified successfully"
+}
+----------------------
+
+route: /api/v1/admin/withdrawals
+method: GET
+auth: Bearer Token (Required, ADMIN only)
+description: Orodha ya withdrawal requests
+params: page=0, size=20, status=PENDING
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": "uuid",
+                "agent": { "id": "uuid", "name": "Agent Name" },
+                "amount": 100000.00,
+                "status": "PENDING",
+                "phone": "+255712345678",
+                "createdAt": "2026-02-06T10:00:00"
+            }
+        ],
+        "totalElements": 5,
+        "totalPages": 1
+    }
+}
+----------------------
+
+route: /api/v1/admin/withdrawals/{withdrawalId}/process
+method: POST
+auth: Bearer Token (Required, ADMIN only)
+description: Process withdrawal request (approve/reject)
+example: {
+    "action": "APPROVE",
+    "notes": "Processed via M-Pesa"
+}
+output: {
+    "success": true,
+    "message": "Withdrawal approved successfully"
+}
+----------------------
+
+route: /api/v1/admin/reports
+method: GET
+auth: Bearer Token (Required, ADMIN only)
+description: Orodha ya reports zilizotumwa
+params: page=0, size=20, status=PENDING
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": "uuid",
+                "reporter": { "id": "uuid", "name": "Reporter Name" },
+                "targetType": "POST",
+                "targetId": "uuid",
+                "reason": "SPAM",
+                "description": "This is spam content",
+                "status": "PENDING",
+                "createdAt": "2026-02-06T10:00:00"
+            }
+        ],
+        "totalElements": 12,
+        "totalPages": 1
+    }
+}
+----------------------
+
+route: /api/v1/admin/reports/{reportId}/resolve
+method: POST
+auth: Bearer Token (Required, ADMIN only)
+description: Resolve report (take action)
+example: {
+    "action": "DELETE_CONTENT",
+    "notes": "Content violated community guidelines"
+}
+output: {
+    "success": true,
+    "message": "Report resolved successfully"
+}
+----------------------
+
+route: /api/v1/admin/reports/{reportId}/dismiss
+method: POST
+auth: Bearer Token (Required, ADMIN only)
+description: Dismiss report (reject)
+example: {
+    "notes": "Report is not valid"
+}
+output: {
+    "success": true,
+    "message": "Report dismissed"
+}
+----------------------
+
+route: /api/v1/admin/audit-logs
+method: GET
+auth: Bearer Token (Required, ADMIN only)
+description: Pata audit logs za actions zilizofanywa
+params: page=0, size=50, action=USER_STATUS_CHANGE
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "content": [
+            {
+                "id": "uuid",
+                "adminId": "uuid",
+                "action": "USER_STATUS_CHANGE",
+                "targetType": "USER",
+                "targetId": "uuid",
+                "details": "User deactivated for TOS violation",
+                "createdAt": "2026-02-06T10:00:00"
+            }
+        ],
+        "totalElements": 500,
+        "totalPages": 10
+    }
+}
+----------------------
+
+# 📢 Report Routes
+
+route: /api/v1/reports
+method: POST
+auth: Bearer Token (Required)
+description: Tuma report ya content/user
+example: {
+    "targetType": "POST",
+    "targetId": "uuid-of-post",
+    "reason": "SPAM",
+    "description": "This post contains spam links"
+}
+output: {
+    "success": true,
+    "message": "Report submitted successfully",
+    "data": {
+        "id": "uuid",
+        "status": "PENDING"
+    }
+}
+notes: |
+    Target Types: POST, USER, BUSINESS, PRODUCT, COMMENT
+    Reason Types: SPAM, HARASSMENT, FALSE_INFO, INAPPROPRIATE, SCAM, OTHER
+----------------------
+
+# Promotions API
+
+route: /api/v1/promotions/packages
+method: GET
+example: {}
+output: { "success": true, "data": [ { "id": "uuid", "name": "Boost 1 Day", "price": 5000 } ] }
+----------------------
+
+route: /api/v1/promotions
+method: POST
+example: { "postId": "uuid", "packageId": "uuid" }
+output: { "success": true, "data": { "id": "uuid", "status": "PENDING" } }
+----------------------
+
+route: /api/v1/promotions
+method: GET
+example: {}
+output: { "success": true, "data": { "content": [...] } }
+----------------------
+
+route: /api/v1/promotions/{id}
+method: GET
+example: {}
+output: { "success": true, "data": { "id": "uuid", "postId": "uuid", "status": "ACTIVE" } }
+----------------------
+
+route: /api/v1/promotions/{id}/stats
+method: GET
+example: {}
+output: { "success": true, "data": { "impressions": 1000, "clicks": 50 } }
+----------------------
+
+route: /api/v1/promotions/{id}/pause
+method: POST
+example: {}
+output: { "success": true, "message": "Promotion paused" }
+----------------------
+
+route: /api/v1/promotions/{id}/resume
+method: POST
+example: {}
+output: { "success": true, "message": "Promotion resumed" }
+----------------------
+
+route: /api/v1/promotions/{id}
+method: DELETE
+example: {}
+output: { "success": true, "message": "Promotion deleted" }
+----------------------
+
+route: /api/v1/promotions/{id}/impression
+method: POST
+example: {}
+output: { "success": true }
+----------------------
+
+route: /api/v1/promotions/{id}/click
+method: POST
+example: {}
+output: { "success": true }
+----------------------
+
+# Ads API
+
+route: /api/v1/ads/active
+method: GET
+example: {}
+output: { "success": true, "data": [ { "id": "uuid", "title": "...", "imageUrl": "..." } ] }
+----------------------
+
+route: /api/v1/ads/{adId}/impression
+method: POST
+example: {}
+output: { "success": true }
+----------------------
+
+route: /api/v1/ads/{adId}/click
+method: POST
+example: {}
+output: { "success": true }
+----------------------
+
+route: /api/v1/business/ads
+method: POST
+example: { "title": "My Ad", "targetUrl": "https://...", "imageUrl": "..." }
+output: { "success": true, "data": { "id": "uuid", "status": "PENDING" } }
+----------------------
+
+route: /api/v1/business/ads
+method: GET
+example: {}
+output: { "success": true, "data": [ { "id": "uuid", "title": "...", "status": "ACTIVE" } ] }
+----------------------
+
+route: /api/v1/business/ads/{adId}/pause
+method: POST
+example: {}
+output: { "success": true, "message": "Ad paused" }
+----------------------
+
+route: /api/v1/business/ads/{adId}/resume
+method: POST
+example: {}
+output: { "success": true, "message": "Ad resumed" }
+----------------------
+
+# Health Routes
+route: /
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "app": "Wakilfly API",
+        "version": "1.0.0",
+        "status": "running",
+        "timestamp": "2023-12-01T20:00:00"
+    }
+}
+----------------------
+
+route: /api/v1/health
+method: GET
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "status": "UP",
+        "database": "connected",
+        "timestamp": "2023-12-01T20:00:00"
+    }
+}
+----------------------
+
+# SRS Streams Webhook (internal/callback)
+
+route: /api/v1/streams/on-publish
+method: POST
+auth: None (Callback from SRS)
+description: Called when a stream is published
+example: { "stream": "stream_id", "app": "live" }
+output: { "success": true }
+----------------------
+
+route: /api/v1/streams/on-unpublish
+method: POST
+auth: None (Callback from SRS)
+description: Called when a stream is unpublished
+example: { "stream": "stream_id", "app": "live" }
+output: { "success": true }
+----------------------
+
+# 🔔 Notification API
+
+route: /api/v1/notifications
+method: GET
+auth: Bearer Token (Required)
+description: Get user notifications
+params: page=0, size=20
+example: {}
+output: {
+    "success": true,
+    "data": { "content": [...] }
+}
+----------------------
+
+route: /api/v1/notifications/unread-count
+method: GET
+auth: Bearer Token (Required)
+description: Get unread notification count
+example: {}
+output: {
+    "success": true,
+    "data": 5
+}
+----------------------
+
+route: /api/v1/notifications/{id}/read
+method: POST
+auth: Bearer Token (Required)
+description: Mark a specific notification as read
+example: {}
+output: {
+    "success": true,
+    "data": null
+}
+----------------------
+
+route: /api/v1/notifications/read-all
+method: POST
+auth: Bearer Token (Required)
+description: Mark all notifications as read
+example: {}
+output: {
+    "success": true,
+    "data": null
+}
+----------------------
+
+# 🛒 Shopping Cart API
+
+route: /api/v1/cart
+method: GET
+auth: Bearer Token (Required)
+description: Get user's current shopping cart
+example: {}
+output: {
+    "success": true,
+    "data": { "items": [...], "summaryTotal": 50000, "itemCount": 2 }
+}
+----------------------
+
+route: /api/v1/cart/add
+method: POST
+auth: Bearer Token (Required)
+description: Add item to cart
+example: {
+    "productId": "uuid",
+    "quantity": 1
+}
+output: {
+    "success": true,
+    "data": { ... }
+}
+----------------------
+
+route: /api/v1/cart/remove/{productId}
+method: DELETE
+auth: Bearer Token (Required)
+description: Remove item from cart
+example: {}
+output: {
+    "success": true,
+    "data": { ... }
+}
+----------------------
+
+route: /api/v1/cart/clear
+method: DELETE
+auth: Bearer Token (Required)
+description: Clear entire cart
+example: {}
+output: {
+    "success": true,
+    "message": "Cart cleared"
+}
+----------------------
+
+# ⭐ Favorites API
+
+route: /api/v1/favorites/{productId}
+method: POST
+auth: Bearer Token (Required)
+description: Add product to favorites
+example: {}
+output: { "success": true, "message": "Added to favorites" }
+----------------------
+
+route: /api/v1/favorites/{productId}
+method: DELETE
+auth: Bearer Token (Required)
+description: Remove product from favorites
+example: {}
+output: { "success": true, "message": "Removed from favorites" }
+----------------------
+
+route: /api/v1/favorites
+method: GET
+auth: Bearer Token (Required)
+description: Get my favorite products
+params: page=0, size=20
+output: { "success": true, "data": { "content": [...] } }
+----------------------
+
+route: /api/v1/favorites/check/{productId}
+method: GET
+auth: Bearer Token (Required)
+description: Check if product is in favorites
+example: {}
+output: { "success": true, "data": true }
+----------------------
+
+# ⭐ Reviews API
+
+route: /api/v1/reviews
+method: POST
+auth: Bearer Token (Required)
+description: Add a product review
+example: {
+    "productId": "uuid",
+    "rating": 5,
+    "comment": "Amazing product!"
+}
+output: {
+    "success": true,
+    "data": { ... }
+}
+----------------------
+
+route: /api/v1/reviews/product/{productId}
+method: GET
+auth: None (Public)
+description: Get reviews for a product
+params: page=0, size=10
+example: {}
+output: {
+    "success": true,
+    "data": { "content": [...] }
+}
+----------------------
+
+# 📊 Agent Dashboard API
+
+route: /api/v1/agent/dashboard
+method: GET
+auth: Bearer Token (Required, Agent Role)
+description: Get agent's dashboard summary with wallet balance and performance stats
+example: {}
+output: {
+    "success": true,
+    "data": {
+        "currentBalance": 150000.00,
+        "totalEarnings": 500000.00,
+        "todayEarnings": 25000.00,
+        "pendingWithdrawals": 50000.00,
+        "totalBusinessesActivated": 15,
+        "totalReferrals": 8
+    }
+}
+----------------------
+
+# 📞 Voice & Video Calls API
+
+route: /api/v1/calls/initiate
+method: POST
+auth: Bearer Token (Required)
+description: Initiate a voice or video call
+example: {
+    "receiverId": "uuid",
+    "type": "VIDEO"
+}
+output: {
+    "success": true,
+    "data": { "id": "uuid", "roomId": "wakify_123...", "type": "VIDEO", "status": "INITIATED" }
+}
+----------------------
+
+route: /api/v1/calls/{callId}/answer
+method: POST
+auth: Bearer Token (Required)
+description: Answer an incoming call
+example: {}
+output: { "success": true, "message": "Call accepted" }
+----------------------
+
+route: /api/v1/calls/{callId}/reject
+method: POST
+auth: Bearer Token (Required)
+description: Reject an incoming call
+example: {}
+output: { "success": true, "message": "Call rejected" }
+----------------------
+
+route: /api/v1/calls/{callId}/end
+method: POST
+auth: Bearer Token (Required)
+description: End an ongoing call
+example: {}
+output: { "success": true, "message": "Call ended" }
+----------------------
+
+route: /api/v1/calls/history
+method: GET
+auth: Bearer Token (Required)
+description: Get call history
+example: {}
+output: { "success": true, "data": { "content": [...] } }
+----------------------
+
+route: /api/v1/calls/incoming
+method: GET
+auth: Bearer Token (Required)
+description: Get incoming call requests
+example: {}
+output: { "success": true, "data": [...] }
+----------------------
+
+# 🎥 Live Streaming API
+
+route: /api/v1/live/start
+method: POST
+auth: Bearer Token (Required)
+description: Start a live stream
+example: {
+    "title": "My Awesome Live",
+    "description": "Talking about tech",
+    "coverImage": "url_to_image"
+}
+output: {
+    "success": true,
+    "data": { "id": "uuid", "roomId": "stream_123...", "title": "My Awesome Live" }
+}
+----------------------
+
+route: /api/v1/live/schedule
+method: POST
+auth: Bearer Token (Required)
+description: Schedule a live stream
+example: {
+    "title": "Upcoming Live",
+    "description": "Tech talk",
+    "scheduledAt": "2023-12-15T18:00:00"
+}
+output: {
+    "success": true,
+    "data": { "id": "uuid", "title": "Upcoming Live", "scheduledAt": "2023-12-15T18:00:00" }
+}
+----------------------
+
+route: /api/v1/live/{liveId}/end
+method: POST
+auth: Bearer Token (Required)
+description: End a live stream
+example: {}
+output: { "success": true, "message": "Stream ended" }
+----------------------
+
+route: /api/v1/live/active
+method: GET
+auth: None (Public)
+description: Get list of active live streams
+params: limit=20
+output: { "success": true, "data": [...] }
+----------------------
+
+route: /api/v1/live/{liveId}
+method: GET
+auth: None (Public)
+description: Get live stream details
+example: {}
+output: { "success": true, "data": { "id": "uuid", "title": "...", "viewers": 150, "host": {...} } }
+----------------------
+
+route: /api/v1/live/{liveId}/join
+method: POST
+auth: Bearer Token (Required)
+description: Join a live stream (increments viewer count)
+example: {}
+output: { "success": true, "data": { "id": "uuid", "viewers": 150 } }
+----------------------
+
+route: /api/v1/live/{liveId}/leave
+method: POST
+auth: Bearer Token (Required)
+description: Leave a live stream
+example: {}
+output: { "success": true, "message": "Left live stream" }
+----------------------
+
+route: /api/v1/live/{liveId}/like
+method: POST
+auth: Bearer Token (Required)
+description: Like a live stream
+example: {}
+output: { "success": true, "message": "Liked" }
+----------------------
+
+route: /api/v1/live/my-streams
+method: GET
+auth: Bearer Token (Required)
+description: Get my live stream history
+params: page=0, size=20
+output: { "success": true, "data": { "content": [...] } }
+----------------------
+
+route: /api/v1/live/config
+method: GET
+auth: None (Public)
+description: Get streaming config (STUN/TURN, RTMP URL, signal URL)
+output: {
+    "success": true,
+    "data": {
+        "iceServers": { "stunUrl": "...", "turnUrl": "...", "turnUsername": "...", "turnPassword": "..." },
+        "broadcastUrl": "...",
+        "signalUrl": "..."
+    }
+}
+----------------------
+
+# 💎 Virtual Gifts & Coins API
+
+route: /api/v1/coins/packages
+method: GET
+auth: None (Public)
+description: Get available coin packages for purchase
+output: { "success": true, "data": [...] }
+----------------------
+
+route: /api/v1/coins/purchase
+method: POST
+auth: Bearer Token (Required)
+description: Initiate a coin package purchase
+example: {
+    "packageId": "uuid",
+    "phone": "0712345678"
+}
+output: { "success": true, "data": { "transactionId": "HP123..." } }
+----------------------
+
+route: /api/v1/gifts
+method: GET
+auth: None (Public)
+description: Get list of available virtual gifts
+output: { "success": true, "data": [...] }
+----------------------
+
+route: /api/v1/gifts/send
+method: POST
+auth: Bearer Token (Required)
+description: Send a gift to a user (optionally during a live stream)
+example: {
+    "receiverId": "uuid",
+    "giftId": "uuid",
+    "liveStreamId": "uuid",
+    "quantity": 1,
+    "message": "Cool stream!"
+}
+output: { "success": true, "message": "Gift sent successfully" }
+----------------------
+
+route: /api/v1/wallet
+method: GET
+auth: Bearer Token (Required)
+description: Get my wallet balances (Coins and Cash)
+output: {
+    "success": true,
+    "data": { "coinBalance": 500, "cashBalance": 12000.00 }
+}
+----------------------
+
+route: /api/v1/wallet/gifts/received
+method: GET
+auth: Bearer Token (Required)
+description: Get gifts I received
+params: page=0, size=20
+output: { "success": true, "data": { "content": [...] } }
+----------------------
+
+route: /api/v1/wallet/gifts/sent
+method: GET
+auth: Bearer Token (Required)
+description: Get gifts I sent
+params: page=0, size=20
+output: { "success": true, "data": { "content": [...] } }
+----------------------
+
+# 📱 Reels & Stories (Status) API
+
+route: /api/v1/posts/reels
+method: GET
+auth: None (Optional)
+description: Get feed of short videos (Reels)
+params: page=0, size=20
+output: { "success": true, "data": { "content": [...] } }
+----------------------
+
+route: /api/v1/posts/status
+method: GET
+auth: Bearer Token (Required)
+description: Get active stories from friends and self (Last 24h)
+alias: /api/v1/posts/stories
+output: { "success": true, "data": [...] }
+----------------------
+
+# 📌 Status Codes
+
+| Code | Meaning |
+|------|---------|
+| 200 | OK - Success |
+| 201 | Created - Resource created |
+| 400 | Bad Request - Invalid input |
+| 401 | Unauthorized - Token invalid/missing |
+| 403 | Forbidden - No permission |
+| 404 | Not Found - Resource not found |
+| 500 | Server Error |

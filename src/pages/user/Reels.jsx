@@ -1,12 +1,38 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { ThumbsUp, MessageCircle, Share2, MoreHorizontal, Play } from 'lucide-react';
+import { getReels } from '@/lib/api/posts';
 
-// Mock short videos – replace with API (e.g. /api/v1/posts/reels) later
-const MOCK_VIDEOS = [
-  { id: '1', author: { name: 'Wakilfy Official' }, time: '2 hrs', description: 'Quick tips for selling on the feed. Connect with buyers in your area.', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4', likes: 420, comments: 28, shares: 5 },
-  { id: '2', author: { name: 'Sarah M.' }, time: '5 hrs', description: 'Weekend market haul – supporting local sellers.', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4', likes: 189, comments: 12, shares: 2 },
-  { id: '3', author: { name: 'Tech Gadgets Store' }, time: '1 d', description: 'New drop unboxing. Link in bio.', videoUrl: null, likes: 560, comments: 44, shares: 18 },
-];
+function formatTime(createdAt) {
+  if (!createdAt) return '';
+  const date = new Date(createdAt);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m`;
+  if (diffHours < 24) return `${diffHours}h`;
+  if (diffDays < 7) return `${diffDays}d`;
+  return date.toLocaleDateString();
+}
+
+function normalizeReel(post) {
+  const author = post.author ?? post.user ?? {};
+  const media = post.media ?? post.attachments ?? post.images ?? [];
+  const urls = Array.isArray(media) ? media.map((m) => (typeof m === 'string' ? m : m?.url ?? m?.src)) : [];
+  const videoUrl = urls.find((u) => u && /\.(mp4|webm|ogg)(\?|$)/i.test(u)) ?? urls[0] ?? null;
+  return {
+    id: post.id,
+    author: { name: author.name ?? author.username ?? 'User', profilePic: author.profilePic ?? author.avatar },
+    time: formatTime(post.createdAt ?? post.created_at),
+    description: post.caption ?? post.content ?? post.description ?? '',
+    videoUrl,
+    likes: post.likesCount ?? post.likes_count ?? post.likeCount ?? 0,
+    comments: post.commentsCount ?? post.comments_count ?? post.commentCount ?? 0,
+    shares: post.sharesCount ?? post.shares_count ?? 0,
+  };
+}
 
 function Avatar({ user, size = 40, className = '' }) {
   const name = user?.name || 'User';
@@ -125,17 +151,53 @@ function VideoPostCard({ item }) {
 }
 
 export default function Reels() {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    getReels({ page: 0, size: 20 })
+      .then((list) => {
+        if (!cancelled) setItems(Array.isArray(list) ? list.map(normalizeReel) : []);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err.response?.data?.message || err.message || 'Failed to load reels');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <div className="reels-page">
       <div className="reels-page-header">
         <h1 className="reels-page-title">Short video</h1>
         <p className="reels-page-subtitle">Videos in your feed</p>
       </div>
-      <div className="reels-list">
-        {MOCK_VIDEOS.map((item) => (
-          <VideoPostCard key={item.id} item={item} />
-        ))}
-      </div>
+      {error && (
+        <div className="user-app-card" style={{ padding: 16, color: '#b91c1c', marginBottom: 16 }}>
+          {error}
+        </div>
+      )}
+      {loading && (
+        <div className="user-app-card" style={{ padding: 24, textAlign: 'center', color: '#65676b' }}>
+          Loading reels…
+        </div>
+      )}
+      {!loading && !error && items.length === 0 && (
+        <div className="user-app-card" style={{ padding: 24, textAlign: 'center', color: '#65676b' }}>
+          No reels yet.
+        </div>
+      )}
+      {!loading && items.length > 0 && (
+        <div className="reels-list">
+          {items.map((item) => (
+            <VideoPostCard key={item.id} item={item} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
