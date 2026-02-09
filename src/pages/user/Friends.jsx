@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getFriends, followUser, unfollowUser } from '@/lib/api/friends';
+import { useAuthStore } from '@/store/auth.store';
+import { getFollowing, followUser, unfollowUser } from '@/lib/api/friends';
 import { searchUsers, getSuggestedUsers } from '@/lib/api/users';
 
 function UserAvatar({ user, size = 48 }) {
@@ -62,6 +63,7 @@ function normalizeUser(u) {
 }
 
 export default function Friends() {
+  const { user: currentUser } = useAuthStore();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -75,18 +77,24 @@ export default function Friends() {
 
   useEffect(() => {
     let cancelled = false;
-    getFriends({ page: 0, size: 20 })
-      .then((list) => {
-        if (!cancelled) setUsers(Array.isArray(list) ? list.map(normalizeFriend) : []);
+    if (!currentUser?.id) {
+      setUsers([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    getFollowing(currentUser.id, { page: 0, size: 50 })
+      .then((res) => {
+        if (!cancelled && res?.content) setUsers(res.content.map(normalizeUser));
       })
       .catch((err) => {
-        if (!cancelled) setError(err.response?.data?.message || err.message || 'Failed to load friends');
+        if (!cancelled) setError(err.response?.data?.message || err.message || 'Failed to load people you follow');
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
-  }, []);
+  }, [currentUser?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -218,8 +226,8 @@ export default function Friends() {
         )}
       </section>
 
-      <section className="friends-section" aria-label="Your friends">
-        <h2 className="friends-section-title">Your friends</h2>
+      <section className="friends-section" aria-label="People you follow">
+        <h2 className="friends-section-title">People you follow</h2>
       </section>
       {error && (
         <div className="friends-list-error" role="alert">
@@ -230,7 +238,7 @@ export default function Friends() {
         <p className="friends-list-loading">Loading friends…</p>
       )}
       {!loading && !error && users.length === 0 && (
-        <p className="friends-list-empty">No friends yet. Find people to follow from the search or suggestions above.</p>
+        <p className="friends-list-empty">You don't follow anyone yet. Find people from the search or suggestions above.</p>
       )}
       {!loading && users.length > 0 && (
         <ul className="friends-list">

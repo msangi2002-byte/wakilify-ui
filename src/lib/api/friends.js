@@ -12,7 +12,7 @@ function toList(data) {
 }
 
 /**
- * Get my friends (auth required)
+ * Get my friends (accepted friendships; auth required)
  * GET /api/v1/friends?page=0&size=20
  */
 export async function getFriends(params = {}) {
@@ -20,6 +20,18 @@ export async function getFriends(params = {}) {
     params: { page: defaultPage, size: defaultSize, ...params },
   });
   return toList(data);
+}
+
+/**
+ * Get people that a user follows (auth required)
+ * GET /api/v1/social/following/:userId?page=0&size=20
+ * Returns { content: UserResponse[], page, size, totalElements, ... }
+ */
+export async function getFollowing(userId, params = {}) {
+  const { data } = await api.get(`/social/following/${userId}`, {
+    params: { page: defaultPage, size: defaultSize, ...params },
+  });
+  return data?.data ?? data;
 }
 
 /**

@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ImagePlus, Users, Video, MoreHorizontal, Plus, ThumbsUp, MessageCircle, Share2 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
-import { getPublicFeed, getStories, likePost, unlikePost, getComments, addComment, deleteComment } from '@/lib/api/posts';
+import { getFeed, getPublicFeed, getStories, likePost, unlikePost, getComments, addComment, deleteComment } from '@/lib/api/posts';
+import { followUser, unfollowUser } from '@/lib/api/friends';
 
 function groupStoriesByAuthor(stories, currentUserId) {
   const map = new Map();
@@ -93,11 +94,14 @@ function formatCommentTime(createdAt) {
   return date.toLocaleDateString();
 }
 
-function FeedPost({ id, author, time, description, media = [], liked: initialLiked = false, likesCount: initialLikesCount = 0, commentsCount: initialCommentsCount = 0, sharesCount = 0 }) {
+function FeedPost({ id, author, time, description, media = [], liked: initialLiked = false, likesCount: initialLikesCount = 0, commentsCount: initialCommentsCount = 0, sharesCount = 0, authorIsFollowed: initialAuthorIsFollowed = false, onFollowChange }) {
   const { user: currentUser } = useAuthStore();
+  const isSelf = currentUser?.id && author?.id && currentUser.id === author.id;
   const [liked, setLiked] = useState(!!initialLiked);
   const [likesCount, setLikesCount] = useState(initialLikesCount);
   const [likeLoading, setLikeLoading] = useState(false);
+  const [authorIsFollowed, setAuthorIsFollowed] = useState(!!initialAuthorIsFollowed);
+  const [followLoading, setFollowLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState([]);
@@ -167,6 +171,25 @@ function FeedPost({ id, author, time, description, media = [], liked: initialLik
     } catch (_) {}
   };
 
+  const handleFollowClick = async () => {
+    if (!author?.id || isSelf || followLoading) return;
+    setFollowLoading(true);
+    try {
+      if (authorIsFollowed) {
+        await unfollowUser(author.id);
+        setAuthorIsFollowed(false);
+        onFollowChange?.(author.id, false);
+      } else {
+        await followUser(author.id);
+        setAuthorIsFollowed(true);
+        onFollowChange?.(author.id, true);
+      }
+    } catch (_) {}
+    finally {
+      setFollowLoading(false);
+    }
+  };
+
   return (
     <div className="user-app-card feed-post">
       <div className="feed-post-header">
@@ -174,7 +197,16 @@ function FeedPost({ id, author, time, description, media = [], liked: initialLik
         <div className="feed-post-meta">
           <div className="feed-post-meta-top">
             <span className="feed-post-name">{author?.name || 'User'}</span>
-            <button type="button" className="feed-post-follow">Follow</button>
+            {!isSelf && author?.id && (
+              <button
+                type="button"
+                className={`feed-post-follow ${authorIsFollowed ? 'following' : ''}`}
+                onClick={handleFollowClick}
+                disabled={followLoading}
+              >
+                {followLoading ? '…' : authorIsFollowed ? 'Following' : 'Follow'}
+              </button>
+            )}
           </div>
           <span className="feed-post-time">{time}</span>
         </div>
@@ -312,7 +344,7 @@ function normalizePost(post) {
     : [];
   return {
     id: post.id,
-    author: { name, profilePic },
+    author: { id: author.id, name, profilePic },
     time: formatPostTime(post.createdAt ?? post.created_at),
     description: post.caption ?? post.content ?? post.description ?? '',
     media: urls.filter(Boolean),
@@ -320,6 +352,7 @@ function normalizePost(post) {
     likesCount: post.reactionsCount ?? post.likesCount ?? post.likes_count ?? post.likeCount ?? 0,
     commentsCount: post.commentsCount ?? post.comments_count ?? post.commentCount ?? 0,
     sharesCount: post.sharesCount ?? post.shares_count ?? 0,
+    authorIsFollowed: !!post.authorIsFollowed,
   };
 }
 
@@ -335,7 +368,8 @@ export default function Home() {
     let cancelled = false;
     setLoading(true);
     setError('');
-    getPublicFeed({ page: 0, size: 20 })
+    const fetchFeed = currentUser?.id ? getFeed : getPublicFeed;
+    fetchFeed({ page: 0, size: 20 })
       .then((list) => {
         if (!cancelled) setPosts(Array.isArray(list) ? list.map(normalizePost) : []);
       })
@@ -346,7 +380,7 @@ export default function Home() {
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -452,6 +486,7 @@ export default function Home() {
           likesCount={p.likesCount}
           commentsCount={p.commentsCount}
           sharesCount={p.sharesCount}
+          authorIsFollowed={p.authorIsFollowed}
         />
       ))}
     </>

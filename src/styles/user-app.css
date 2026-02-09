@@ -547,6 +547,19 @@
   background: #ede9fe;
 }
 
+.feed-post-follow.following {
+  color: #65676b;
+}
+
+.feed-post-follow.following:hover {
+  background: #e4e6eb;
+}
+
+.feed-post-follow:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 .feed-post-time {
   display: block;
   font-size: 0.8125rem;
