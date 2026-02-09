@@ -5,8 +5,8 @@ let state = {
   token: null, // access token
   refreshToken: null,
   isAuthenticated: false,
-};
-
+}; 
+ 
 const listeners = new Set();
 
 function getState() {
