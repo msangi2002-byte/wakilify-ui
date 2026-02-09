@@ -3,6 +3,7 @@ import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
 import App from '../App';
 import AuthLayout from '@/layouts/AuthLayout';
 import UserLayout from '@/layouts/UserLayout';
+import GroupsLayout from '@/layouts/GroupsLayout';
 import BusinessLayout from '@/layouts/BusinessLayout';
 import AgentLayout from '@/layouts/AgentLayout';
 import AdminLayout from '@/layouts/AdminLayout';
@@ -34,6 +35,8 @@ const Chat = lazy(() => import('@/pages/user/Chat'));
 const Profile = lazy(() => import('@/pages/user/Profile'));
 const Friends = lazy(() => import('@/pages/user/Friends'));
 const Groups = lazy(() => import('@/pages/user/Groups'));
+const GroupDetail = lazy(() => import('@/pages/user/GroupDetail'));
+const GroupCreate = lazy(() => import('@/pages/user/GroupCreate'));
 const UserSettings = lazy(() => import('@/pages/user/Settings'));
 const Notifications = lazy(() => import('@/pages/user/Notifications'));
 
@@ -113,7 +116,15 @@ const router = createBrowserRouter([
           { path: 'chat/:id', element: <Suspense fallback={<Fallback />}><Chat /></Suspense> },
           { path: 'profile', element: <Suspense fallback={<Fallback />}><Profile /></Suspense> },
           { path: 'friends', element: <Suspense fallback={<Fallback />}><Friends /></Suspense> },
-          { path: 'groups', element: <Suspense fallback={<Fallback />}><Groups /></Suspense> },
+          {
+            path: 'groups',
+            element: <Suspense fallback={<Fallback />}><GroupsLayout /></Suspense>,
+            children: [
+              { index: true, element: <Suspense fallback={<Fallback />}><Groups /></Suspense> },
+              { path: 'create', element: <Suspense fallback={<Fallback />}><GroupCreate /></Suspense> },
+              { path: ':id', element: <Suspense fallback={<Fallback />}><GroupDetail /></Suspense> },
+            ],
+          },
           { path: 'settings', element: <Suspense fallback={<Fallback />}><UserSettings /></Suspense> },
         ],
       },

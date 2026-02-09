@@ -80,6 +80,17 @@ export async function getPostsByUser(userId, params = {}) {
 }
 
 /**
+ * Posts in a community (group) (auth required)
+ * GET /api/v1/posts/community/:communityId?page=0&size=20
+ */
+export async function getPostsByCommunity(communityId, params = {}) {
+  const { data } = await api.get(`/posts/community/${communityId}`, {
+    params: { page: defaultPage, size: defaultSize, ...params },
+  });
+  return toList(data);
+}
+
+/**
  * 6. Single post by ID (auth required)
  * GET /api/v1/posts/:postId
  */
@@ -140,12 +151,14 @@ export async function deleteComment(commentId) {
  * Create a post (text-only, with image(s), or multiple files).
  * Uses multipart/form-data: field "data" (JSON) and optional "files" (one or more).
  * For repost: pass originalPostId and postType 'POST'.
+ * For group post: pass communityId (UUID string).
  * POST /api/v1/posts
  */
-export async function createPost({ caption = '', visibility = 'PUBLIC', postType = 'POST', originalPostId = null, files = [] }) {
+export async function createPost({ caption = '', visibility = 'PUBLIC', postType = 'POST', originalPostId = null, communityId = null, files = [] }) {
   const formData = new FormData();
   const dataPayload = { caption, visibility, postType };
   if (originalPostId) dataPayload.originalPostId = originalPostId;
+  if (communityId) dataPayload.communityId = communityId;
   formData.append('data', new Blob([JSON.stringify(dataPayload)], { type: 'application/json' }));
   for (const file of files) {
     if (file instanceof File) formData.append('files', file);
