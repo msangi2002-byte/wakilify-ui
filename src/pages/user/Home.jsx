@@ -368,7 +368,7 @@ export default function Home() {
     let cancelled = false;
     setLoading(true);
     setError('');
-    const fetchFeed = currentUser?.id ? getFeed : getPublicFeed;
+    const fetchFeed = user?.id ? getFeed : getPublicFeed;
     fetchFeed({ page: 0, size: 20 })
       .then((list) => {
         if (!cancelled) setPosts(Array.isArray(list) ? list.map(normalizePost) : []);
