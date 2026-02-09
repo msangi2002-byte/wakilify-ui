@@ -37,6 +37,9 @@ export default function Register() {
     month: '',
     year: '',
     gender: 'female',
+    region: '',
+    country: 'Tanzania',
+    interests: '',
   });
 
   const update = (name, value) => {
@@ -67,12 +70,21 @@ export default function Register() {
       setError('Password is required.');
       return;
     }
+    const dateOfBirth =
+      form.day && form.month && form.year
+        ? `${form.year}-${String(form.month).padStart(2, '0')}-${String(form.day).padStart(2, '0')}`
+        : undefined;
+
     const payload = {
       name,
       password: password.trim(),
       role: 'USER',
       email: emailTrim || undefined,
       phone: phoneFormatted || undefined,
+      region: (form.region || '').trim() || undefined,
+      country: (form.country || '').trim() || undefined,
+      dateOfBirth,
+      interests: (form.interests || '').trim() || undefined,
     };
     setLoading(true);
     try {
@@ -221,6 +233,53 @@ export default function Register() {
               Male
             </label>
           </div>
+        </div>
+
+        <div className="auth-field">
+          <label htmlFor="region">Region (Mkoa)</label>
+          <select
+            id="region"
+            value={form.region}
+            onChange={(e) => update('region', e.target.value)}
+            aria-label="Region"
+          >
+            <option value="">Choose region</option>
+            <option value="Dar es Salaam">Dar es Salaam</option>
+            <option value="Mwanza">Mwanza</option>
+            <option value="Arusha">Arusha</option>
+            <option value="Dodoma">Dodoma</option>
+            <option value="Mbeya">Mbeya</option>
+            <option value="Tanga">Tanga</option>
+            <option value="Morogoro">Morogoro</option>
+            <option value="Moshi">Moshi</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <div className="auth-field">
+          <label htmlFor="country">Country (Taifa)</label>
+          <select
+            id="country"
+            value={form.country}
+            onChange={(e) => update('country', e.target.value)}
+            aria-label="Country"
+          >
+            <option value="Tanzania">Tanzania</option>
+            <option value="Kenya">Kenya</option>
+            <option value="Uganda">Uganda</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <div className="auth-field">
+          <label htmlFor="interests">Interests / Hobbies (vitaka)</label>
+          <input
+            id="interests"
+            type="text"
+            placeholder="e.g. Music, Sports, Tech"
+            value={form.interests}
+            onChange={(e) => update('interests', e.target.value)}
+          />
         </div>
 
         <button type="submit" className="auth-btn-primary" disabled={loading}>

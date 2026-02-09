@@ -57,3 +57,27 @@ export async function uploadCoverPic(file) {
   });
   return data?.data ?? data;
 }
+
+/**
+ * Search users by name/email/phone. Results sorted alphabetically by name.
+ * GET /api/v1/users/search?q=...&page=0&size=20
+ * Returns { content: UserResponse[], page, size, totalElements, totalPages, last, first }
+ */
+export async function searchUsers(q, params = {}) {
+  const { data } = await api.get('/users/search', {
+    params: { q: q ?? '', page: 0, size: 20, ...params },
+  });
+  return data?.data ?? data;
+}
+
+/**
+ * Get suggested users (people you may know) by same region/country. Sorted alphabetically.
+ * GET /api/v1/users/suggested?page=0&size=20
+ * Returns { content: UserResponse[], page, size, totalElements, totalPages, last, first }
+ */
+export async function getSuggestedUsers(params = {}) {
+  const { data } = await api.get('/users/suggested', {
+    params: { page: 0, size: 20, ...params },
+  });
+  return data?.data ?? data;
+}

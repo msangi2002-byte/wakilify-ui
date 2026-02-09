@@ -19,6 +19,11 @@ export async function register(payload) {
   };
   if (payload.email != null && payload.email !== '') body.email = payload.email;
   if (payload.phone != null && payload.phone !== '') body.phone = payload.phone;
+  if (payload.region != null && payload.region !== '') body.region = payload.region;
+  if (payload.country != null && payload.country !== '') body.country = payload.country;
+  if (payload.dateOfBirth != null) body.dateOfBirth = payload.dateOfBirth;
+  if (payload.interests != null && payload.interests !== '') body.interests = payload.interests;
+  if (payload.referralCode != null && payload.referralCode !== '') body.referralCode = payload.referralCode;
   const { data } = await api.post('/auth/register', body);
   return data;
 }

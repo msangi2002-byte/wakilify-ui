@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getFriends, followUser, unfollowUser } from '@/lib/api/friends';
+import { searchUsers, getSuggestedUsers } from '@/lib/api/users';
 
 function UserAvatar({ user, size = 48 }) {
   const name = user?.name || 'User';
@@ -39,6 +40,24 @@ function normalizeFriend(item) {
     username: user.username ?? user.name?.replace(/\s+/g, '_').toLowerCase(),
     profilePic: user.profilePic ?? user.avatar ?? user.image,
     isFollowing: item.isFollowing ?? true,
+    region: user.region,
+    country: user.country,
+    age: user.age,
+    interests: user.interests,
+  };
+}
+
+function normalizeUser(u) {
+  return {
+    id: u.id,
+    name: u.name ?? 'User',
+    username: (u.username ?? u.name?.replace(/\s+/g, '_').toLowerCase()) ?? 'user',
+    profilePic: u.profilePic ?? u.avatar ?? u.image,
+    isFollowing: u.isFollowing ?? false,
+    region: u.region,
+    country: u.country,
+    age: u.age,
+    interests: u.interests,
   };
 }
 
@@ -47,6 +66,12 @@ export default function Friends() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [loadingId, setLoadingId] = useState(null);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [suggested, setSuggested] = useState([]);
+  const [suggestedLoading, setSuggestedLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,20 +88,86 @@ export default function Friends() {
     return () => { cancelled = true; };
   }, []);
 
-  const handleFollowToggle = async (user) => {
+  useEffect(() => {
+    let cancelled = false;
+    setSuggestedLoading(true);
+    getSuggestedUsers({ page: 0, size: 20 })
+      .then((res) => {
+        if (!cancelled && res?.content) setSuggested(res.content.map(normalizeUser));
+      })
+      .catch(() => {
+        if (!cancelled) setSuggested([]);
+      })
+      .finally(() => {
+        if (!cancelled) setSuggestedLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    let cancelled = false;
+    setSearching(true);
+    const timer = setTimeout(() => {
+      searchUsers(searchQuery.trim(), { page: 0, size: 30 })
+        .then((res) => {
+          if (!cancelled && res?.content) setSearchResults(res.content.map(normalizeUser));
+          else if (!cancelled) setSearchResults([]);
+        })
+        .catch(() => {
+          if (!cancelled) setSearchResults([]);
+        })
+        .finally(() => {
+          if (!cancelled) setSearching(false);
+        });
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [searchQuery]);
+
+  const handleFollowToggle = async (user, setList) => {
     if (loadingId) return;
     setLoadingId(user.id);
     const nextFollowing = !user.isFollowing;
-    setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, isFollowing: nextFollowing } : u)));
+    setList((prev) => prev.map((u) => (u.id === user.id ? { ...u, isFollowing: nextFollowing } : u)));
     try {
       if (nextFollowing) await followUser(user.id);
       else await unfollowUser(user.id);
     } catch {
-      setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, isFollowing: user.isFollowing } : u)));
+      setList((prev) => prev.map((u) => (u.id === user.id ? { ...u, isFollowing: user.isFollowing } : u)));
     } finally {
       setLoadingId(null);
     }
   };
+
+  const renderUserRow = (user, setList) => (
+    <li key={user.id} className="friends-list-item">
+      <UserAvatar user={user} size={48} />
+      <div className="friends-list-info">
+        <span className="friends-list-name">{user.name}</span>
+        <span className="friends-list-username">@{user.username}</span>
+        {(user.region || user.country || user.age != null) && (
+          <span className="friends-list-meta">
+            {[user.region, user.country].filter(Boolean).join(', ')}
+            {user.age != null ? ` · ${user.age} yrs` : ''}
+          </span>
+        )}
+      </div>
+      <button
+        type="button"
+        className={`friends-list-follow-btn ${user.isFollowing ? 'following' : ''}`}
+        onClick={() => handleFollowToggle(user, setList)}
+        disabled={loadingId === user.id}
+      >
+        {loadingId === user.id ? '…' : user.isFollowing ? 'Following' : 'Follow'}
+      </button>
+    </li>
+  );
 
   return (
     <div className="user-app-card">
@@ -84,6 +175,52 @@ export default function Friends() {
         <h1 className="friends-list-title">Friends</h1>
         <p className="friends-list-subtitle">People you follow and connect with</p>
       </div>
+
+      <div className="friends-search-wrap">
+        <input
+          type="search"
+          className="friends-search-input"
+          placeholder="Search any user (A–Z)"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          aria-label="Search users"
+        />
+        {searching && <span className="friends-search-loading">Searching…</span>}
+      </div>
+
+      {searchQuery.trim() && (
+        <section className="friends-section" aria-label="Search results">
+          <h2 className="friends-section-title">Search results</h2>
+          {searching && searchResults.length === 0 && (
+            <p className="friends-list-loading">Searching…</p>
+          )}
+          {!searching && searchResults.length === 0 && (
+            <p className="friends-list-empty">No users found. Try another name.</p>
+          )}
+          {!searching && searchResults.length > 0 && (
+            <ul className="friends-list">
+              {searchResults.map((u) => renderUserRow(u, setSearchResults))}
+            </ul>
+          )}
+        </section>
+      )}
+
+      <section className="friends-section" aria-label="People you may know">
+        <h2 className="friends-section-title">People you may know</h2>
+        {suggestedLoading && <p className="friends-list-loading">Loading…</p>}
+        {!suggestedLoading && suggested.length === 0 && (
+          <p className="friends-list-empty">No suggestions right now. Try searching for users above.</p>
+        )}
+        {!suggestedLoading && suggested.length > 0 && (
+          <ul className="friends-list">
+            {suggested.map((u) => renderUserRow(u, setSuggested))}
+          </ul>
+        )}
+      </section>
+
+      <section className="friends-section" aria-label="Your friends">
+        <h2 className="friends-section-title">Your friends</h2>
+      </section>
       {error && (
         <div className="friends-list-error" role="alert">
           {error}
@@ -93,27 +230,11 @@ export default function Friends() {
         <p className="friends-list-loading">Loading friends…</p>
       )}
       {!loading && !error && users.length === 0 && (
-        <p className="friends-list-empty">No friends yet. Find people to follow from the feed.</p>
+        <p className="friends-list-empty">No friends yet. Find people to follow from the search or suggestions above.</p>
       )}
       {!loading && users.length > 0 && (
         <ul className="friends-list">
-          {users.map((user) => (
-            <li key={user.id} className="friends-list-item">
-              <UserAvatar user={user} size={48} />
-              <div className="friends-list-info">
-                <span className="friends-list-name">{user.name}</span>
-                <span className="friends-list-username">@{user.username}</span>
-              </div>
-              <button
-                type="button"
-                className={`friends-list-follow-btn ${user.isFollowing ? 'following' : ''}`}
-                onClick={() => handleFollowToggle(user)}
-                disabled={loadingId === user.id}
-              >
-                {loadingId === user.id ? '…' : user.isFollowing ? 'Following' : 'Follow'}
-              </button>
-            </li>
-          ))}
+          {users.map((user) => renderUserRow(user, setUsers))}
         </ul>
       )}
     </div>
