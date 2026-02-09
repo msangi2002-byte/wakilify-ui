@@ -1,8 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  ImagePlus,
-  Video,
   MoreHorizontal,
   ThumbsUp,
   MessageCircle,
@@ -12,14 +10,15 @@ import {
   Globe,
   Pencil,
   Camera,
+  LayoutGrid,
+  Repeat,
+  UserSquare,
 } from 'lucide-react';
 import { useAuthStore, setAuth, getToken } from '@/store/auth.store';
-import { getMe, updateMe, uploadProfilePic, uploadCoverPic } from '@/lib/api/users';
-import { getFriends } from '@/lib/api/friends';
+import { getMe, uploadProfilePic, uploadCoverPic } from '@/lib/api/users';
 import {
   getPostsByUser,
   getSavedPosts,
-  createPost,
   likePost,
   unlikePost,
   savePost,
@@ -331,15 +330,13 @@ function ProfileFeedPost({ post, currentUser, saved: initialSaved = false, onSav
 export default function Profile() {
   const { user: authUser } = useAuthStore();
   const [profile, setProfile] = useState(null);
-  const [friends, setFriends] = useState([]);
   const [posts, setPosts] = useState([]);
-  const [postFilter, setPostFilter] = useState('all'); // all | photos | videos | saved
+  const [profileTab, setProfileTab] = useState('posts'); // posts (grid) | saved | tagged
+  const [postFilter, setPostFilter] = useState('all'); // all | photos | videos (used when profileTab === 'posts')
   const [savedPosts, setSavedPosts] = useState([]);
   const [savedLoading, setSavedLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [composerText, setComposerText] = useState('');
-  const [posting, setPosting] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [coverUploading, setCoverUploading] = useState(false);
   const avatarInputRef = useRef(null);
@@ -352,15 +349,10 @@ export default function Profile() {
     let cancelled = false;
     setLoading(true);
     setError('');
-    Promise.all([getMe(), getFriends({ page: 0, size: 50 }), getPostsByUser(userId, { page: 0, size: 50 })])
-      .then(([me, friendsList, postsList]) => {
+    Promise.all([getMe(), getPostsByUser(userId, { page: 0, size: 50 })])
+      .then(([me, postsList]) => {
         if (cancelled) return;
         setProfile(me ?? authUser);
-        const raw = Array.isArray(friendsList) ? friendsList : friendsList?.content ?? [];
-        const friendUsers = raw
-          .map((f) => (f.requester?.id === userId ? f.addressee : f.requester))
-          .filter(Boolean);
-        setFriends(friendUsers);
         setPosts(Array.isArray(postsList) ? postsList.map(normalizePost) : []);
       })
       .catch((err) => {
@@ -408,27 +400,10 @@ export default function Profile() {
     }
   };
 
-  const handleCreatePost = async (e) => {
-    e.preventDefault();
-    const text = composerText.trim();
-    if (!text || posting) return;
-    setPosting(true);
-    try {
-      await createPost({ caption: text, postType: 'POST', visibility: 'PUBLIC', files: [] });
-      setComposerText('');
-      const list = await getPostsByUser(userId, { page: 0, size: 50 });
-      setPosts(Array.isArray(list) ? list.map(normalizePost) : []);
-    } catch (err) {
-      setError(getApiErrorMessage(err, 'Failed to post'));
-    } finally {
-      setPosting(false);
-    }
-  };
-
   const displayProfile = profile ?? authUser;
 
   useEffect(() => {
-    if (postFilter !== 'saved' || !userId) return;
+    if (profileTab !== 'saved' || !userId) return;
     let cancelled = false;
     setSavedLoading(true);
     getSavedPosts({ page: 0, size: 50 })
@@ -444,10 +419,10 @@ export default function Profile() {
         if (!cancelled) setSavedLoading(false);
       });
     return () => { cancelled = true; };
-  }, [postFilter, userId]);
+  }, [profileTab, userId]);
 
   const filteredPosts =
-    postFilter === 'saved'
+    profileTab === 'saved'
       ? savedPosts
       : postFilter === 'photos'
         ? posts.filter((p) => p.media?.length > 0 && !p.hasVideo)
@@ -455,10 +430,17 @@ export default function Profile() {
           ? posts.filter((p) => p.hasVideo)
           : posts;
 
-  const photoUrls = posts
-    .filter((p) => p.media?.length > 0)
-    .flatMap((p) => p.media)
-    .slice(0, 9);
+  /* For grid tab: posts with media for thumbnail grid; "all" = any image/video post */
+  const gridPosts =
+    profileTab === 'posts'
+      ? postFilter === 'photos'
+        ? posts.filter((p) => p.media?.length > 0 && !p.hasVideo)
+        : postFilter === 'videos'
+          ? posts.filter((p) => p.hasVideo)
+          : posts.filter((p) => p.media?.length > 0)
+      : profileTab === 'saved'
+        ? savedPosts
+        : [];
 
   if (loading && !displayProfile) {
     return (
@@ -550,158 +532,121 @@ export default function Profile() {
         </div>
       )}
 
-      <div className="profile-fb-main">
-        {/* Left sidebar */}
-        <aside className="profile-fb-sidebar">
-          <div className="profile-fb-card">
-            <h3 className="profile-fb-card-title">Intro</h3>
-            {(displayProfile?.work || displayProfile?.education || displayProfile?.currentCity || displayProfile?.relationshipStatus) ? (
-              <ul className="profile-fb-intro-list">
-                {displayProfile.work && <li>{displayProfile.work}</li>}
-                {displayProfile.education && <li>Studied at {displayProfile.education}</li>}
-                {displayProfile.currentCity && <li>Lives in {displayProfile.currentCity}</li>}
-                {displayProfile.relationshipStatus && <li>{displayProfile.relationshipStatus}</li>}
-              </ul>
-            ) : (
-              <p className="profile-fb-intro-empty">No intro added yet.</p>
-            )}
-            <Link to="/app/settings" className="profile-fb-card-link">
-              Edit details
-            </Link>
+      <div className="profile-fb-main profile-fb-main-no-sidebar">
+        {/* Main content: icon tab bar + grid */}
+        <div className="profile-fb-content">
+          {/* Icon tab bar (Grid = image/video posts, Repeat = saved, UserSquare = tagged) */}
+          <div className="profile-fb-tabs" role="tablist" aria-label="Profile content tabs">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={profileTab === 'posts'}
+              aria-label="Image and video posts"
+              className={`profile-fb-tab ${profileTab === 'posts' ? 'active' : ''}`}
+              onClick={() => setProfileTab('posts')}
+            >
+              <LayoutGrid size={24} />
+              <span className="profile-fb-tab-indicator" />
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={profileTab === 'saved'}
+              aria-label="Saved posts"
+              className={`profile-fb-tab ${profileTab === 'saved' ? 'active' : ''}`}
+              onClick={() => setProfileTab('saved')}
+            >
+              <Repeat size={24} />
+              <span className="profile-fb-tab-indicator" />
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={profileTab === 'tagged'}
+              aria-label="Tagged posts"
+              className={`profile-fb-tab ${profileTab === 'tagged' ? 'active' : ''}`}
+              onClick={() => setProfileTab('tagged')}
+            >
+              <UserSquare size={24} />
+              <span className="profile-fb-tab-indicator" />
+            </button>
           </div>
 
-          <div className="profile-fb-card">
-            <div className="profile-fb-card-head">
-              <h3 className="profile-fb-card-title">Photos</h3>
-              <span className="profile-fb-card-count">{photoUrls.length} Photos</span>
+          {/* Sub-filters for posts tab: All | Photos | Videos */}
+          {profileTab === 'posts' && (
+            <div className="profile-fb-subfilters">
+              <button
+                type="button"
+                className={`profile-fb-subfilter ${postFilter === 'all' ? 'active' : ''}`}
+                onClick={() => setPostFilter('all')}
+              >
+                All
+              </button>
+              <button
+                type="button"
+                className={`profile-fb-subfilter ${postFilter === 'photos' ? 'active' : ''}`}
+                onClick={() => setPostFilter('photos')}
+              >
+                Photos
+              </button>
+              <button
+                type="button"
+                className={`profile-fb-subfilter ${postFilter === 'videos' ? 'active' : ''}`}
+                onClick={() => setPostFilter('videos')}
+              >
+                Videos
+              </button>
             </div>
-            {photoUrls.length > 0 ? (
-              <>
-                <div className="profile-fb-photos-grid">
-                  {photoUrls.slice(0, 9).map((url, i) => (
-                    <div key={i} className="profile-fb-photo-item">
-                      <img src={url} alt="" loading="lazy" />
+          )}
+
+          {/* Grid view for posts and saved */}
+          {(profileTab === 'posts' || profileTab === 'saved') && (
+            <>
+              {profileTab === 'saved' && savedLoading && (
+                <div className="profile-fb-posts-empty">Loading saved posts…</div>
+              )}
+              {gridPosts.length === 0 && !(profileTab === 'saved' && savedLoading) && (
+                <div className="profile-fb-posts-empty">
+                  {profileTab === 'saved'
+                    ? 'Hakuna post zilizohifadhiwa. / No saved posts.'
+                    : posts.length === 0
+                      ? 'No posts yet. Share something!'
+                      : `No ${postFilter === 'all' ? 'image or video' : postFilter} posts.`}
+                </div>
+              )}
+              {gridPosts.length > 0 && (
+                <div className="profile-fb-posts-grid">
+                  {gridPosts.map((post) => (
+                    <div key={post.id} className="profile-fb-posts-grid-item">
+                      {post.media?.[0] ? (
+                        post.hasVideo ? (
+                          <video src={post.media[0]} muted playsInline className="profile-fb-grid-thumb" />
+                        ) : (
+                          <img src={post.media[0]} alt="" loading="lazy" className="profile-fb-grid-thumb" />
+                        )
+                      ) : (
+                        <div className="profile-fb-grid-thumb profile-fb-grid-thumb-placeholder">
+                          <span className="profile-fb-grid-thumb-text">Post</span>
+                        </div>
+                      )}
+                      {post.media?.length > 1 && (
+                        <span className="profile-fb-grid-multi" aria-hidden>
+                          <LayoutGrid size={14} />
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>
-                <Link to="/app/profile#photos" className="profile-fb-card-link">
-                  See all photos
-                </Link>
-              </>
-            ) : (
-              <p className="profile-fb-empty-text">No photos yet.</p>
-            )}
-          </div>
-
-          <div className="profile-fb-card">
-            <div className="profile-fb-card-head">
-              <h3 className="profile-fb-card-title">Friends</h3>
-              <span className="profile-fb-card-count">{friends.length} Friends</span>
-            </div>
-            {friends.length > 0 ? (
-              <>
-                <div className="profile-fb-friends-grid">
-                  {friends.slice(0, 9).map((friend) => (
-                    <Link key={friend.id} to={`/app/profile`} className="profile-fb-friend-item">
-                      <Avatar user={friend} size={80} />
-                      <span className="profile-fb-friend-name">{friend.name ?? 'User'}</span>
-                    </Link>
-                  ))}
-                </div>
-                <Link to="/app/friends" className="profile-fb-card-link">
-                  See all friends
-                </Link>
-              </>
-            ) : (
-              <p className="profile-fb-empty-text">No friends yet.</p>
-            )}
-          </div>
-        </aside>
-
-        {/* Main content: composer + posts */}
-        <div className="profile-fb-content">
-          <div className="profile-fb-filters">
-            <button
-              type="button"
-              className={`profile-fb-filter ${postFilter === 'all' ? 'active' : ''}`}
-              onClick={() => setPostFilter('all')}
-            >
-              Posts
-            </button>
-            <button
-              type="button"
-              className={`profile-fb-filter ${postFilter === 'photos' ? 'active' : ''}`}
-              onClick={() => setPostFilter('photos')}
-            >
-              Photos
-            </button>
-            <button
-              type="button"
-              className={`profile-fb-filter ${postFilter === 'videos' ? 'active' : ''}`}
-              onClick={() => setPostFilter('videos')}
-            >
-              Videos
-            </button>
-            <button
-              type="button"
-              className={`profile-fb-filter ${postFilter === 'saved' ? 'active' : ''}`}
-              onClick={() => setPostFilter('saved')}
-            >
-              Saved
-            </button>
-          </div>
-
-          {/* What's on your mind */}
-          <div className="profile-fb-composer">
-            <Avatar user={displayProfile} size={40} />
-            <form onSubmit={handleCreatePost} className="profile-fb-composer-form">
-              <input
-                type="text"
-                placeholder={`What's on your mind, ${displayProfile?.name?.split(' ')[0] ?? 'User'}?`}
-                value={composerText}
-                onChange={(e) => setComposerText(e.target.value)}
-                className="profile-fb-composer-input"
-              />
-              <div className="profile-fb-composer-actions">
-                <button type="button" className="profile-fb-composer-action" disabled title="Live video">
-                  <Video size={24} />
-                  Live video
-                </button>
-                <button type="button" className="profile-fb-composer-action" disabled title="Photo/video">
-                  <ImagePlus size={24} />
-                  Photo/video
-                </button>
-                <button type="submit" className="profile-fb-composer-post" disabled={!composerText.trim() || posting}>
-                  {posting ? 'Posting…' : 'Post'}
-                </button>
-              </div>
-            </form>
-          </div>
-
-          {/* Posts feed */}
-          {postFilter === 'saved' && savedLoading && (
-            <div className="profile-fb-posts-empty">Loading saved posts…</div>
+              )}
+            </>
           )}
-          {filteredPosts.length === 0 && !(postFilter === 'saved' && savedLoading) && (
+
+          {/* Tagged tab */}
+          {profileTab === 'tagged' && (
             <div className="profile-fb-posts-empty">
-              {postFilter === 'saved'
-                ? 'Hakuna post zilizohifadhiwa. / No saved posts.'
-                : posts.length === 0
-                  ? 'No posts yet. Share something!'
-                  : `No ${postFilter} posts.`}
+              No tagged posts yet. Posts you're tagged in will appear here.
             </div>
           )}
-          {filteredPosts.map((post) => (
-            <ProfileFeedPost
-              key={post.id}
-              post={post}
-              currentUser={authUser}
-              saved={post.saved}
-              onSaveChange={(postId, nowSaved) => {
-                if (postFilter === 'saved' && !nowSaved) setSavedPosts((prev) => prev.filter((p) => p.id !== postId));
-              }}
-            />
-          ))}
         </div>
       </div>
     </div>
