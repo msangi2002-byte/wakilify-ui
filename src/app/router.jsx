@@ -20,6 +20,8 @@ const Explore = lazy(() => import('@/pages/user/Explore'));
 const Create = lazy(() => import('@/pages/user/Create'));
 const Reels = lazy(() => import('@/pages/user/Reels'));
 const Stories = lazy(() => import('@/pages/user/Stories'));
+const StoryCreate = lazy(() => import('@/pages/user/StoryCreate'));
+const StoryViewer = lazy(() => import('@/pages/user/StoryViewer'));
 const Shop = lazy(() => import('@/pages/user/Shop'));
 const ProductDetails = lazy(() => import('@/pages/user/ProductDetails'));
 const Cart = lazy(() => import('@/pages/user/Cart'));
@@ -95,6 +97,8 @@ const router = createBrowserRouter([
           { path: 'create', element: <Suspense fallback={<Fallback />}><Create /></Suspense> },
           { path: 'reels', element: <Suspense fallback={<Fallback />}><Reels /></Suspense> },
           { path: 'stories', element: <Suspense fallback={<Fallback />}><Stories /></Suspense> },
+          { path: 'stories/create', element: <Suspense fallback={<Fallback />}><StoryCreate /></Suspense> },
+          { path: 'stories/view/:userId', element: <Suspense fallback={<Fallback />}><StoryViewer /></Suspense> },
           { path: 'shop', element: <Suspense fallback={<Fallback />}><Shop /></Suspense> },
           { path: 'shop/settings', element: <Navigate to="/app/settings#marketplace" replace /> },
           { path: 'shop/:id', element: <Suspense fallback={<Fallback />}><ProductDetails /></Suspense> },

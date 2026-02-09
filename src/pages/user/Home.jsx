@@ -2,13 +2,40 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ImagePlus, Users, Video, MoreHorizontal, Plus, ThumbsUp, MessageCircle, Share2 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
-import { getPublicFeed, likePost, unlikePost, getComments, addComment, deleteComment } from '@/lib/api/posts';
+import { getPublicFeed, getStories, likePost, unlikePost, getComments, addComment, deleteComment } from '@/lib/api/posts';
 
-const storyFriends = [
-  { name: 'Bruittun Friends', id: '1' },
-  { name: 'Rusty Friends', id: '2' },
-  { name: 'Jun Frie', id: '3' },
-];
+function groupStoriesByAuthor(stories, currentUserId) {
+  const map = new Map();
+  for (const s of stories) {
+    const author = s.author ?? {};
+    const id = author.id ?? s.authorId;
+    if (!id) continue;
+    if (!map.has(id)) {
+      map.set(id, { authorId: id, author: { id: author.id, name: author.name, profilePic: author.profilePic }, stories: [] });
+    }
+    map.get(id).stories.push(s);
+  }
+  const list = Array.from(map.values());
+  for (const g of list) {
+    g.stories.sort((a, b) => new Date(b.createdAt ?? 0) - new Date(a.createdAt ?? 0));
+  }
+  list.sort((a, b) => {
+    const aIsMe = a.authorId === currentUserId ? 1 : 0;
+    const bIsMe = b.authorId === currentUserId ? 1 : 0;
+    if (aIsMe !== bIsMe) return bIsMe - aIsMe;
+    const aTime = a.stories[0]?.createdAt ?? '';
+    const bTime = b.stories[0]?.createdAt ?? '';
+    return new Date(bTime) - new Date(aTime);
+  });
+  return list;
+}
+
+function getStoryThumbnail(story) {
+  const media = story?.media;
+  if (!Array.isArray(media) || media.length === 0) return null;
+  const first = media[0];
+  return typeof first === 'string' ? first : first?.url ?? first?.thumbnailUrl ?? null;
+}
 
 function Avatar({ user, size = 40, className = '' }) {
   const src = user?.profilePic;
@@ -301,6 +328,8 @@ export default function Home() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [storyGroups, setStoryGroups] = useState([]);
+  const [storiesLoading, setStoriesLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -319,6 +348,22 @@ export default function Home() {
     return () => { cancelled = true; };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    setStoriesLoading(true);
+    getStories()
+      .then((list) => {
+        if (!cancelled) setStoryGroups(groupStoriesByAuthor(list ?? [], user?.id ?? null));
+      })
+      .catch(() => {
+        if (!cancelled) setStoryGroups([]);
+      })
+      .finally(() => {
+        if (!cancelled) setStoriesLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [user?.id]);
+
   return (
     <>
       {/* Stories */}
@@ -328,7 +373,7 @@ export default function Home() {
           <Link to="/app/stories">See All</Link>
         </div>
         <div className="user-app-stories-row">
-          <div className="user-app-story-card create">
+          <Link to="/app/stories/create" className="user-app-story-card create">
             <div className="avatar-wrap">
               <Avatar user={user} size={56} />
               <span className="plus-icon">
@@ -336,16 +381,21 @@ export default function Home() {
               </span>
             </div>
             <span className="label">Create Story</span>
-          </div>
-          {storyFriends.map((s) => (
-            <Link key={s.id} to="/app/stories" className="user-app-story-card">
-              <div className="story-bg" />
-              <div style={{ position: 'relative', zIndex: 1, marginBottom: 'auto', paddingTop: 8 }}>
-                <Avatar user={{ name: s.name }} size={40} className="story-avatar" />
-              </div>
-              <span className="story-name">{s.name}</span>
-            </Link>
-          ))}
+          </Link>
+          {!storiesLoading && storyGroups.map((group) => {
+            const thumb = getStoryThumbnail(group.stories[0]);
+            const authorId = group.authorId ?? group.author?.id;
+            return (
+              <Link key={authorId} to={`/app/stories/view/${authorId}`} className="user-app-story-card">
+                {thumb && <div className="story-bg story-bg-img" style={{ backgroundImage: `url(${thumb})` }} />}
+                {!thumb && <div className="story-bg" />}
+                <div className="story-ring-inner">
+                  <Avatar user={group.author} size={40} className="story-avatar" />
+                </div>
+                <span className="story-name">{group.author?.name ?? 'User'}</span>
+              </Link>
+            );
+          })}
         </div>
       </div>
 

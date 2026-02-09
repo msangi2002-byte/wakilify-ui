@@ -57,6 +57,18 @@ export async function getReels(params = {}) {
 }
 
 /**
+ * 4b. Active stories (24h) from self + following
+ * GET /api/v1/posts/stories
+ * Returns list of PostResponse (postType STORY). Group by author on the client.
+ */
+export async function getStories() {
+  const { data } = await api.get('/posts/stories');
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data)) return data;
+  return [];
+}
+
+/**
  * 5. Posts by user (auth required)
  * GET /api/v1/posts/user/:userId?page=0&size=20
  */
