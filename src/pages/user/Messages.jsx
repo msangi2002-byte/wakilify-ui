@@ -101,15 +101,19 @@ export default function Messages() {
 
   const handleCall = async (type) => {
     if (!selectedUser?.id || calling) return;
+    const receiverId = String(selectedUser.id);
+    if (!receiverId || receiverId === 'undefined') return;
     setCalling(type);
     try {
-      const call = await initiateCall(selectedUser.id, type);
+      const call = await initiateCall(receiverId, type);
       if (call?.roomId) {
         const url = `${window.location.origin}/app/call?room=${call.roomId}&type=${type}&role=caller`;
         window.open(url, '_blank', 'width=600,height=500');
       }
     } catch (err) {
-      console.error('Call failed:', err);
+      const msg = err.response?.data?.message || err.message || 'Call failed';
+      console.error('Call failed:', msg, err);
+      alert(msg);
     } finally {
       setCalling(null);
     }
