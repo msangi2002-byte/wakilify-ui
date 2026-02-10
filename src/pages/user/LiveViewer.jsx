@@ -277,8 +277,8 @@ export default function LiveViewer() {
           playsInline
           controls={false}
         />
-        {/* Overlay when stream not available: no URL, or load failed (e.g. 404) */}
-        {(!live?.streamUrl || videoLoadError) && (
+        {/* Overlay: no stream URL, load error, or host hasn't started camera yet */}
+        {(!live?.streamUrl || videoLoadError || (isHost && !whipStarted)) && (
           <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-violet-900/50 to-fuchsia-900/50">
             <div className="text-center max-w-lg px-4">
               <Radio className="w-16 h-16 text-white/50 mx-auto mb-3 animate-pulse" />
