@@ -25,6 +25,7 @@ import {
   endLive,
 } from '@/lib/api/live';
 import { startWhipPublish } from '@/lib/whip';
+import { startWhepPlay } from '@/lib/whep';
 import { useAuthStore } from '@/store/auth.store';
 import { GiftDrawer } from '@/components/live/GiftDrawer';
 import { JoinRequestsPanel } from '@/components/live/JoinRequestsPanel';
@@ -53,9 +54,11 @@ export default function LiveViewer() {
   const navigate = useNavigate();
   const videoRef = useRef(null);
   const hlsRef = useRef(null);
+  const whepPcRef = useRef(null);
   const localPreviewRef = useRef(null);
   const pcRef = useRef(null);
   const localStreamRef = useRef(null);
+  const [useWhep, setUseWhep] = useState(true);
   const [live, setLive] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -148,44 +151,68 @@ export default function LiveViewer() {
     };
   }, [id, live?.id, live?.status, isHost]);
 
-  // HLS playback + detect load error (e.g. 404)
+  // Playback: WHEP (WebRTC) first for low latency, fallback to HLS
   useEffect(() => {
     setVideoLoadError(false);
     const video = videoRef.current;
     const streamUrl = live?.streamUrl;
-    if (!video || !streamUrl) return;
+    const key = streamKey;
+    if (!video || !live) return;
 
-    const isM3u8 = streamUrl.includes('.m3u8');
-    if (!isM3u8) return;
+    let hls = null;
 
-    const onError = () => setVideoLoadError(true);
-
-    if (Hls.isSupported()) {
-      const hls = new Hls({
-        maxBufferLength: 30,
-        maxMaxBufferLength: 60,
-      });
-      hls.on(Hls.Events.ERROR, (_, data) => {
-        if (data.fatal) setVideoLoadError(true);
-      });
-      hls.loadSource(streamUrl);
-      hls.attachMedia(video);
-      hlsRef.current = hls;
-      return () => {
+    const cleanup = () => {
+      if (whepPcRef.current) {
+        whepPcRef.current.close();
+        whepPcRef.current = null;
+      }
+      if (video.srcObject) {
+        video.srcObject = null;
+      }
+      if (hls) {
         hls.off(Hls.Events.ERROR);
         hls.destroy();
         hlsRef.current = null;
-      };
-    }
-    if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.addEventListener('error', onError);
-      video.src = streamUrl;
-      return () => {
-        video.removeEventListener('error', onError);
+      } else if (video.src) {
         video.src = '';
-      };
-    }
-  }, [live?.streamUrl, retryCount]);
+      }
+    };
+
+    const startHls = () => {
+      if (!streamUrl || !streamUrl.includes('.m3u8')) return;
+      const onError = () => setVideoLoadError(true);
+      if (Hls.isSupported()) {
+        hls = new Hls({ maxBufferLength: 30, maxMaxBufferLength: 60 });
+        hls.on(Hls.Events.ERROR, (_, data) => {
+          if (data.fatal) setVideoLoadError(true);
+        });
+        hls.loadSource(streamUrl);
+        hls.attachMedia(video);
+        hlsRef.current = hls;
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.addEventListener('error', onError);
+        video.src = streamUrl;
+      }
+    };
+
+    (async () => {
+      if (useWhep && key) {
+        try {
+          const config = await getLiveConfig();
+          const baseUrl = config?.rtcApiBaseUrl || 'https://streaming.wakilfy.com/rtc/v1';
+          const pc = await startWhepPlay(key, baseUrl, video);
+          whepPcRef.current = pc;
+          return;
+        } catch (e) {
+          console.warn('WHEP failed, falling back to HLS:', e);
+          setUseWhep(false);
+        }
+      }
+      startHls();
+    })();
+
+    return () => cleanup();
+  }, [live?.id, streamKey, live?.streamUrl, retryCount, useWhep]);
 
   const handleLike = () => {
     if (!id || liked) return;
