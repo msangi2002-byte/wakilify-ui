@@ -6396,6 +6396,12 @@
   justify-content: center;
   color: #fff;
   gap: 16px;
+  text-align: center;
+}
+
+.call-error-hint {
+  font-size: 0.875rem;
+  opacity: 0.8;
 }
 
 .call-videos {

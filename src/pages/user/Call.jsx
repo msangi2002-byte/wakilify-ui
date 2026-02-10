@@ -1,23 +1,43 @@
+/**
+ * Voice/Video call using SRS (WHIP/WHEP).
+ * SRS uses HTTP API, NOT WebSocket. See: https://ossrs.net/lts/en-us/docs/v5/doc/webrtc
+ */
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { PhoneOff, Video, VideoOff, Mic, MicOff } from 'lucide-react';
 import '@/styles/user-app.css';
 
-const SIGNAL_URL = 'wss://streaming.wakilfy.com/rtc/v1/sig';
-const ICE_SERVERS = [
-  { urls: 'stun:streaming.wakilfy.com:3478' },
-  {
-    urls: 'turn:streaming.wakilfy.com:3478',
-    username: 'wakilfy',
-    credential: 'Wakilfy@2026',
-  },
-];
+const SRS_BASE = 'https://streaming.wakilfy.com';
+const APP = 'live';
+
+async function whipPublish(baseUrl, streamKey, sdpOffer) {
+  const url = `${baseUrl}/rtc/v1/whip/?app=${APP}&stream=${encodeURIComponent(streamKey)}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/sdp' },
+    body: sdpOffer,
+  });
+  if (!res.ok) throw new Error(`WHIP failed: ${res.status}`);
+  return res.text();
+}
+
+async function whepPlay(baseUrl, streamKey, sdpOffer) {
+  const url = `${baseUrl}/rtc/v1/whep/?app=${APP}&stream=${encodeURIComponent(streamKey)}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/sdp' },
+    body: sdpOffer,
+  });
+  if (!res.ok) throw new Error(`WHEP failed: ${res.status}`);
+  return res.text();
+}
 
 export default function Call() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const roomId = searchParams.get('room') || '';
   const callType = (searchParams.get('type') || 'VIDEO').toUpperCase();
+  const role = searchParams.get('role') || 'caller';
   const isVideo = callType === 'VIDEO';
 
   const [status, setStatus] = useState('connecting');
@@ -27,16 +47,16 @@ export default function Call() {
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
-  const wsRef = useRef(null);
-  const pcRef = useRef(null);
+  const publishPcRef = useRef(null);
+  const playPcRef = useRef(null);
   const localStreamRef = useRef(null);
 
   const endCall = () => {
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((t) => t.stop());
     }
-    if (pcRef.current) pcRef.current.close();
-    if (wsRef.current?.readyState === WebSocket.OPEN) wsRef.current.close();
+    publishPcRef.current?.close();
+    playPcRef.current?.close();
     navigate('/app/messages');
   };
 
@@ -47,116 +67,87 @@ export default function Call() {
       return;
     }
 
-    let pc = null;
-    let ws = null;
+    const myStream = `${roomId}_${role}`;
+    const peerStream = `${roomId}_${role === 'caller' ? 'callee' : 'caller'}`;
 
-    const setupLocalStream = async () => {
+    let cancelled = false;
+
+    const run = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: isVideo ? true : false,
+          video: isVideo,
           audio: true,
         });
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
         localStreamRef.current = stream;
         if (localVideoRef.current) localVideoRef.current.srcObject = stream;
-      } catch (e) {
-        setError('Could not access camera/microphone: ' + (e.message || 'Unknown'));
-        setStatus('error');
-      }
-    };
 
-    const connect = async () => {
-      await setupLocalStream();
-      if (status === 'error') return;
+        setStatus('publishing');
 
-      try {
-        ws = new WebSocket(SIGNAL_URL);
-        wsRef.current = ws;
+        const publishPc = new RTCPeerConnection({});
+        publishPcRef.current = publishPc;
+        stream.getTracks().forEach((t) => publishPc.addTrack(t, stream));
 
-        ws.onopen = () => {
-          setStatus('waiting');
-          ws.send(JSON.stringify({ action: 'join', room: roomId }));
-        };
+        const offer = await publishPc.createOffer();
+        await publishPc.setLocalDescription(offer);
+        const sdpOffer = publishPc.localDescription.sdp;
+        const sdpAnswer = await whipPublish(SRS_BASE, myStream, sdpOffer);
+        if (cancelled) return;
+        await publishPc.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: sdpAnswer }));
 
-        ws.onmessage = async (event) => {
-          try {
-            const msg = JSON.parse(event.data);
-            const createPC = () => {
-              if (pc) return pc;
-              pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
-              pcRef.current = pc;
-              if (localStreamRef.current) {
-                localStreamRef.current.getTracks().forEach((t) => pc.addTrack(t, localStreamRef.current));
-              }
-              pc.ontrack = (e) => {
-                if (remoteVideoRef.current) remoteVideoRef.current.srcObject = e.streams[0];
-                setStatus('connected');
-              };
-              pc.onicecandidate = (e) => {
-                if (e.candidate) ws.send(JSON.stringify({ type: 'ice', room: roomId, candidate: e.candidate }));
-              };
-              return pc;
-            };
+        setStatus('playing');
 
-            if (msg.type === 'offer') {
-              pc = createPC();
-              await pc.setRemoteDescription(new RTCSessionDescription(msg));
-              const answer = await pc.createAnswer();
-              await pc.setLocalDescription(answer);
-              ws.send(JSON.stringify({ type: 'answer', room: roomId, sdp: answer }));
-            } else if (msg.type === 'answer') {
-              pc = pc || createPC();
-              await pc.setRemoteDescription(new RTCSessionDescription(msg));
-              setStatus('connected');
-            } else if (msg.type === 'ice' && msg.candidate) {
-              pc = pc || createPC();
-              await pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
-            } else if (msg.type === 'peer_joined' || msg.peer_joined) {
-              pc = createPC();
-              const offer = await pc.createOffer();
-              await pc.setLocalDescription(offer);
-              ws.send(JSON.stringify({ type: 'offer', room: roomId, sdp: offer }));
-            }
-          } catch (e) {
-            console.warn('Signaling message error:', e);
+        const playPc = new RTCPeerConnection({});
+        playPcRef.current = playPc;
+        playPc.ontrack = (e) => {
+          if (!cancelled && remoteVideoRef.current) {
+            remoteVideoRef.current.srcObject = e.streams[0];
+            setStatus('connected');
           }
         };
 
-        ws.onerror = () => setError('Connection error');
-        ws.onclose = () => {
-          if (status !== 'ended') setStatus('disconnected');
-        };
+        const playOffer = await playPc.createOffer();
+        await playPc.setLocalDescription(playOffer);
+        const playSdpAnswer = await whepPlay(SRS_BASE, peerStream, playPc.localDescription.sdp);
+        if (cancelled) return;
+        await playPc.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: playSdpAnswer }));
+
+        setStatus('connected');
       } catch (e) {
-        setError(e.message || 'Failed to connect');
-        setStatus('error');
+        if (!cancelled) {
+          setError(e.message || 'Failed to connect to SRS');
+          setStatus('error');
+        }
       }
     };
 
-    connect();
+    run();
     return () => {
-      if (localStreamRef.current) localStreamRef.current.getTracks().forEach((t) => t.stop());
-      if (pcRef.current) pcRef.current.close();
-      if (wsRef.current?.readyState === WebSocket.OPEN) wsRef.current.close();
+      cancelled = true;
+      localStreamRef.current?.getTracks().forEach((t) => t.stop());
+      publishPcRef.current?.close();
+      playPcRef.current?.close();
     };
-  }, [roomId]);
+  }, [roomId, role, isVideo]);
 
   useEffect(() => {
     if (!localStreamRef.current) return;
-    localStreamRef.current.getVideoTracks().forEach((t) => {
-      t.enabled = videoEnabled;
-    });
+    localStreamRef.current.getVideoTracks().forEach((t) => { t.enabled = videoEnabled; });
   }, [videoEnabled]);
 
   useEffect(() => {
     if (!localStreamRef.current) return;
-    localStreamRef.current.getAudioTracks().forEach((t) => {
-      t.enabled = audioEnabled;
-    });
+    localStreamRef.current.getAudioTracks().forEach((t) => { t.enabled = audioEnabled; });
   }, [audioEnabled]);
 
   if (error) {
     return (
       <div className="call-page call-page-error">
         <p>{error}</p>
+        <p className="call-error-hint">SRS uses WHIP/WHEP (HTTP). Check https://streaming.wakilfy.com</p>
         <button type="button" className="call-btn-end" onClick={endCall}>
           <PhoneOff size={24} />
           End
@@ -173,7 +164,8 @@ export default function Call() {
           {status !== 'connected' && (
             <div className="call-status-overlay">
               {status === 'connecting' && 'Connecting…'}
-              {status === 'waiting' && 'Waiting for peer…'}
+              {status === 'publishing' && 'Publishing…'}
+              {status === 'playing' && 'Connecting to peer…'}
               {status === 'disconnected' && 'Call ended'}
             </div>
           )}
