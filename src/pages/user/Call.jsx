@@ -1,22 +1,34 @@
 /**
  * Voice/Video call using SRS (WHIP/WHEP).
- * Uses API proxy to avoid CORS (browser cannot fetch streaming.wakilfy.com directly).
+ * Connects directly to SRS (streaming.wakilfy.com) to avoid proxy 502. Base URL from GET /api/v1/live/config → rtcApiBaseUrl.
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { PhoneOff, Video, VideoOff, Mic, MicOff } from 'lucide-react';
+import axios from 'axios';
 import { api } from '@/lib/api/client';
 import { endCall } from '@/lib/api/calls';
 import '@/styles/user-app.css';
 
 const APP = 'live';
+const DEFAULT_RTC_BASE = 'https://streaming.wakilfy.com/rtc/v1';
 
-async function whipPublish(streamKey, sdpOffer) {
-  const { data } = await api.post(
-    `/streaming/whip?app=${APP}&stream=${encodeURIComponent(streamKey)}`,
-    sdpOffer,
-    { headers: { 'Content-Type': 'application/sdp' }, responseType: 'text' }
-  );
+/** Get SRS base URL for WHIP/WHEP (direct, no proxy). */
+async function getRtcBaseUrl() {
+  try {
+    const { data } = await api.get('/live/config');
+    const base = data?.data?.rtcApiBaseUrl ?? data?.rtcApiBaseUrl;
+    if (base && typeof base === 'string') return base.replace(/\/$/, '');
+  } catch (_) {}
+  return DEFAULT_RTC_BASE;
+}
+
+async function whipPublish(rtcBaseUrl, streamKey, sdpOffer) {
+  const url = `${rtcBaseUrl}/whip/?app=${APP}&stream=${encodeURIComponent(streamKey)}`;
+  const { data } = await axios.post(url, sdpOffer, {
+    headers: { 'Content-Type': 'application/sdp' },
+    responseType: 'text',
+  });
   return data;
 }
 
@@ -25,16 +37,16 @@ const WHEP_RETRY_DELAY_MS = 2000;
 const WHEP_DELAY_AFTER_WHIP_MS = 2000; // SRS: don't WHEP until publisher has 201
 const CALLEE_START_DELAY_MS = 2500; // Callee: wait before starting so Caller's WHIP (201) is ready
 
-async function whepPlay(streamKey, sdpOffer, onRetry) {
+async function whepPlay(rtcBaseUrl, streamKey, sdpOffer, onRetry) {
   await new Promise((r) => setTimeout(r, WHEP_DELAY_AFTER_WHIP_MS));
   let lastErr;
   for (let i = 0; i < WHEP_RETRIES; i++) {
     try {
-      const { data } = await api.post(
-        `/streaming/whep?app=${APP}&stream=${encodeURIComponent(streamKey)}`,
-        sdpOffer,
-        { headers: { 'Content-Type': 'application/sdp' }, responseType: 'text' }
-      );
+      const url = `${rtcBaseUrl}/whep/?app=${APP}&stream=${encodeURIComponent(streamKey)}`;
+      const { data } = await axios.post(url, sdpOffer, {
+        headers: { 'Content-Type': 'application/sdp' },
+        responseType: 'text',
+      });
       return data;
     } catch (e) {
       lastErr = e;
@@ -63,7 +75,6 @@ export default function Call() {
   const isVideo = callType === 'VIDEO';
 
   const [status, setStatus] = useState('connecting');
-  const [waitingAttempt, setWaitingAttempt] = useState(0);
   const [error, setError] = useState('');
   const [videoEnabled, setVideoEnabled] = useState(isVideo);
   const [audioEnabled, setAudioEnabled] = useState(true);
@@ -103,6 +114,9 @@ export default function Call() {
 
     const run = async () => {
       try {
+        const rtcBaseUrl = await getRtcBaseUrl();
+        if (cancelled) return;
+
         if (role === 'callee') {
           await new Promise((r) => setTimeout(r, CALLEE_START_DELAY_MS));
           if (cancelled) return;
@@ -127,11 +141,11 @@ export default function Call() {
         const offer = await publishPc.createOffer();
         await publishPc.setLocalDescription(offer);
         const sdpOffer = publishPc.localDescription.sdp;
-        const sdpAnswer = await whipPublish(myStream, sdpOffer);
+        const sdpAnswer = await whipPublish(rtcBaseUrl, myStream, sdpOffer);
         if (cancelled) return;
         await publishPc.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: sdpAnswer }));
 
-        setStatus('playing');
+        setStatus(role === 'caller' ? 'ringing' : 'playing');
 
         const playPc = new RTCPeerConnection({});
         playPcRef.current = playPc;
@@ -145,13 +159,11 @@ export default function Call() {
         const playOffer = await playPc.createOffer();
         await playPc.setLocalDescription(playOffer);
         const playSdpAnswer = await whepPlay(
+          rtcBaseUrl,
           peerStream,
           playPc.localDescription.sdp,
-          (attempt, total) => {
-            if (!cancelled) {
-              setWaitingAttempt(attempt);
-              setStatus('waiting');
-            }
+          () => {
+            if (!cancelled) setStatus('waiting');
           }
         );
         if (cancelled) return;
@@ -195,7 +207,7 @@ export default function Call() {
     return (
       <div className="call-page call-page-error">
         <p>{error}</p>
-        <p className="call-error-hint">Proxy via API. Ensure you are logged in and backend can reach SRS.</p>
+        <p className="call-error-hint">Check your connection and try again. If it keeps failing, share the call link with the other person.</p>
         <button type="button" className="call-btn-end" onClick={handleEndCall}>
           <PhoneOff size={24} />
           End
@@ -211,10 +223,9 @@ export default function Call() {
           <video ref={remoteVideoRef} autoPlay playsInline className="call-video call-remote" />
           {status !== 'connected' && (
             <div className="call-status-overlay">
-              {status === 'connecting' && 'Connecting…'}
-              {status === 'publishing' && 'Publishing…'}
-              {status === 'playing' && 'Connecting…'}
-              {status === 'waiting' && `Waiting for other person… (${waitingAttempt}/${WHEP_RETRIES})`}
+              {(status === 'connecting' || status === 'publishing' || status === 'playing') && 'Connecting…'}
+              {status === 'ringing' && 'Ringing…'}
+              {status === 'waiting' && (role === 'caller' ? 'Ringing…' : 'Connecting…')}
               {status === 'disconnected' && 'Call ended'}
             </div>
           )}
