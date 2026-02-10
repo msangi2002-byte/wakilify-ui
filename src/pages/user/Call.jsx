@@ -20,10 +20,13 @@ async function whipPublish(streamKey, sdpOffer) {
   return data;
 }
 
-const WHEP_RETRIES = 15;
+const WHEP_RETRIES = 25;
 const WHEP_RETRY_DELAY_MS = 2000;
+const WHEP_DELAY_AFTER_WHIP_MS = 2000; // SRS: don't WHEP until publisher has 201
+const CALLEE_START_DELAY_MS = 2500; // Callee: wait before starting so Caller's WHIP (201) is ready
 
 async function whepPlay(streamKey, sdpOffer, onRetry) {
+  await new Promise((r) => setTimeout(r, WHEP_DELAY_AFTER_WHIP_MS));
   let lastErr;
   for (let i = 0; i < WHEP_RETRIES; i++) {
     try {
@@ -35,9 +38,10 @@ async function whepPlay(streamKey, sdpOffer, onRetry) {
       return data;
     } catch (e) {
       lastErr = e;
-      const is502 = e.response?.status === 502;
-      if (!is502 || i === WHEP_RETRIES - 1) {
-        if (is502 && i > 0) {
+      const status = e.response?.status;
+      const isRetryable = status === 502 || status === 404 || status === 503;
+      if (!isRetryable || i === WHEP_RETRIES - 1) {
+        if (isRetryable && i > 0) {
           throw new Error('Other person did not join in time. Share the call link and ask them to open it.');
         }
         throw e;
@@ -99,6 +103,10 @@ export default function Call() {
 
     const run = async () => {
       try {
+        if (role === 'callee') {
+          await new Promise((r) => setTimeout(r, CALLEE_START_DELAY_MS));
+          if (cancelled) return;
+        }
         const stream = await navigator.mediaDevices.getUserMedia({
           video: isVideo,
           audio: true,
