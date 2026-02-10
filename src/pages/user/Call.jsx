@@ -156,10 +156,10 @@ export default function Call() {
           }
         };
 
-        // SRS requires full SDP with BUNDLE and m=audio/m=video. Without recvonly transceivers,
-        // createOffer() produces a tiny SDP (~105B) and SRS rejects with "now only support BUNDLE".
+        // SRS requires full SDP with BUNDLE and media. Without recvonly transceivers we get tiny SDP and "now only support BUNDLE".
+        // Voice call: only audio (1 m-line). Video call: audio + video (2 m-lines). Offer/answer m-line count must match.
         playPc.addTransceiver('audio', { direction: 'recvonly' });
-        playPc.addTransceiver('video', { direction: 'recvonly' });
+        if (isVideo) playPc.addTransceiver('video', { direction: 'recvonly' });
 
         const playOffer = await playPc.createOffer();
         await playPc.setLocalDescription(playOffer);
