@@ -79,3 +79,14 @@ export async function rejectJoinRequest(requestId) {
   const { data } = await api.post(`/live/join-requests/${requestId}/reject`);
   return unwrap({ data }) ?? data;
 }
+
+/** GET /api/v1/live/my-streams – current user's live stream history (auth) */
+export async function getMyStreams(page = 0, size = 20) {
+  const { data } = await api.get('/live/my-streams', { params: { page, size } });
+  const out = unwrap({ data });
+  return {
+    content: Array.isArray(out?.content) ? out.content : [],
+    totalElements: out?.totalElements ?? 0,
+    totalPages: out?.totalPages ?? 1,
+  };
+}

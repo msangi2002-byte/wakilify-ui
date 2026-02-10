@@ -176,9 +176,17 @@ export default function LiveViewer() {
         {/* Fallback when no stream yet */}
         {!live?.streamUrl && (
           <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-violet-900/50 to-fuchsia-900/50">
-            <div className="text-center">
+            <div className="text-center max-w-md px-4">
               <Radio className="w-16 h-16 text-white/50 mx-auto mb-3 animate-pulse" />
-              <p className="text-white/70">Waiting for stream…</p>
+              <p className="text-white/70 mb-2">
+                {isHost ? 'You’re live! Start streaming with OBS or any RTMP app.' : 'Waiting for stream…'}
+              </p>
+              {isHost && live?.rtmpUrl && (
+                <div className="mt-4 p-3 rounded-xl bg-black/40 text-left">
+                  <p className="text-white/70 text-xs mb-1">RTMP URL (paste in OBS → Settings → Stream):</p>
+                  <p className="text-white text-sm font-mono break-all select-all">{live.rtmpUrl}</p>
+                </div>
+              )}
             </div>
           </div>
         )}
