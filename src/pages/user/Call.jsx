@@ -1,35 +1,31 @@
 /**
  * Voice/Video call using SRS (WHIP/WHEP).
- * SRS uses HTTP API, NOT WebSocket. See: https://ossrs.net/lts/en-us/docs/v5/doc/webrtc
+ * Uses API proxy to avoid CORS (browser cannot fetch streaming.wakilfy.com directly).
  */
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { PhoneOff, Video, VideoOff, Mic, MicOff } from 'lucide-react';
+import { api } from '@/lib/api/client';
 import '@/styles/user-app.css';
 
-const SRS_BASE = 'https://streaming.wakilfy.com';
 const APP = 'live';
 
-async function whipPublish(baseUrl, streamKey, sdpOffer) {
-  const url = `${baseUrl}/rtc/v1/whip/?app=${APP}&stream=${encodeURIComponent(streamKey)}`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/sdp' },
-    body: sdpOffer,
-  });
-  if (!res.ok) throw new Error(`WHIP failed: ${res.status}`);
-  return res.text();
+async function whipPublish(streamKey, sdpOffer) {
+  const { data } = await api.post(
+    `/streaming/whip?app=${APP}&stream=${encodeURIComponent(streamKey)}`,
+    sdpOffer,
+    { headers: { 'Content-Type': 'application/sdp' }, responseType: 'text' }
+  );
+  return data;
 }
 
-async function whepPlay(baseUrl, streamKey, sdpOffer) {
-  const url = `${baseUrl}/rtc/v1/whep/?app=${APP}&stream=${encodeURIComponent(streamKey)}`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/sdp' },
-    body: sdpOffer,
-  });
-  if (!res.ok) throw new Error(`WHEP failed: ${res.status}`);
-  return res.text();
+async function whepPlay(streamKey, sdpOffer) {
+  const { data } = await api.post(
+    `/streaming/whep?app=${APP}&stream=${encodeURIComponent(streamKey)}`,
+    sdpOffer,
+    { headers: { 'Content-Type': 'application/sdp' }, responseType: 'text' }
+  );
+  return data;
 }
 
 export default function Call() {
@@ -94,7 +90,7 @@ export default function Call() {
         const offer = await publishPc.createOffer();
         await publishPc.setLocalDescription(offer);
         const sdpOffer = publishPc.localDescription.sdp;
-        const sdpAnswer = await whipPublish(SRS_BASE, myStream, sdpOffer);
+        const sdpAnswer = await whipPublish(myStream, sdpOffer);
         if (cancelled) return;
         await publishPc.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: sdpAnswer }));
 
@@ -111,7 +107,7 @@ export default function Call() {
 
         const playOffer = await playPc.createOffer();
         await playPc.setLocalDescription(playOffer);
-        const playSdpAnswer = await whepPlay(SRS_BASE, peerStream, playPc.localDescription.sdp);
+        const playSdpAnswer = await whepPlay(peerStream, playPc.localDescription.sdp);
         if (cancelled) return;
         await playPc.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: playSdpAnswer }));
 
@@ -147,7 +143,7 @@ export default function Call() {
     return (
       <div className="call-page call-page-error">
         <p>{error}</p>
-        <p className="call-error-hint">SRS uses WHIP/WHEP (HTTP). Check https://streaming.wakilfy.com</p>
+        <p className="call-error-hint">Proxy via API. Ensure you are logged in and backend can reach SRS.</p>
         <button type="button" className="call-btn-end" onClick={endCall}>
           <PhoneOff size={24} />
           End
