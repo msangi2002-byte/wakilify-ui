@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { X, Eye } from 'lucide-react';
+import { UserProfileMenu } from '@/components/ui/UserProfileMenu';
 import { getStories, recordStoryView, getStoryViewers } from '@/lib/api/posts';
 import { useAuthStore } from '@/store/auth.store';
 import '@/styles/user-app.css';
@@ -331,9 +332,8 @@ export default function StoryViewer() {
       </div>
 
       <div className="story-viewer-header">
-        <Avatar user={currentGroup.author} size={40} className="story-viewer-avatar" />
+        <UserProfileMenu user={currentGroup.author} avatarSize={40} className="story-viewer-author" />
         <div className="story-viewer-meta">
-          <span className="story-viewer-name">{currentGroup.author?.name ?? 'User'}</span>
           <span className="story-viewer-time">{formatStoryTime(currentStory?.createdAt)}</span>
         </div>
         {isMyStory && currentStory?.id && (
@@ -362,8 +362,7 @@ export default function StoryViewer() {
                 <ul className="story-viewer-viewers-list">
                   {viewers.map((v) => (
                     <li key={v.id} className="story-viewer-viewer-item">
-                      <Avatar user={v} size={40} />
-                      <span className="story-viewer-viewer-name">{v.name ?? 'User'}</span>
+                      <UserProfileMenu user={v} avatarSize={40} />
                     </li>
                   ))}
                 </ul>

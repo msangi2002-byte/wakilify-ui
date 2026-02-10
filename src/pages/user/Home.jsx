@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ImagePlus, Users, Video, MoreHorizontal, Plus, ThumbsUp, MessageCircle, Share2 } from 'lucide-react';
+import { UserProfileMenu } from '@/components/ui/UserProfileMenu';
+import { CommentItem } from '@/components/social/CommentItem';
 import { useAuthStore } from '@/store/auth.store';
-import { getFeed, getPublicFeed, getStories, likePost, unlikePost, savePost, unsavePost, sharePostToStory, getComments, addComment, deleteComment, createPost } from '@/lib/api/posts';
+import { getFeed, getPublicFeed, getStories, likePost, unlikePost, savePost, unsavePost, sharePostToStory, getComments, addComment, deleteComment, createPost, likeComment, unlikeComment } from '@/lib/api/posts';
 import { followUser, unfollowUser } from '@/lib/api/friends';
 import { blockUser } from '@/lib/api/users';
 import { createReport } from '@/lib/api/reports';
@@ -119,6 +121,8 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], li
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [commentSubmitting, setCommentSubmitting] = useState(false);
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [replyText, setReplyText] = useState('');
   const [commentsCount, setCommentsCount] = useState(initialCommentsCount);
   const shortDesc = description && description.length > 120 ? description.slice(0, 120) + '...' : description;
   const showSeeMore = description && description.length > 120 && !expanded;
@@ -174,11 +178,42 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], li
     }
   };
 
+  const handleSubmitReply = async (e, parentId) => {
+    e.preventDefault();
+    const content = replyText.trim();
+    if (!id || !content || !parentId || commentSubmitting) return;
+    setCommentSubmitting(true);
+    try {
+      await addComment(id, content, parentId);
+      setReplyText('');
+      setReplyingTo(null);
+      setCommentsCount((c) => c + 1);
+      await loadComments();
+    } finally {
+      setCommentSubmitting(false);
+    }
+  };
+
   const handleDeleteComment = async (commentId) => {
     try {
       await deleteComment(commentId);
-      setComments((prev) => prev.filter((c) => c.id !== commentId));
       setCommentsCount((c) => Math.max(0, c - 1));
+      await loadComments();
+    } catch (_) {}
+  };
+
+  const handleLikeComment = async (commentId, currentlyLiked) => {
+    try {
+      const res = currentlyLiked ? await unlikeComment(commentId) : await likeComment(commentId);
+      const newCount = res?.likesCount;
+      const updateComment = (list, cid, liked, count) => list.map((c) => {
+        if (c.id === cid) return { ...c, userLiked: liked, likesCount: count ?? c.likesCount };
+        if (Array.isArray(c.replies) && c.replies.length) {
+          return { ...c, replies: updateComment(c.replies, cid, liked, count) };
+        }
+        return c;
+      });
+      setComments((prev) => updateComment(prev, commentId, !currentlyLiked, newCount));
     } catch (_) {}
   };
 
@@ -270,10 +305,9 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], li
   return (
     <div className="user-app-card feed-post">
       <div className="feed-post-header">
-        <Avatar user={author} size={40} className="feed-post-avatar" />
+        <UserProfileMenu user={author} avatarSize={40} className="feed-post-avatar-wrap" />
         <div className="feed-post-meta">
           <div className="feed-post-meta-top">
-            <span className="feed-post-name">{author?.name || 'User'}</span>
             {!isSelf && author?.id && (
               <button
                 type="button"
@@ -362,9 +396,16 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], li
       )}
       {(media?.length > 0) && (
         <div className="feed-post-body">
-          {media.map((url, i) => (
-            <img key={i} src={url} alt="" />
-          ))}
+          {media.map((item, i) => {
+            const url = typeof item === 'string' ? item : item?.url;
+            const isVideo = typeof item === 'object' && item?.isVideo;
+            if (!url) return null;
+            return isVideo ? (
+              <video key={i} src={url} controls playsInline className="feed-post-video" />
+            ) : (
+              <img key={i} src={url} alt="" loading="lazy" />
+            );
+          })}
         </div>
       )}
       <div className="feed-post-engagement">
@@ -437,36 +478,22 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], li
             <p className="feed-post-comments-loading">Loading comments…</p>
           ) : (
             <ul className="feed-post-comments-list">
-              {comments.map((c) => {
-                const commentAuthor = c.author ?? c.user ?? {};
-                const name = commentAuthor.name ?? commentAuthor.username ?? 'User';
-                const profilePic = commentAuthor.profilePic ?? commentAuthor.avatar ?? commentAuthor.image;
-                const isOwn = currentUser?.id && (commentAuthor.id === currentUser.id || c.userId === currentUser.id);
-                return (
-                  <li key={c.id} className="feed-post-comment-item">
-                    <Avatar user={{ name, profilePic }} size={32} className="feed-post-comment-avatar" />
-                    <div className="feed-post-comment-body">
-                      <div className="feed-post-comment-bubble">
-                        <span className="feed-post-comment-author">{name}</span>
-                        <span className="feed-post-comment-content">{c.content ?? c.text ?? ''}</span>
-                      </div>
-                      <div className="feed-post-comment-meta">
-                        <span className="feed-post-comment-time">{formatCommentTime(c.createdAt ?? c.created_at)}</span>
-                        {isOwn && (
-                          <button
-                            type="button"
-                            className="feed-post-comment-delete"
-                            onClick={() => handleDeleteComment(c.id)}
-                            aria-label="Delete comment"
-                          >
-                            Delete
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </li>
-                );
-              })}
+              {comments.map((c) => (
+                <CommentItem
+                  key={c.id}
+                  comment={c}
+                  currentUser={currentUser}
+                  onDelete={handleDeleteComment}
+                  onLike={handleLikeComment}
+                  onReply={(parentId) => setReplyingTo(parentId)}
+                  replyingTo={replyingTo}
+                  replyText={replyText}
+                  setReplyText={setReplyText}
+                  onSubmitReply={handleSubmitReply}
+                  commentSubmitting={commentSubmitting}
+                  formatTime={formatCommentTime}
+                />
+              ))}
             </ul>
           )}
           <form onSubmit={handleSubmitComment} className="feed-post-comment-form">
@@ -491,6 +518,14 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], li
   );
 }
 
+function isVideoMedia(m) {
+  if (!m) return false;
+  const t = (m.type ?? '').toString().toLowerCase();
+  if (t.includes('video')) return true;
+  const u = typeof m === 'string' ? m : (m?.url ?? m?.src ?? '');
+  return /\.(mp4|webm|ogg|mov|m4v)(\?|$)/i.test(u);
+}
+
 function normalizePost(post) {
   const author = post.author ?? post.user ?? {};
   const name = author.name ?? author.username ?? 'User';
@@ -500,15 +535,21 @@ function normalizePost(post) {
     post.attachments ??
     post.images ??
     (post.mediaUrls ? (Array.isArray(post.mediaUrls) ? post.mediaUrls : [post.mediaUrls]) : []);
-  const urls = Array.isArray(media)
-    ? media.map((m) => (typeof m === 'string' ? m : m?.url ?? m?.src))
+  const mediaItems = Array.isArray(media)
+    ? media
+        .map((m) => {
+          const url = typeof m === 'string' ? m : m?.url ?? m?.src;
+          if (!url) return null;
+          return { url, isVideo: isVideoMedia(m) };
+        })
+        .filter(Boolean)
     : [];
   return {
     id: post.id,
     author: { id: author.id, name, profilePic },
     time: formatPostTime(post.createdAt ?? post.created_at),
     description: post.caption ?? post.content ?? post.description ?? '',
-    media: urls.filter(Boolean),
+    media: mediaItems,
     hashtags: post.hashtags ?? [],
     liked: !!post.userReaction,
     likesCount: post.reactionsCount ?? post.likesCount ?? post.likes_count ?? post.likeCount ?? 0,

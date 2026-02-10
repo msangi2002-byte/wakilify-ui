@@ -114,7 +114,7 @@ const router = createBrowserRouter([
           { path: 'wallet', element: <Suspense fallback={<Fallback />}><Wallet /></Suspense> },
           { path: 'messages', element: <Suspense fallback={<Fallback />}><Messages /></Suspense> },
           { path: 'chat/:id', element: <Suspense fallback={<Fallback />}><Chat /></Suspense> },
-          { path: 'profile', element: <Suspense fallback={<Fallback />}><Profile /></Suspense> },
+          { path: 'profile/:userId?', element: <Suspense fallback={<Fallback />}><Profile /></Suspense> },
           { path: 'friends', element: <Suspense fallback={<Fallback />}><Friends /></Suspense> },
           {
             path: 'groups',

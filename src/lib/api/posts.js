@@ -135,12 +135,32 @@ export async function getComments(postId, params = {}) {
 }
 
 /**
- * Add comment (auth required)
+ * Add comment or reply (auth required)
  * POST /api/v1/posts/:postId/comments
- * Body: { content: "..." }
+ * Body: { content: "...", parentId?: "uuid" } - parentId for replies
  */
-export async function addComment(postId, content) {
-  const { data } = await api.post(`/posts/${postId}/comments`, { content });
+export async function addComment(postId, content, parentId = null) {
+  const body = { content };
+  if (parentId) body.parentId = parentId;
+  const { data } = await api.post(`/posts/${postId}/comments`, body);
+  return data?.data ?? data;
+}
+
+/**
+ * Like a comment (auth required)
+ * POST /api/v1/posts/comments/:commentId/like
+ */
+export async function likeComment(commentId) {
+  const { data } = await api.post(`/posts/comments/${commentId}/like`);
+  return data?.data ?? data;
+}
+
+/**
+ * Unlike a comment (auth required)
+ * DELETE /api/v1/posts/comments/:commentId/like
+ */
+export async function unlikeComment(commentId) {
+  const { data } = await api.delete(`/posts/comments/${commentId}/like`);
   return data?.data ?? data;
 }
 

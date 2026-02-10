@@ -509,7 +509,8 @@
   padding: 12px 16px;
 }
 
-.feed-post-avatar {
+.feed-post-avatar,
+.feed-post-avatar-wrap {
   flex-shrink: 0;
 }
 
@@ -627,11 +628,17 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
-.feed-post-body img {
+.feed-post-body img,
+.feed-post-body .feed-post-video {
   width: 100%;
   display: block;
   max-height: 500px;
   object-fit: cover;
+}
+
+.feed-post-body .feed-post-video {
+  max-height: 560px;
+  background: #000;
 }
 
 .feed-post-engagement {
@@ -886,7 +893,8 @@
   color: #050505;
 }
 
-.feed-post-comment-avatar {
+.feed-post-comment-avatar,
+.feed-post-comment-avatar-wrap {
   flex-shrink: 0;
 }
 
@@ -903,22 +911,90 @@
   max-width: 100%;
 }
 
-.feed-post-comment-author {
+.feed-post-comment-author,
+.feed-post-comment-author-inline {
   font-weight: 600;
   color: #050505;
   margin-right: 6px;
+}
+
+.feed-post-comment-author-inline .user-profile-menu-trigger {
+  font-weight: 600;
+  color: #050505;
 }
 
 .feed-post-comment-content {
   word-break: break-word;
 }
 
-.feed-post-comment-meta {
+.feed-post-comment-meta,
+.feed-post-comment-actions {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-top: 2px;
   margin-left: 12px;
+  flex-wrap: wrap;
+}
+
+.feed-post-comment-action {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.75rem;
+  color: #65676b;
+  cursor: pointer;
+}
+
+.feed-post-comment-action:hover {
+  text-decoration: underline;
+  color: #050505;
+}
+
+.feed-post-comment-action.active {
+  color: #7c3aed;
+  font-weight: 600;
+}
+
+.feed-post-comment-likes-count {
+  font-size: 0.75rem;
+  color: #65676b;
+}
+
+.feed-post-reply-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  margin-left: 0;
+  flex-wrap: wrap;
+}
+
+.feed-post-reply-form .feed-post-comment-input {
+  flex: 1;
+  min-width: 120px;
+}
+
+.feed-post-reply-cancel {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.8125rem;
+  color: #65676b;
+  cursor: pointer;
+}
+
+.feed-post-reply-cancel:hover {
+  text-decoration: underline;
+  color: #050505;
+}
+
+.feed-post-comments-replies {
+  list-style: none;
+  margin: 12px 0 0 12px;
+  padding: 0;
+  border-left: 2px solid #e4e6eb;
+  padding-left: 12px;
 }
 
 .feed-post-comment-time {
@@ -6171,4 +6247,71 @@
   font-size: 0.9375rem;
   font-weight: 600;
   color: #050505;
+}
+
+/* UserProfileMenu - Facebook/Instagram style View Profile dropdown */
+.user-profile-menu-wrap {
+  display: inline-flex;
+  align-items: center;
+}
+
+.user-profile-menu-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  min-width: 0;
+}
+
+.user-profile-menu-trigger:hover {
+  opacity: 0.85;
+}
+
+.user-profile-menu-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #050505;
+}
+
+.user-profile-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  min-width: 180px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  z-index: 200;
+  overflow: hidden;
+}
+
+.user-profile-menu-right {
+  left: auto;
+  right: 0;
+}
+
+.user-profile-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.9375rem;
+  color: #050505;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.user-profile-menu-item:hover {
+  background: #f0f2f5;
 }

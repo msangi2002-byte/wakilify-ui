@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Hash, ThumbsUp, MessageCircle } from 'lucide-react';
+import { UserProfileMenu } from '@/components/ui/UserProfileMenu';
 import { getTrendingHashtags, getPostsByHashtag } from '@/lib/api/hashtags';
 import { useAuthStore } from '@/store/auth.store';
 import { likePost, unlikePost } from '@/lib/api/posts';
@@ -47,10 +48,20 @@ function formatPostTime(createdAt) {
   return date.toLocaleDateString();
 }
 
+function isVideoItem(m) {
+  if (!m) return false;
+  const t = (m.type ?? '').toString().toLowerCase();
+  if (t.includes('video')) return true;
+  const u = typeof m === 'string' ? m : (m?.url ?? '');
+  return /\.(mp4|webm|ogg|mov|m4v)(\?|$)/i.test(u);
+}
+
 function ExplorePostCard({ post, currentUser }) {
   const author = post.author ?? {};
   const media = post.media ?? [];
-  const urls = Array.isArray(media) ? media.map((m) => (typeof m === 'string' ? m : m?.url)).filter(Boolean) : [];
+  const items = Array.isArray(media)
+    ? media.map((m) => ({ url: typeof m === 'string' ? m : m?.url, isVideo: isVideoItem(m) })).filter((x) => x.url)
+    : [];
   const [liked, setLiked] = useState(!!post.userReaction);
   const [likesCount, setLikesCount] = useState(post.reactionsCount ?? 0);
 
@@ -70,13 +81,12 @@ function ExplorePostCard({ post, currentUser }) {
 
   return (
     <div className="user-app-card explore-post-card">
-      <Link to={`/app/profile`} className="explore-post-header">
-        <Avatar user={author} size={36} />
+      <div className="explore-post-header">
+        <UserProfileMenu user={author} avatarSize={36} className="explore-post-author" />
         <div className="explore-post-meta">
-          <span className="explore-post-name">{author.name ?? 'User'}</span>
           <span className="explore-post-time">{formatPostTime(post.createdAt)}</span>
         </div>
-      </Link>
+      </div>
       {post.caption && (
         <p className="explore-post-caption">
           {post.caption}
@@ -92,15 +102,23 @@ function ExplorePostCard({ post, currentUser }) {
           )}
         </p>
       )}
-      {urls.length > 0 && (
+      {items.length > 0 && (
         <div className="explore-post-media">
-          {urls.length === 1 ? (
-            <img src={urls[0]} alt="" loading="lazy" />
+          {items.length === 1 ? (
+            items[0].isVideo ? (
+              <video src={items[0].url} controls playsInline className="explore-post-video" />
+            ) : (
+              <img src={items[0].url} alt="" loading="lazy" />
+            )
           ) : (
-            <div className="explore-post-media-grid" style={{ gridTemplateColumns: `repeat(${Math.min(urls.length, 3)}, 1fr)` }}>
-              {urls.slice(0, 9).map((url, i) => (
-                <img key={i} src={url} alt="" loading="lazy" />
-              ))}
+            <div className="explore-post-media-grid" style={{ gridTemplateColumns: `repeat(${Math.min(items.length, 3)}, 1fr)` }}>
+              {items.slice(0, 9).map((item, i) =>
+                item.isVideo ? (
+                  <video key={i} src={item.url} controls playsInline className="explore-post-video" />
+                ) : (
+                  <img key={i} src={item.url} alt="" loading="lazy" />
+                )
+              )}
             </div>
           )}
         </div>
@@ -230,7 +248,8 @@ export default function Explore() {
         .explore-hashtag-link { color: #7c3aed; text-decoration: none; }
         .explore-hashtag-link:hover { text-decoration: underline; }
         .explore-post-media { border-radius: 8px; overflow: hidden; margin-bottom: 8px; }
-        .explore-post-media img { width: 100%; display: block; }
+        .explore-post-media img, .explore-post-media .explore-post-video { width: 100%; display: block; }
+        .explore-post-media .explore-post-video { max-height: 400px; object-fit: cover; background: #000; }
         .explore-post-media-grid { display: grid; gap: 2px; }
         .explore-post-actions { display: flex; align-items: center; gap: 16px; }
         .explore-post-action { display: inline-flex; align-items: center; gap: 6px; padding: 4px 0; background: none; border: none; color: #65676b; cursor: pointer; font-size: 0.9375rem; }

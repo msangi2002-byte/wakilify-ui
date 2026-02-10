@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { MoreHorizontal, ThumbsUp, MessageCircle, Share2, X } from 'lucide-react';
-import { likePost, unlikePost, getComments, addComment, deleteComment } from '@/lib/api/posts';
+import { UserProfileMenu } from '@/components/ui/UserProfileMenu';
+import { CommentItem } from '@/components/social/CommentItem';
+import { likePost, unlikePost, getComments, addComment, deleteComment, likeComment, unlikeComment } from '@/lib/api/posts';
 import { useAuthStore } from '@/store/auth.store';
 
 function formatCommentTime(createdAt) {
@@ -101,6 +103,8 @@ export function GroupPost({
   const [commentsCount, setCommentsCount] = useState(initialCommentsCount);
   const [commentText, setCommentText] = useState('');
   const [commentSubmitting, setCommentSubmitting] = useState(false);
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [replyText, setReplyText] = useState('');
 
   const shortDesc = description && description.length > 120 ? description.slice(0, 120) + '...' : description;
   const showSeeMore = description && description.length > 120 && !expanded;
@@ -158,22 +162,53 @@ export function GroupPost({
     }
   };
 
+  const handleSubmitReply = async (e, parentId) => {
+    e.preventDefault();
+    const content = replyText.trim();
+    if (!postId || !content || !parentId || commentSubmitting) return;
+    setCommentSubmitting(true);
+    try {
+      await addComment(postId, content, parentId);
+      setReplyText('');
+      setReplyingTo(null);
+      setCommentsCount((c) => c + 1);
+      onCommentCountChange?.(postId);
+      await loadComments();
+    } finally {
+      setCommentSubmitting(false);
+    }
+  };
+
   const handleDeleteComment = async (commentId) => {
     try {
       await deleteComment(commentId);
-      setComments((prev) => prev.filter((c) => c.id !== commentId));
       setCommentsCount((c) => Math.max(0, c - 1));
       onCommentCountChange?.(postId);
+      await loadComments();
+    } catch (_) {}
+  };
+
+  const handleLikeComment = async (commentId, currentlyLiked) => {
+    try {
+      const res = currentlyLiked ? await unlikeComment(commentId) : await likeComment(commentId);
+      const newCount = res?.likesCount;
+      const updateComment = (list, cid, liked, count) => list.map((c) => {
+        if (c.id === cid) return { ...c, userLiked: liked, likesCount: count ?? c.likesCount };
+        if (Array.isArray(c.replies) && c.replies.length) {
+          return { ...c, replies: updateComment(c.replies, cid, liked, count) };
+        }
+        return c;
+      });
+      setComments((prev) => updateComment(prev, commentId, !currentlyLiked, newCount));
     } catch (_) {}
   };
 
   return (
     <div className="user-app-card group-post">
       <div className="group-post-header">
-        <Avatar user={author} size={40} className="group-post-avatar" />
+        <UserProfileMenu user={author} avatarSize={40} className="group-post-avatar-wrap" />
         <div className="group-post-meta">
           <div className="group-post-meta-top">
-            <span className="group-post-name">{author?.name || 'User'}</span>
             {showGroupContext && groupName && (
               <span className="group-post-group-context">
                 <span className="group-post-group-sep"> · </span>
@@ -273,36 +308,22 @@ export function GroupPost({
             <p className="feed-post-comments-loading">Loading comments…</p>
           ) : (
             <ul className="feed-post-comments-list">
-              {comments.map((c) => {
-                const commentAuthor = c.author ?? c.user ?? {};
-                const name = commentAuthor.name ?? commentAuthor.username ?? 'User';
-                const profilePic = commentAuthor.profilePic ?? commentAuthor.avatar ?? commentAuthor.image;
-                const isOwn = currentUser?.id && (commentAuthor.id === currentUser.id || String(c.userId) === String(currentUser.id));
-                return (
-                  <li key={c.id} className="feed-post-comment-item">
-                    <Avatar user={{ name, profilePic }} size={32} className="feed-post-comment-avatar" />
-                    <div className="feed-post-comment-body">
-                      <div className="feed-post-comment-bubble">
-                        <span className="feed-post-comment-author">{name}</span>
-                        <span className="feed-post-comment-content">{c.content ?? c.text ?? ''}</span>
-                      </div>
-                      <div className="feed-post-comment-meta">
-                        <span className="feed-post-comment-time">{formatCommentTime(c.createdAt ?? c.created_at)}</span>
-                        {isOwn && (
-                          <button
-                            type="button"
-                            className="feed-post-comment-delete"
-                            onClick={() => handleDeleteComment(c.id)}
-                            aria-label="Delete comment"
-                          >
-                            Delete
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </li>
-                );
-              })}
+              {comments.map((c) => (
+                <CommentItem
+                  key={c.id}
+                  comment={c}
+                  currentUser={currentUser}
+                  onDelete={handleDeleteComment}
+                  onLike={handleLikeComment}
+                  onReply={(parentId) => setReplyingTo(parentId)}
+                  replyingTo={replyingTo}
+                  replyText={replyText}
+                  setReplyText={setReplyText}
+                  onSubmitReply={handleSubmitReply}
+                  commentSubmitting={commentSubmitting}
+                  formatTime={formatCommentTime}
+                />
+              ))}
             </ul>
           )}
           <form onSubmit={handleSubmitComment} className="feed-post-comment-form">

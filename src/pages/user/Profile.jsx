@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   MoreHorizontal,
@@ -15,7 +15,7 @@ import {
   UserSquare,
 } from 'lucide-react';
 import { useAuthStore, setAuth, getToken } from '@/store/auth.store';
-import { getMe, uploadProfilePic, uploadCoverPic } from '@/lib/api/users';
+import { getMe, getUser, uploadProfilePic, uploadCoverPic } from '@/lib/api/users';
 import {
   getPostsByUser,
   getSavedPosts,
@@ -328,6 +328,7 @@ function ProfileFeedPost({ post, currentUser, saved: initialSaved = false, onSav
 }
 
 export default function Profile() {
+  const { userId: paramUserId } = useParams();
   const { user: authUser } = useAuthStore();
   const [profile, setProfile] = useState(null);
   const [posts, setPosts] = useState([]);
@@ -342,17 +343,23 @@ export default function Profile() {
   const avatarInputRef = useRef(null);
   const coverInputRef = useRef(null);
 
-  const userId = authUser?.id;
+  const userId = paramUserId && paramUserId !== 'me' ? paramUserId : authUser?.id;
+  const isOwnProfile = !paramUserId || paramUserId === 'me' || (authUser?.id && paramUserId === authUser.id);
 
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
     setLoading(true);
     setError('');
-    Promise.all([getMe(), getPostsByUser(userId, { page: 0, size: 50 })])
-      .then(([me, postsList]) => {
+    const loadProfile = isOwnProfile
+      ? Promise.all([getMe(), getPostsByUser(userId, { page: 0, size: 50 })])
+          .then(([me, postsList]) => [me ?? authUser, postsList])
+      : Promise.all([getUser(userId), getPostsByUser(userId, { page: 0, size: 50 })]);
+
+    loadProfile
+      .then(([profileData, postsList]) => {
         if (cancelled) return;
-        setProfile(me ?? authUser);
+        setProfile(profileData);
         setPosts(Array.isArray(postsList) ? postsList.map(normalizePost) : []);
       })
       .catch((err) => {
@@ -362,7 +369,7 @@ export default function Profile() {
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
-  }, [userId, authUser?.id]);
+  }, [userId, isOwnProfile, authUser?.id]);
 
   const handleAvatarChange = async (e) => {
     const file = e.target.files?.[0];
@@ -454,22 +461,26 @@ export default function Profile() {
   return (
     <div className="profile-fb">
       {/* Cover + avatar + name + actions */}
-      <input
-        type="file"
-        ref={coverInputRef}
-        accept="image/*"
-        className="profile-fb-input-hidden"
-        aria-label="Upload cover photo"
-        onChange={handleCoverChange}
-      />
-      <input
-        type="file"
-        ref={avatarInputRef}
-        accept="image/*"
-        className="profile-fb-input-hidden"
-        aria-label="Upload profile picture"
-        onChange={handleAvatarChange}
-      />
+      {isOwnProfile && (
+        <>
+          <input
+            type="file"
+            ref={coverInputRef}
+            accept="image/*"
+            className="profile-fb-input-hidden"
+            aria-label="Upload cover photo"
+            onChange={handleCoverChange}
+          />
+          <input
+            type="file"
+            ref={avatarInputRef}
+            accept="image/*"
+            className="profile-fb-input-hidden"
+            aria-label="Upload profile picture"
+            onChange={handleAvatarChange}
+          />
+        </>
+      )}
       <div className="profile-fb-cover-wrap">
         <div
           className="profile-fb-cover"
@@ -479,43 +490,55 @@ export default function Profile() {
               : 'linear-gradient(135deg, #4c1d95 0%, #7c3aed 50%, #d946ef 100%)',
           }}
         />
-        <button
-          type="button"
-          className="profile-fb-cover-edit"
-          onClick={() => coverInputRef.current?.click()}
-          disabled={coverUploading}
-          aria-label="Change cover photo"
-        >
-          <Camera size={20} />
-          {coverUploading ? 'Uploading…' : displayProfile?.coverPic ? 'Edit cover photo' : 'Add cover photo'}
-        </button>
+        {isOwnProfile && (
+          <button
+            type="button"
+            className="profile-fb-cover-edit"
+            onClick={() => coverInputRef.current?.click()}
+            disabled={coverUploading}
+            aria-label="Change cover photo"
+          >
+            <Camera size={20} />
+            {coverUploading ? 'Uploading…' : displayProfile?.coverPic ? 'Edit cover photo' : 'Add cover photo'}
+          </button>
+        )}
         <div className="profile-fb-identity">
           <div className="profile-fb-avatar-wrap">
             <Avatar user={displayProfile} size={168} className="profile-fb-avatar" />
-            <button
-              type="button"
-              className="profile-fb-avatar-edit"
-              onClick={() => avatarInputRef.current?.click()}
-              disabled={avatarUploading}
-              aria-label="Change profile picture"
-            >
-              {avatarUploading ? <span className="profile-fb-avatar-edit-text">…</span> : <Camera size={24} />}
-            </button>
+            {isOwnProfile && (
+              <button
+                type="button"
+                className="profile-fb-avatar-edit"
+                onClick={() => avatarInputRef.current?.click()}
+                disabled={avatarUploading}
+                aria-label="Change profile picture"
+              >
+                {avatarUploading ? <span className="profile-fb-avatar-edit-text">…</span> : <Camera size={24} />}
+              </button>
+            )}
           </div>
           <div className="profile-fb-name-row">
             <h1 className="profile-fb-name">{displayProfile?.name ?? 'User'}</h1>
             <div className="profile-fb-actions">
-              <Link to="/app/stories/create" className="profile-fb-btn profile-fb-btn-primary">
-                <Plus size={20} />
-                Add to Story
-              </Link>
-              <Link to="/app/settings" className="profile-fb-btn profile-fb-btn-secondary">
-                <Pencil size={18} />
-                Edit Profile
-              </Link>
-              <button type="button" className="profile-fb-btn profile-fb-btn-icon" aria-label="More">
-                <MoreHorizontal size={20} />
-              </button>
+              {isOwnProfile ? (
+                <>
+                  <Link to="/app/stories/create" className="profile-fb-btn profile-fb-btn-primary">
+                    <Plus size={20} />
+                    Add to Story
+                  </Link>
+                  <Link to="/app/settings" className="profile-fb-btn profile-fb-btn-secondary">
+                    <Pencil size={18} />
+                    Edit Profile
+                  </Link>
+                  <button type="button" className="profile-fb-btn profile-fb-btn-icon" aria-label="More">
+                    <MoreHorizontal size={20} />
+                  </button>
+                </>
+              ) : (
+                <button type="button" className="profile-fb-btn profile-fb-btn-primary" disabled>
+                  Message (coming soon)
+                </button>
+              )}
             </div>
             {(displayProfile?.bio || displayProfile?.work) && (
               <p className="profile-fb-bio">
@@ -548,28 +571,32 @@ export default function Profile() {
               <LayoutGrid size={24} />
               <span className="profile-fb-tab-indicator" />
             </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={profileTab === 'saved'}
-              aria-label="Saved posts"
-              className={`profile-fb-tab ${profileTab === 'saved' ? 'active' : ''}`}
-              onClick={() => setProfileTab('saved')}
-            >
-              <Repeat size={24} />
-              <span className="profile-fb-tab-indicator" />
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={profileTab === 'tagged'}
-              aria-label="Tagged posts"
-              className={`profile-fb-tab ${profileTab === 'tagged' ? 'active' : ''}`}
-              onClick={() => setProfileTab('tagged')}
-            >
-              <UserSquare size={24} />
-              <span className="profile-fb-tab-indicator" />
-            </button>
+            {isOwnProfile && (
+              <>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={profileTab === 'saved'}
+                  aria-label="Saved posts"
+                  className={`profile-fb-tab ${profileTab === 'saved' ? 'active' : ''}`}
+                  onClick={() => setProfileTab('saved')}
+                >
+                  <Repeat size={24} />
+                  <span className="profile-fb-tab-indicator" />
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={profileTab === 'tagged'}
+                  aria-label="Tagged posts"
+                  className={`profile-fb-tab ${profileTab === 'tagged' ? 'active' : ''}`}
+                  onClick={() => setProfileTab('tagged')}
+                >
+                  <UserSquare size={24} />
+                  <span className="profile-fb-tab-indicator" />
+                </button>
+              </>
+            )}
           </div>
 
           {/* Sub-filters for posts tab: All | Photos | Videos */}
