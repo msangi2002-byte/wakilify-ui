@@ -105,7 +105,8 @@ export default function Messages() {
     try {
       const call = await initiateCall(selectedUser.id, type);
       if (call?.roomId) {
-        window.open(`/app/call?room=${call.roomId}&type=${type}`, '_blank', 'width=600,height=500');
+        const url = `${window.location.origin}/app/call?room=${call.roomId}&type=${type}`;
+        window.open(url, '_blank', 'width=600,height=500');
       }
     } catch (err) {
       console.error('Call failed:', err);

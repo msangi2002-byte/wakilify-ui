@@ -32,6 +32,7 @@ const LiveViewer = lazy(() => import('@/pages/user/LiveViewer'));
 const Wallet = lazy(() => import('@/pages/user/Wallet'));
 const Messages = lazy(() => import('@/pages/user/Messages'));
 const Chat = lazy(() => import('@/pages/user/Chat'));
+const Call = lazy(() => import('@/pages/user/Call'));
 const Profile = lazy(() => import('@/pages/user/Profile'));
 const Friends = lazy(() => import('@/pages/user/Friends'));
 const Groups = lazy(() => import('@/pages/user/Groups'));
@@ -114,6 +115,7 @@ const router = createBrowserRouter([
           { path: 'wallet', element: <Suspense fallback={<Fallback />}><Wallet /></Suspense> },
           { path: 'messages', element: <Suspense fallback={<Fallback />}><Messages /></Suspense> },
           { path: 'chat/:id', element: <Suspense fallback={<Fallback />}><Chat /></Suspense> },
+          { path: 'call', element: <Suspense fallback={<Fallback />}><Call /></Suspense> },
           { path: 'profile/:userId?', element: <Suspense fallback={<Fallback />}><Profile /></Suspense> },
           { path: 'friends', element: <Suspense fallback={<Fallback />}><Friends /></Suspense> },
           {
