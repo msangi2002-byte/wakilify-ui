@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ThumbsUp, MessageCircle, Share2, MoreHorizontal, Plus, Play, ChevronUp, ChevronDown } from 'lucide-react';
+import { ThumbsUp, MessageCircle, Share2, MoreHorizontal, Plus, Play, ChevronUp, ChevronDown, X, Bookmark } from 'lucide-react';
 import { getReels, likePost, unlikePost, savePost, unsavePost } from '@/lib/api/posts';
 import { formatPostTime } from '@/lib/utils/dateUtils';
 
@@ -50,6 +50,100 @@ function Avatar({ user, size = 40, className = '' }) {
 }
 
 const SWIPE_THRESHOLD = 50;
+
+/** List view: card per image – header (avatar, username, Following, time, more), video + play, footer (comment count left, Like Comment Share Save right) */
+function ReelCard({ item, index, onPlay, onLikeChange, onSaveChange }) {
+  const [liked, setLiked] = useState(!!item.liked);
+  const [likesCount, setLikesCount] = useState(item.likes ?? 0);
+  const [saved, setSaved] = useState(!!item.saved);
+  const [saveLoading, setSaveLoading] = useState(false);
+
+  const handleLike = async (e) => {
+    e.stopPropagation();
+    if (!item.id) return;
+    const next = !liked;
+    setLiked(next);
+    setLikesCount((c) => (next ? c + 1 : Math.max(0, c - 1)));
+    try {
+      if (next) await likePost(item.id);
+      else await unlikePost(item.id);
+      onLikeChange?.(item.id, next, next ? likesCount + 1 : likesCount - 1);
+    } catch {
+      setLiked(!next);
+      setLikesCount((c) => (next ? c - 1 : c + 1));
+    }
+  };
+
+  const handleSave = async (e) => {
+    e.stopPropagation();
+    if (!item.id || saveLoading) return;
+    const next = !saved;
+    setSaveLoading(true);
+    try {
+      if (next) await savePost(item.id);
+      else await unsavePost(item.id);
+      setSaved(next);
+      onSaveChange?.(item.id, next);
+    } catch (_) {}
+    finally {
+      setSaveLoading(false);
+    }
+  };
+
+  return (
+    <article className="reels-card" onClick={() => onPlay(index)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPlay(index); } }}>
+      <div className="reels-card-header" onClick={(e) => e.stopPropagation()}>
+        <Avatar user={item.author} size={40} className="reels-card-avatar" />
+        <div className="reels-card-meta">
+          <div className="reels-card-meta-row">
+            <span className="reels-card-username">{item.author?.name ?? 'User'}</span>
+            <span className="reels-card-following">Following</span>
+          </div>
+          <span className="reels-card-time">{item.time ?? ''}</span>
+        </div>
+        <button type="button" className="reels-card-more" aria-label="More options" onClick={(e) => e.stopPropagation()}>
+          <MoreHorizontal size={20} />
+        </button>
+      </div>
+      <div className="reels-card-video-wrap">
+        {item.videoUrl ? (
+          <>
+            <video src={item.videoUrl} className="reels-card-video" muted playsInline loop preload="metadata" />
+            <div className="reels-card-play-btn" aria-hidden>
+              <Play size={56} fill="currentColor" />
+            </div>
+          </>
+        ) : (
+          <div className="reels-card-placeholder">
+            <Play size={48} />
+            <span>No video</span>
+          </div>
+        )}
+      </div>
+      <div className="reels-card-footer" onClick={(e) => e.stopPropagation()}>
+        <span className="reels-card-comment-count">{item.comments ?? 0} comments</span>
+        <div className="reels-card-actions">
+          <button type="button" className={`reels-card-action ${liked ? 'active' : ''}`} onClick={handleLike}>
+            <ThumbsUp size={20} />
+            <span>Like</span>
+          </button>
+          <button type="button" className="reels-card-action">
+            <MessageCircle size={20} />
+            <span>Comment</span>
+          </button>
+          <button type="button" className="reels-card-action">
+            <Share2 size={20} />
+            <span>Share</span>
+          </button>
+          <button type="button" className={`reels-card-action ${saved ? 'active' : ''}`} onClick={handleSave}>
+            <Bookmark size={20} fill={saved ? 'currentColor' : 'none'} />
+            <span>Save</span>
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+}
 
 function ReelSlide({ item, isActive, onLikeChange, onSaveChange, onNext, onPrev }) {
   const videoRef = useRef(null);
@@ -212,6 +306,7 @@ export default function Reels() {
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [viewMode, setViewMode] = useState('list'); // 'list' = feed of cards, 'player' = full-height reel view
   const loadMoreRef = useRef(null);
 
   const loadPage = useCallback((pageNum) => {
@@ -319,12 +414,57 @@ export default function Reels() {
     );
   }
 
+  // List view: feed of reel cards (like the reference image)
+  if (viewMode === 'list') {
+    return (
+      <div className="reels-page reels-page-list">
+        <div className="reels-page-header reels-list-header">
+          <h1 className="reels-page-title">Reels</h1>
+          <Link to="/app/create?type=reel" className="reels-page-create-btn" aria-label="Post reel">
+            <Plus size={24} />
+            <span>Post reel</span>
+          </Link>
+        </div>
+        <div className="reels-feed-list">
+          {items.map((item, index) => (
+            <ReelCard
+              key={item.id}
+              item={item}
+              index={index}
+              onPlay={(idx) => {
+                setCurrentIndex(idx);
+                setViewMode('player');
+              }}
+              onLikeChange={handleLikeChange}
+              onSaveChange={handleSaveChange}
+            />
+          ))}
+          <div ref={loadMoreRef} className="reels-load-more-sentinel" aria-hidden />
+          {loadingMore && (
+            <div className="reels-loading-more" style={{ padding: 16, textAlign: 'center', color: '#65676b' }}>
+              Loading more…
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Player view: full-height reel (current design), with back to list
   const current = items[currentIndex];
   const hasNext = currentIndex < items.length - 1;
   const hasPrev = currentIndex > 0;
 
   return (
     <div className="reels-page reels-page-feed">
+      <button
+        type="button"
+        className="reels-player-back"
+        onClick={() => setViewMode('list')}
+        aria-label="Back to reels list"
+      >
+        <X size={24} />
+      </button>
       <ReelSlide
         key={current.id}
         item={current}
