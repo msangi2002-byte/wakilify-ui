@@ -19,13 +19,33 @@ async function whipPublish(streamKey, sdpOffer) {
   return data;
 }
 
-async function whepPlay(streamKey, sdpOffer) {
-  const { data } = await api.post(
-    `/streaming/whep?app=${APP}&stream=${encodeURIComponent(streamKey)}`,
-    sdpOffer,
-    { headers: { 'Content-Type': 'application/sdp' }, responseType: 'text' }
-  );
-  return data;
+const WHEP_RETRIES = 15;
+const WHEP_RETRY_DELAY_MS = 2000;
+
+async function whepPlay(streamKey, sdpOffer, onRetry) {
+  let lastErr;
+  for (let i = 0; i < WHEP_RETRIES; i++) {
+    try {
+      const { data } = await api.post(
+        `/streaming/whep?app=${APP}&stream=${encodeURIComponent(streamKey)}`,
+        sdpOffer,
+        { headers: { 'Content-Type': 'application/sdp' }, responseType: 'text' }
+      );
+      return data;
+    } catch (e) {
+      lastErr = e;
+      const is502 = e.response?.status === 502;
+      if (!is502 || i === WHEP_RETRIES - 1) {
+        if (is502 && i > 0) {
+          throw new Error('Other person did not join in time. Share the call link and ask them to open it.');
+        }
+        throw e;
+      }
+      onRetry?.(i + 1, WHEP_RETRIES);
+      await new Promise((r) => setTimeout(r, WHEP_RETRY_DELAY_MS));
+    }
+  }
+  throw lastErr;
 }
 
 export default function Call() {
@@ -37,6 +57,7 @@ export default function Call() {
   const isVideo = callType === 'VIDEO';
 
   const [status, setStatus] = useState('connecting');
+  const [waitingAttempt, setWaitingAttempt] = useState(0);
   const [error, setError] = useState('');
   const [videoEnabled, setVideoEnabled] = useState(isVideo);
   const [audioEnabled, setAudioEnabled] = useState(true);
@@ -107,7 +128,16 @@ export default function Call() {
 
         const playOffer = await playPc.createOffer();
         await playPc.setLocalDescription(playOffer);
-        const playSdpAnswer = await whepPlay(peerStream, playPc.localDescription.sdp);
+        const playSdpAnswer = await whepPlay(
+          peerStream,
+          playPc.localDescription.sdp,
+          (attempt, total) => {
+            if (!cancelled) {
+              setWaitingAttempt(attempt);
+              setStatus('waiting');
+            }
+          }
+        );
         if (cancelled) return;
         await playPc.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: playSdpAnswer }));
 
@@ -164,7 +194,8 @@ export default function Call() {
             <div className="call-status-overlay">
               {status === 'connecting' && 'Connecting…'}
               {status === 'publishing' && 'Publishing…'}
-              {status === 'playing' && 'Connecting to peer…'}
+              {status === 'playing' && 'Connecting…'}
+              {status === 'waiting' && `Waiting for other person… (${waitingAttempt}/${WHEP_RETRIES})`}
               {status === 'disconnected' && 'Call ended'}
             </div>
           )}
