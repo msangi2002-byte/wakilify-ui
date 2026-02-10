@@ -114,7 +114,10 @@ export default function Call() {
         setStatus('connected');
       } catch (e) {
         if (!cancelled) {
-          setError(e.message || 'Failed to connect to SRS');
+          const msg = typeof e.response?.data === 'string'
+            ? e.response.data
+            : (e.response?.data?.message || e.message || 'Failed to connect');
+          setError(msg);
           setStatus('error');
         }
       }
