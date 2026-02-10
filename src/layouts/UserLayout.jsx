@@ -5,6 +5,7 @@ import {
   Home,
   Users,
   PlayCircle,
+  Radio,
   ShoppingBag,
   Bell,
   MessageCircle,
@@ -25,6 +26,7 @@ const POLL_INTERVAL_MS = 2500;
 const leftNav = [
   { to: '/app/profile', icon: User, label: 'Profile' },
   { to: '/app/friends', icon: Users, label: 'Friends' },
+  { to: '/app/live', icon: Radio, label: 'Live' },
   { to: '/app/groups', icon: Users, label: 'Groups' },
   { to: '/app/shop', icon: ShoppingBag, label: 'Marketplace' },
   { to: '/app/notifications', icon: Bell, label: 'Notifications' },
