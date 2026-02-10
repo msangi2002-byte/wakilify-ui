@@ -4,7 +4,7 @@
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { PhoneOff, Video, VideoOff, Mic, MicOff, User } from 'lucide-react';
+import { PhoneOff, Video, VideoOff, Mic, MicOff, User, RefreshCw } from 'lucide-react';
 import axios from 'axios';
 import { api } from '@/lib/api/client';
 import { endCall } from '@/lib/api/calls';
@@ -115,6 +115,8 @@ export default function Call() {
   const [meUser, setMeUser] = useState(null);
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
   const [hasLocalVideoTrack, setHasLocalVideoTrack] = useState(false);
+  const [facingMode, setFacingMode] = useState('user'); // 'user' = front, 'environment' = back
+  const [switchingCamera, setSwitchingCamera] = useState(false);
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -159,7 +161,7 @@ export default function Call() {
           if (cancelled) return;
         }
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: isVideo,
+          video: isVideo ? { facingMode: 'user' } : false,
           audio: true,
         });
         if (cancelled) {
@@ -253,6 +255,43 @@ export default function Call() {
     if (!localStreamRef.current) return;
     localStreamRef.current.getAudioTracks().forEach((t) => { t.enabled = audioEnabled; });
   }, [audioEnabled]);
+
+  const switchCamera = useCallback(async () => {
+    if (!isVideo || !localStreamRef.current || !publishPcRef.current || switchingCamera) return;
+    const pc = publishPcRef.current;
+    const senders = pc.getSenders();
+    const videoSender = senders.find((s) => s.track?.kind === 'video');
+    if (!videoSender) return;
+    setSwitchingCamera(true);
+    try {
+      const nextFacing = facingMode === 'user' ? 'environment' : 'user';
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: nextFacing },
+        audio: false,
+      });
+      const newVideoTrack = stream.getVideoTracks()[0];
+      if (!newVideoTrack) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
+      const oldVideoTrack = localStreamRef.current.getVideoTracks()[0];
+      if (oldVideoTrack) {
+        localStreamRef.current.removeTrack(oldVideoTrack);
+        oldVideoTrack.stop();
+      }
+      localStreamRef.current.addTrack(newVideoTrack);
+      if (localVideoRef.current?.srcObject) {
+        localVideoRef.current.srcObject = localStreamRef.current;
+      }
+      await videoSender.replaceTrack(newVideoTrack);
+      setFacingMode(nextFacing);
+      setHasLocalVideoTrack(true);
+      stream.getTracks().filter((t) => t !== newVideoTrack).forEach((t) => t.stop());
+    } catch (_) {}
+    finally {
+      setSwitchingCamera(false);
+    }
+  }, [isVideo, facingMode, switchingCamera]);
 
   // Fetch peer and me for profile avatars (WhatsApp-style when video off)
   useEffect(() => {
@@ -350,6 +389,17 @@ export default function Call() {
         >
           {videoEnabled ? <Video size={24} /> : <VideoOff size={24} />}
         </button>
+        {isVideo && videoEnabled && (
+          <button
+            type="button"
+            className="call-control-btn"
+            onClick={switchCamera}
+            disabled={switchingCamera}
+            title={facingMode === 'user' ? 'Switch to back camera' : 'Switch to front camera'}
+          >
+            <RefreshCw size={24} className={switchingCamera ? 'call-switch-spin' : ''} />
+          </button>
+        )}
       </div>
     </div>
   );

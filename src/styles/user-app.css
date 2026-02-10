@@ -2441,6 +2441,15 @@
   overflow: hidden;
 }
 
+/* Mobile: keep top and bottom nav visible when watching a reel */
+@media (max-width: 768px) {
+  .reels-page-feed {
+    min-height: calc(100dvh - 56px - 56px - env(safe-area-inset-top, 0) - env(safe-area-inset-bottom, 0));
+    height: calc(100dvh - 56px - 56px - env(safe-area-inset-top, 0) - env(safe-area-inset-bottom, 0));
+    max-height: calc(100dvh - 56px - 56px - env(safe-area-inset-top, 0) - env(safe-area-inset-bottom, 0));
+  }
+}
+
 .reels-page-loading,
 .reels-empty {
   min-height: 60vh;
@@ -2479,6 +2488,51 @@
   flex-wrap: wrap;
 }
 
+.reels-page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.reels-page-golive-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: #dc2626;
+  color: #fff;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+
+.reels-page-golive-btn:hover {
+  background: #b91c1c;
+  color: #fff;
+}
+
+.reels-page-golive-btn svg {
+  flex-shrink: 0;
+}
+
+@media (min-width: 769px) {
+  .reels-page-golive-btn span {
+    display: none;
+  }
+  .reels-page-golive-btn {
+    padding: 6px 8px;
+  }
+}
+
+@media (max-width: 768px) {
+  .reels-page-golive-btn {
+    display: inline-flex;
+  }
+}
+
 .reels-page-header-text {
   flex: 1;
   min-width: 0;
@@ -2487,13 +2541,13 @@
 .reels-page-create-btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
+  gap: 4px;
+  padding: 6px 10px;
   background: #7c3aed;
   color: #fff;
-  border-radius: 8px;
+  border-radius: 6px;
   font-weight: 600;
-  font-size: 0.9375rem;
+  font-size: 0.8125rem;
   text-decoration: none;
   transition: background 0.2s;
 }
@@ -2501,6 +2555,10 @@
 .reels-page-create-btn:hover {
   background: #6d28d9;
   color: #fff;
+}
+
+.reels-page-create-btn svg {
+  flex-shrink: 0;
 }
 
 .reels-page-title {
@@ -2566,11 +2624,11 @@
 /* Plus button top right */
 .reels-fab {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  top: 12px;
+  right: 12px;
   z-index: 3;
-  width: 48px;
-  height: 48px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   background: rgba(124, 58, 237, 0.9);
   color: #fff;
@@ -2578,13 +2636,55 @@
   align-items: center;
   justify-content: center;
   text-decoration: none;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
   transition: background 0.2s;
 }
 
 .reels-fab:hover {
   background: #7c3aed;
   color: #fff;
+}
+
+.reels-fab-row {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.reels-fab-row .reels-fab {
+  position: static;
+}
+
+.reels-fab-golive {
+  background: rgba(220, 38, 38, 0.9);
+  min-width: 38px;
+  width: auto;
+  padding: 0 8px;
+  gap: 4px;
+}
+
+.reels-fab-golive:hover {
+  background: #dc2626;
+  color: #fff;
+}
+
+.reels-fab-golive-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+@media (min-width: 769px) {
+  .reels-fab-golive-label {
+    display: none;
+  }
+  .reels-fab-golive {
+    padding: 0;
+    min-width: 38px;
+  }
 }
 
 /* Right-side vertical action bar (Like, Comment, Share, More) */
@@ -2677,8 +2777,22 @@
   flex-shrink: 0;
 }
 
-.reels-info-follow:hover {
+.reels-info-follow:hover:not(:disabled) {
   background: #6d28d9;
+}
+
+.reels-info-follow.following {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+.reels-info-follow.following:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.reels-info-follow:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .reels-info-caption {
@@ -2828,9 +2942,34 @@
   color: #050505;
 }
 
-.reels-card-following {
+.reels-card-follow-btn {
+  padding: 4px 12px;
+  border-radius: 6px;
+  background: #7c3aed;
+  color: #fff;
+  border: none;
   font-size: 0.8125rem;
-  color: #65676b;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.reels-card-follow-btn:hover:not(:disabled) {
+  background: #6d28d9;
+}
+
+.reels-card-follow-btn.following {
+  background: #e4e6eb;
+  color: #050505;
+}
+
+.reels-card-follow-btn.following:hover:not(:disabled) {
+  background: #d8dadf;
+}
+
+.reels-card-follow-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .reels-card-time {
@@ -2912,40 +3051,78 @@
   font-size: 0.9375rem;
 }
 
-.reels-card-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 16px;
+/* Reels card engagement – same layout as home feed (counts row + actions grid) */
+.reels-card-engagement {
+  padding: 8px 16px 12px;
+  border-top: 1px solid #e4e6eb;
   background: #fff;
 }
 
-.reels-card-comment-count {
+.reels-card-counts {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 0;
   font-size: 0.875rem;
   color: #65676b;
 }
 
-.reels-card-actions {
-  display: flex;
+.reels-card-likes-count {
+  display: inline-flex;
   align-items: center;
+  gap: 4px;
+  color: #4078D0;
+  font-weight: 500;
+}
+
+.reels-card-comments-share {
+  display: inline-flex;
   gap: 12px;
+}
+
+.reels-card-comments-share span {
+  cursor: default;
+}
+
+.reels-card-comments-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.reels-card-comments-link:hover {
+  text-decoration: underline;
+  color: #050505;
+}
+
+.reels-card-actions {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
 }
 
 .reels-card-action {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #65676b;
   background: none;
   border: none;
-  color: #65676b;
-  font-size: 0.875rem;
-  font-weight: 500;
+  border-radius: 8px;
   cursor: pointer;
-  padding: 4px 0;
 }
 
 .reels-card-action:hover {
+  background: #f0f2f5;
   color: #050505;
 }
 
@@ -2955,6 +3132,118 @@
 
 .reels-card-action.active svg {
   fill: currentColor;
+}
+
+.reels-card-share-wrap {
+  position: relative;
+}
+
+.reels-card-share-menu {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 4px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  padding: 4px 0;
+  min-width: 160px;
+  z-index: 10;
+}
+
+.reels-card-share-menu button {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  text-align: left;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.9375rem;
+  color: #050505;
+}
+
+.reels-card-share-menu button:hover {
+  background: #f0f2f5;
+}
+
+.reels-card-share-menu button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.reels-card-comments {
+  border-top: 1px solid #e4e6eb;
+  padding: 12px 16px 16px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.reels-card-comments-loading {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #65676b;
+}
+
+.reels-card-comments-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.reels-card-comment-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reels-card-comment-form-avatar {
+  flex-shrink: 0;
+}
+
+.reels-card-comment-form-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.reels-card-comment-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e4e6eb;
+  border-radius: 20px;
+  font-size: 0.9375rem;
+  background: #f0f2f5;
+  color: #050505;
+}
+
+.reels-card-comment-input:focus {
+  outline: none;
+  background: #fff;
+  border-color: #7c3aed;
+}
+
+.reels-card-comment-submit {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: none;
+  color: #7c3aed;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reels-card-comment-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Back button in player view */
@@ -8186,6 +8475,15 @@
 
 .call-control-btn.off {
   background: #b91c1c;
+}
+
+.call-switch-spin {
+  animation: call-switch-spin 0.8s linear infinite;
+}
+
+@keyframes call-switch-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .call-btn-end {
