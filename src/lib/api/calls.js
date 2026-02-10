@@ -38,6 +38,15 @@ export async function endCall(callId) {
 }
 
 /**
+ * Get incoming (ringing) calls for current user
+ * GET /api/v1/calls/incoming
+ */
+export async function getIncomingCalls() {
+  const { data } = await api.get('/calls/incoming');
+  return data?.data ?? data ?? [];
+}
+
+/**
  * Get call history
  * GET /api/v1/calls/history?page=0&size=20
  */

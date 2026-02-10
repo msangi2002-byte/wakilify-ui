@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Search,
@@ -14,9 +14,13 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
 import { logout as logoutApi } from '@/lib/api/auth';
+import { getIncomingCalls, answerCall, rejectCall } from '@/lib/api/calls';
+import IncomingCallModal from '@/components/call/IncomingCallModal';
 import { APP_NAME, LOGO_PNG, LOGO_ICON } from '@/lib/constants/brand';
 import { clearAuth } from '@/store/auth.store';
 import '@/styles/user-app.css';
+
+const POLL_INTERVAL_MS = 2500;
 
 const leftNav = [
   { to: '/app/profile', icon: User, label: 'Profile' },
@@ -88,9 +92,77 @@ export default function UserLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [incomingCall, setIncomingCall] = useState(null);
+  const [callActionLoading, setCallActionLoading] = useState(false);
   const menuRef = useRef(null);
 
   const isHome = location.pathname === '/app' || location.pathname === '/app/';
+  const isOnCallPage = location.pathname.startsWith('/app/call');
+
+  const pollIncoming = useCallback(async () => {
+    if (isOnCallPage) return;
+    try {
+      const list = await getIncomingCalls();
+      const ringing = Array.isArray(list) ? list : [];
+      const first = ringing[0];
+      if (first?.id && first?.status === 'RINGING') {
+        setIncomingCall((prev) => {
+          if (prev?.id === first.id) return prev;
+          if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+            try {
+              new Notification(`${first.caller?.name || 'Someone'} is calling`, {
+                body: first.type === 'VIDEO' ? 'Video call' : 'Voice call',
+                tag: `call-${first.id}`,
+              });
+            } catch (_) {}
+          }
+          return first;
+        });
+      } else {
+        setIncomingCall(null);
+      }
+    } catch {
+      setIncomingCall(null);
+    }
+  }, [isOnCallPage]);
+
+  useEffect(() => {
+    const id = setInterval(pollIncoming, POLL_INTERVAL_MS);
+    pollIncoming();
+    return () => clearInterval(id);
+  }, [pollIncoming]);
+
+  const handleAcceptCall = async () => {
+    if (!incomingCall?.id || callActionLoading) return;
+    setCallActionLoading(true);
+    try {
+      const call = await answerCall(incomingCall.id);
+      setIncomingCall(null);
+      const roomId = call?.roomId ?? incomingCall?.roomId;
+      if (roomId) {
+        const type = ((call?.type ?? incomingCall?.type) || 'VIDEO').toUpperCase();
+        navigate(`/app/call?room=${roomId}&type=${type}&role=callee`);
+      }
+    } catch (err) {
+      console.error('Answer call failed:', err);
+    } finally {
+      setCallActionLoading(false);
+    }
+  };
+
+  const handleDeclineCall = async () => {
+    if (!incomingCall?.id || callActionLoading) return;
+    setCallActionLoading(true);
+    try {
+      await rejectCall(incomingCall.id);
+      setIncomingCall(null);
+    } catch (err) {
+      console.error('Reject call failed:', err);
+      setIncomingCall(null);
+    } finally {
+      setCallActionLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -117,6 +189,12 @@ export default function UserLayout() {
 
   return (
     <div className="user-app">
+      <IncomingCallModal
+        call={incomingCall}
+        onAccept={handleAcceptCall}
+        onDecline={handleDeclineCall}
+        disabled={callActionLoading}
+      />
       <header className="user-app-header">
         <div className="user-app-header-left">
           <Link to="/app" className="user-app-logo">
