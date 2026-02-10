@@ -1,164 +1,221 @@
-import { useState } from 'react';
-import { Send, ArrowLeft } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Send, ArrowLeft, Phone, Video } from 'lucide-react';
+import { useAuthStore } from '@/store/auth.store';
+import { getMutualFollows } from '@/lib/api/friends';
+import { getConversations, getConversation, sendMessage } from '@/lib/api/messages';
+import { initiateCall } from '@/lib/api/calls';
+import { UserProfileMenu } from '@/components/ui/UserProfileMenu';
+import '@/styles/user-app.css';
 
-// Mock data – replace with API later
-const ONLINE_USERS = [
-  { id: '1', name: 'Sarah M.' },
-  { id: '2', name: 'Juma K.' },
-  { id: '3', name: 'Amina H.' },
-  { id: '4', name: 'Peter O.' },
-  { id: '5', name: 'Grace K.' },
-];
-
-const MOCK_CONVERSATIONS = [
-  { id: '1', user: { id: '1', name: 'Sarah M.' }, lastMessage: 'Thanks for the link!', time: '2m', unread: 1 },
-  { id: '2', user: { id: '2', name: 'Juma K.' }, lastMessage: 'See you tomorrow', time: '1h', unread: 0 },
-  { id: '3', user: { id: '3', name: 'Amina H.' }, lastMessage: 'Is this still available?', time: '3h', unread: 0 },
-  { id: '4', user: { id: '4', name: 'Peter O.' }, lastMessage: 'Sure, we can meet at 5pm', time: 'Yesterday', unread: 0 },
-  { id: '5', user: { id: '5', name: 'Grace K.' }, lastMessage: 'You sent a photo', time: 'Mon', unread: 0 },
-];
-
-const MOCK_MESSAGES = {
-  '1': [
-    { id: 'm1', fromMe: false, text: 'Hi! Is the item still available?', time: '10:30' },
-    { id: 'm2', fromMe: true, text: 'Yes it is. You can pick it up today.', time: '10:32' },
-    { id: 'm3', fromMe: false, text: 'Thanks for the link!', time: '10:35' },
-  ],
-  '2': [
-    { id: 'm4', fromMe: true, text: 'Hey, are we still on for tomorrow?', time: '09:00' },
-    { id: 'm5', fromMe: false, text: 'See you tomorrow', time: '09:05' },
-  ],
-};
-
-function Avatar({ user, size = 40, className = '', showOnline }) {
-  const name = user?.name || 'User';
-  const initial = name.charAt(0).toUpperCase();
-  return (
-    <div
-      className={className}
-      style={{
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        overflow: 'hidden',
-        background: 'linear-gradient(135deg, #7c3aed, #d946ef)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: '#fff',
-        fontWeight: 600,
-        fontSize: size * 0.4,
-        flexShrink: 0,
-        position: 'relative',
-      }}
-    >
-      {user?.profilePic ? <img src={user.profilePic} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initial}
-      {showOnline && (
-        <span
-          style={{
-            position: 'absolute',
-            bottom: 2,
-            right: 2,
-            width: 10,
-            height: 10,
-            borderRadius: '50%',
-            background: '#31a24c',
-            border: '2px solid #fff',
-          }}
-        />
-      )}
-    </div>
-  );
+function formatTime(createdAt) {
+  if (!createdAt) return '';
+  const date = new Date(createdAt);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m`;
+  if (diffHours < 24) return `${diffHours}h`;
+  if (diffDays < 7) return `${diffDays}d`;
+  return date.toLocaleDateString();
 }
 
 export default function Messages() {
-  const [selectedId, setSelectedId] = useState(null);
+  const { user: currentUser } = useAuthStore();
+  const [mutualFollows, setMutualFollows] = useState([]);
+  const [conversationsMap, setConversationsMap] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [messagesLoading, setMessagesLoading] = useState(false);
   const [draft, setDraft] = useState('');
-  const [messagesByConv, setMessagesByConv] = useState(MOCK_MESSAGES);
+  const [sending, setSending] = useState(false);
+  const [calling, setCalling] = useState(null);
 
-  const selected = selectedId ? MOCK_CONVERSATIONS.find((c) => c.id === selectedId) : null;
-  const messages = selectedId ? (messagesByConv[selectedId] || []) : [];
+  const loadMutualFollows = useCallback(async () => {
+    try {
+      const list = await getMutualFollows();
+      setMutualFollows(Array.isArray(list) ? list : []);
+    } catch {
+      setMutualFollows([]);
+    }
+  }, []);
 
-  const sendMessage = () => {
-    if (!selectedId || !draft.trim()) return;
-    const newMsg = {
-      id: `new-${Date.now()}`,
-      fromMe: true,
-      text: draft.trim(),
-      time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-    };
-    setMessagesByConv((prev) => ({
-      ...prev,
-      [selectedId]: [...(prev[selectedId] || []), newMsg],
-    }));
+  const loadConversations = useCallback(async () => {
+    try {
+      const list = await getConversations();
+      const map = {};
+      for (const c of Array.isArray(list) ? list : []) {
+        map[String(c.otherUserId)] = c;
+      }
+      setConversationsMap(map);
+    } catch {
+      setConversationsMap({});
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    Promise.all([loadMutualFollows(), loadConversations()]).finally(() => {
+      if (!cancelled) setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [loadMutualFollows, loadConversations]);
+
+  const loadMessages = useCallback(async (otherUserId) => {
+    if (!otherUserId) return;
+    setMessagesLoading(true);
+    try {
+      const list = await getConversation(otherUserId);
+      const arr = Array.isArray(list) ? list : [];
+      setMessages(arr.reverse());
+    } catch {
+      setMessages([]);
+    } finally {
+      setMessagesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedUser) loadMessages(selectedUser.id);
+  }, [selectedUser?.id, loadMessages]);
+
+  const handleSend = async () => {
+    if (!selectedUser?.id || !draft.trim() || sending) return;
+    setSending(true);
+    const text = draft.trim();
     setDraft('');
+    try {
+      const msg = await sendMessage(selectedUser.id, text);
+      setMessages((prev) => [...prev, { ...msg, isMe: true }]);
+      loadConversations();
+    } catch {
+      setDraft(text);
+    } finally {
+      setSending(false);
+    }
   };
 
+  const handleCall = async (type) => {
+    if (!selectedUser?.id || calling) return;
+    setCalling(type);
+    try {
+      const call = await initiateCall(selectedUser.id, type);
+      if (call?.roomId) {
+        window.open(`/app/call?room=${call.roomId}&type=${type}`, '_blank', 'width=600,height=500');
+      }
+    } catch (err) {
+      console.error('Call failed:', err);
+    } finally {
+      setCalling(null);
+    }
+  };
+
+  const list = mutualFollows.map((u) => {
+    const conv = conversationsMap[String(u.id)];
+    return {
+      user: u,
+      lastMessage: conv?.lastMessageContent,
+      lastMessageAt: conv?.lastMessageAt,
+      unread: conv?.unreadCount ?? 0,
+    };
+  });
+
   return (
-    <div className={`messages-page ${selected ? 'messages-mobile-chat-open' : ''}`}>
+    <div className={`messages-page ${selectedUser ? 'messages-mobile-chat-open' : ''}`}>
       <div className="messages-sidebar">
         <div className="messages-online-row">
-          <span className="messages-online-label">Online</span>
-          <div className="messages-online-avatars">
-            {ONLINE_USERS.map((u) => (
-              <button
-                key={u.id}
-                type="button"
-                className="messages-online-avatar-wrap"
-                onClick={() => setSelectedId(u.id)}
-                title={u.name}
-              >
-                <Avatar user={u} size={48} showOnline />
-                <span className="messages-online-name">{u.name}</span>
-              </button>
-            ))}
-          </div>
+          <span className="messages-online-label">Malafiki</span>
+          <p className="messages-online-hint">Watu ulio follow na wako follow back</p>
         </div>
         <div className="messages-conversations-header">Conversations</div>
-        <ul className="messages-conversation-list">
-          {MOCK_CONVERSATIONS.map((conv) => (
-            <li key={conv.id}>
-              <button
-                type="button"
-                className={`messages-conversation-item ${selectedId === conv.id ? 'active' : ''}`}
-                onClick={() => setSelectedId(conv.id)}
-              >
-                <Avatar user={conv.user} size={44} showOnline={ONLINE_USERS.some((o) => o.id === conv.user.id)} />
-                <div className="messages-conv-meta">
-                  <span className="messages-conv-name">{conv.user.name}</span>
-                  <span className="messages-conv-preview">{conv.lastMessage}</span>
+        {loading ? (
+          <p className="messages-loading">Loading…</p>
+        ) : list.length === 0 ? (
+          <p className="messages-empty">Hakuna malafiki bado. Follow watu na warudie follow.</p>
+        ) : (
+          <ul className="messages-conversation-list">
+            {list.map(({ user, lastMessage, lastMessageAt, unread }) => (
+              <li key={user.id}>
+                <div
+                  role="button"
+                  tabIndex={0}
+                  className={`messages-conversation-item ${selectedUser?.id === user.id ? 'active' : ''}`}
+                  onClick={() => setSelectedUser(user)}
+                  onKeyDown={(e) => e.key === 'Enter' && setSelectedUser(user)}
+                >
+                  <div className="messages-conv-avatar-wrap" onClick={(e) => e.stopPropagation()}>
+                    <UserProfileMenu user={user} avatarSize={44} showName={false} />
+                  </div>
+                  <div className="messages-conv-meta">
+                    <span className="messages-conv-name">{user.name}</span>
+                    <span className="messages-conv-preview">{lastMessage || 'Start chat'}</span>
+                  </div>
+                  <div className="messages-conv-right">
+                    {lastMessageAt && <span className="messages-conv-time">{formatTime(lastMessageAt)}</span>}
+                    {unread > 0 && <span className="messages-conv-unread">{unread}</span>}
+                  </div>
                 </div>
-                <div className="messages-conv-right">
-                  <span className="messages-conv-time">{conv.time}</span>
-                  {conv.unread > 0 && <span className="messages-conv-unread">{conv.unread}</span>}
-                </div>
-              </button>
-            </li>
-          ))}
-        </ul>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
       <div className="messages-chat-panel">
-        {selected ? (
+        {selectedUser ? (
           <>
             <div className="messages-chat-header">
               <button
                 type="button"
                 className="messages-chat-back"
-                onClick={() => setSelectedId(null)}
+                onClick={() => setSelectedUser(null)}
                 aria-label="Back to conversations"
               >
                 <ArrowLeft size={24} />
               </button>
-              <Avatar user={selected.user} size={40} className="messages-chat-header-avatar" />
-              <span className="messages-chat-header-name">{selected.user.name}</span>
+              <UserProfileMenu user={selectedUser} avatarSize={40} showName={false} className="messages-chat-header-avatar-wrap" />
+              <span className="messages-chat-header-name">{selectedUser.name}</span>
+              <div className="messages-chat-header-actions">
+                <button
+                  type="button"
+                  className="messages-chat-call-btn"
+                  onClick={() => handleCall('VOICE')}
+                  disabled={!!calling}
+                  title="Voice call"
+                  aria-label="Voice call"
+                >
+                  <Phone size={20} />
+                </button>
+                <button
+                  type="button"
+                  className="messages-chat-call-btn"
+                  onClick={() => handleCall('VIDEO')}
+                  disabled={!!calling}
+                  title="Video call"
+                  aria-label="Video call"
+                >
+                  <Video size={20} />
+                </button>
+              </div>
             </div>
             <div className="messages-chat-messages">
-              {messages.map((msg) => (
-                <div key={msg.id} className={`messages-bubble ${msg.fromMe ? 'from-me' : ''}`}>
-                  <span className="messages-bubble-text">{msg.text}</span>
-                  <span className="messages-bubble-time">{msg.time}</span>
-                </div>
-              ))}
+              {messagesLoading ? (
+                <p className="messages-loading">Loading messages…</p>
+              ) : messages.length === 0 ? (
+                <p className="messages-empty-inline">No messages yet. Say hi!</p>
+              ) : (
+                messages.map((msg) => (
+                  <div key={msg.id} className={`messages-bubble ${msg.isMe ? 'from-me' : ''}`}>
+                    <span className="messages-bubble-text">{msg.content}</span>
+                    <span className="messages-bubble-time">
+                      {msg.createdAt ? formatTime(msg.createdAt) : ''}
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
             <div className="messages-chat-input-wrap">
               <input
@@ -167,16 +224,17 @@ export default function Messages() {
                 placeholder="Type a message..."
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
               />
-              <button type="button" className="messages-chat-send" onClick={sendMessage} aria-label="Send">
+              <button type="button" className="messages-chat-send" onClick={handleSend} disabled={!draft.trim() || sending} aria-label="Send">
                 <Send size={20} />
               </button>
             </div>
           </>
         ) : (
           <div className="messages-chat-empty">
-            <p>Select a conversation to start chatting</p>
+            <p>Chagua mtu kuanza chat / Select a conversation to start chatting</p>
+            <p className="messages-chat-empty-hint">Malafiki wako watokea hapa. Unaweza kuwaonyesha profile, kupiga simu, au video call.</p>
           </div>
         )}
       </div>

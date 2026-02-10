@@ -23,6 +23,18 @@ export async function getFriends(params = {}) {
 }
 
 /**
+ * Get mutual follows: users I follow AND who follow me back (malafiki)
+ * GET /api/v1/social/mutual-follows?page=0&size=50
+ */
+export async function getMutualFollows(params = {}) {
+  const { data } = await api.get('/social/mutual-follows', {
+    params: { page: 0, size: 50, ...params },
+  });
+  const content = data?.data?.content ?? data?.content ?? [];
+  return Array.isArray(content) ? content : [];
+}
+
+/**
  * Get people that a user follows (auth required)
  * GET /api/v1/social/following/:userId?page=0&size=20
  * Returns { content: UserResponse[], page, size, totalElements, ... }

@@ -3860,6 +3860,13 @@
   display: block;
   font-size: 0.8125rem;
   font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.messages-online-hint {
+  font-size: 0.75rem;
+  color: #65676b;
+  margin: 0;
   color: #65676b;
   margin-bottom: 12px;
 }
@@ -3925,6 +3932,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  cursor: pointer;
   width: 100%;
   padding: 12px 16px;
   background: none;
@@ -4028,8 +4036,39 @@
   background: #f0f2f5;
 }
 
-.messages-chat-header-avatar {
+.messages-chat-header-avatar,
+.messages-chat-header-avatar-wrap {
   flex-shrink: 0;
+}
+
+.messages-chat-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.messages-chat-call-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: #f0f2f5;
+  color: #050505;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.messages-chat-call-btn:hover:not(:disabled) {
+  background: #e4e6eb;
+  color: #7c3aed;
+}
+
+.messages-chat-call-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .messages-chat-header-name {
@@ -4132,6 +4171,32 @@
 
 .messages-chat-empty p {
   margin: 0;
+}
+
+.messages-chat-empty-hint {
+  font-size: 0.875rem;
+  color: #65676b;
+  margin-top: 8px;
+}
+
+.messages-loading,
+.messages-empty {
+  padding: 16px;
+  font-size: 0.9375rem;
+  color: #65676b;
+  margin: 0;
+}
+
+.messages-empty-inline {
+  padding: 24px;
+  text-align: center;
+  color: #65676b;
+  font-size: 0.9375rem;
+  margin: 0;
+}
+
+.messages-conv-avatar-wrap {
+  flex-shrink: 0;
 }
 
 /* Mobile: one view at a time like Messenger/WhatsApp */
