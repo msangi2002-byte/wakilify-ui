@@ -156,6 +156,11 @@ export default function Call() {
           }
         };
 
+        // SRS requires full SDP with BUNDLE and m=audio/m=video. Without recvonly transceivers,
+        // createOffer() produces a tiny SDP (~105B) and SRS rejects with "now only support BUNDLE".
+        playPc.addTransceiver('audio', { direction: 'recvonly' });
+        playPc.addTransceiver('video', { direction: 'recvonly' });
+
         const playOffer = await playPc.createOffer();
         await playPc.setLocalDescription(playOffer);
         const playSdpAnswer = await whepPlay(
