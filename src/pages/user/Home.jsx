@@ -220,18 +220,22 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], li
   const handleFollowClick = async () => {
     if (!author?.id || isSelf || followLoading) return;
     setFollowLoading(true);
+    const prevFollowed = authorIsFollowed;
     try {
       if (authorIsFollowed) {
-        await unfollowUser(author.id);
+        await unfollowUser(String(author.id));
         setAuthorIsFollowed(false);
         onFollowChange?.(author.id, false);
       } else {
-        await followUser(author.id);
+        await followUser(String(author.id));
         setAuthorIsFollowed(true);
         onFollowChange?.(author.id, true);
       }
-    } catch (_) {}
-    finally {
+    } catch (err) {
+      setAuthorIsFollowed(prevFollowed);
+      const msg = err.response?.data?.message || err.message || 'Action failed';
+      alert(msg);
+    } finally {
       setFollowLoading(false);
     }
   };
@@ -648,10 +652,10 @@ export default function Home() {
             <ImagePlus size={24} />
             Post
           </Link>
-          <button type="button" className="user-app-composer-btn trade">
+          <Link to="/app/friends" className="user-app-composer-btn trade" title="Find people">
             <Users size={24} />
-            Trade
-          </button>
+            Find People
+          </Link>
           <button type="button" className="user-app-composer-btn video">
             <Video size={24} />
             Video
@@ -675,7 +679,19 @@ export default function Home() {
       )}
       {!loading && !error && posts.length === 0 && (
         <div className="user-app-card" style={{ padding: 24, textAlign: 'center', color: '#65676b' }}>
-          No posts yet. Be the first to post!
+          <p>No posts yet. Be the first to post!</p>
+          <Link to="/app/friends" className="home-discover-link" style={{ marginTop: 12, display: 'inline-block', color: '#7c3aed', fontWeight: 600 }}>
+            Find people to follow →
+          </Link>
+        </div>
+      )}
+      {user?.id && !loading && posts.length > 0 && (
+        <div className="user-app-card home-discover-card" style={{ padding: '12px 16px', marginBottom: 12 }}>
+          <Link to="/app/friends" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: 'inherit' }}>
+            <Users size={20} className="home-discover-icon" style={{ color: '#7c3aed' }} />
+            <span style={{ flex: 1, fontSize: 14 }}>Discover people near you</span>
+            <span style={{ fontSize: 13, color: '#7c3aed', fontWeight: 600 }}>Find People →</span>
+          </Link>
         </div>
       )}
       {!loading && posts.length > 0 && posts.map((p) => (

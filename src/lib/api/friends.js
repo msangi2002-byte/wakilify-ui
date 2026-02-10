@@ -51,7 +51,8 @@ export async function getFollowing(userId, params = {}) {
  * POST /api/v1/social/follow/:userId
  */
 export async function followUser(userId) {
-  const { data } = await api.post(`/social/follow/${userId}`);
+  const id = String(userId);
+  const { data } = await api.post(`/social/follow/${id}`);
   return data?.data ?? data;
 }
 
@@ -60,6 +61,7 @@ export async function followUser(userId) {
  * DELETE /api/v1/social/follow/:userId
  */
 export async function unfollowUser(userId) {
-  const { data } = await api.delete(`/social/follow/${userId}`);
+  const id = String(userId);
+  const { data } = await api.delete(`/social/follow/${id}`);
   return data?.data ?? data;
 }

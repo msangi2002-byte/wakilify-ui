@@ -144,10 +144,12 @@ export default function Friends() {
     const nextFollowing = !user.isFollowing;
     setList((prev) => prev.map((u) => (u.id === user.id ? { ...u, isFollowing: nextFollowing } : u)));
     try {
-      if (nextFollowing) await followUser(user.id);
-      else await unfollowUser(user.id);
-    } catch {
+      if (nextFollowing) await followUser(String(user.id));
+      else await unfollowUser(String(user.id));
+    } catch (err) {
       setList((prev) => prev.map((u) => (u.id === user.id ? { ...u, isFollowing: user.isFollowing } : u)));
+      const msg = err.response?.data?.message || err.message || 'Action failed';
+      alert(msg);
     } finally {
       setLoadingId(null);
     }
