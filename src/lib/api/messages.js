@@ -32,6 +32,14 @@ export async function sendMessage(recipientId, content) {
 }
 
 /**
+ * Mark conversation with a user as read
+ * PUT /api/v1/messages/:otherUserId/read
+ */
+export async function markConversationRead(otherUserId) {
+  await api.put(`/messages/${otherUserId}/read`);
+}
+
+/**
  * Get total unread count
  * GET /api/v1/messages/unread-count
  */

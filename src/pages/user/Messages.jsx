@@ -2,8 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Send, ArrowLeft, Phone, Video } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
-import { getMutualFollows } from '@/lib/api/friends';
-import { getConversations, getConversation, sendMessage } from '@/lib/api/messages';
+import { getConversations, getConversation, sendMessage, markConversationRead } from '@/lib/api/messages';
 import { initiateCall } from '@/lib/api/calls';
 import { UserProfileMenu } from '@/components/ui/UserProfileMenu';
 import { formatPostTime } from '@/lib/utils/dateUtils';
@@ -12,8 +11,7 @@ import '@/styles/user-app.css';
 export default function Messages() {
   const { user: currentUser } = useAuthStore();
   const location = useLocation();
-  const [mutualFollows, setMutualFollows] = useState([]);
-  const [conversationsMap, setConversationsMap] = useState({});
+  const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -22,50 +20,39 @@ export default function Messages() {
   const [sending, setSending] = useState(false);
   const [calling, setCalling] = useState(null);
 
-  const loadMutualFollows = useCallback(async () => {
-    try {
-      const list = await getMutualFollows();
-      setMutualFollows(Array.isArray(list) ? list : []);
-    } catch {
-      setMutualFollows([]);
-    }
-  }, []);
-
   const loadConversations = useCallback(async () => {
     try {
       const list = await getConversations();
-      const map = {};
-      for (const c of Array.isArray(list) ? list : []) {
-        map[String(c.otherUserId)] = c;
-      }
-      setConversationsMap(map);
+      setConversations(Array.isArray(list) ? list : []);
     } catch {
-      setConversationsMap({});
+      setConversations([]);
     }
   }, []);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    Promise.all([loadMutualFollows(), loadConversations()]).finally(() => {
+    loadConversations().finally(() => {
       if (!cancelled) setLoading(false);
     });
     return () => { cancelled = true; };
-  }, [loadMutualFollows, loadConversations]);
+  }, [loadConversations]);
 
   const loadMessages = useCallback(async (otherUserId) => {
     if (!otherUserId) return;
     setMessagesLoading(true);
     try {
+      await markConversationRead(otherUserId);
       const list = await getConversation(otherUserId);
       const arr = Array.isArray(list) ? list : [];
       setMessages(arr.reverse());
+      loadConversations();
     } catch {
       setMessages([]);
     } finally {
       setMessagesLoading(false);
     }
-  }, []);
+  }, [loadConversations]);
 
   useEffect(() => {
     if (selectedUser) loadMessages(selectedUser.id);
@@ -121,33 +108,29 @@ export default function Messages() {
   };
 
   const openUser = location.state?.openUser;
-  const listUsers =
-    openUser?.id && !mutualFollows.some((u) => String(u.id) === String(openUser.id))
-      ? [openUser, ...mutualFollows]
-      : mutualFollows;
-
-  const list = listUsers.map((u) => {
-    const conv = conversationsMap[String(u.id)];
-    return {
-      user: u,
-      lastMessage: conv?.lastMessageContent,
-      lastMessageAt: conv?.lastMessageAt,
-      unread: conv?.unreadCount ?? 0,
-    };
-  });
+  const listFromConversations = conversations.map((c) => ({
+    user: {
+      id: c.otherUserId,
+      name: c.otherUserName ?? 'Unknown',
+      profilePic: c.otherUserProfilePic,
+    },
+    lastMessage: c.lastMessageContent,
+    lastMessageAt: c.lastMessageAt,
+    unread: c.unreadCount ?? 0,
+  }));
+  const list =
+    openUser?.id && !listFromConversations.some((item) => String(item.user.id) === String(openUser.id))
+      ? [{ user: openUser, lastMessage: null, lastMessageAt: null, unread: 0 }, ...listFromConversations]
+      : listFromConversations;
 
   return (
     <div className={`messages-page ${selectedUser ? 'messages-mobile-chat-open' : ''}`}>
       <div className="messages-sidebar">
-        <div className="messages-online-row">
-          <span className="messages-online-label">Malafiki</span>
-          <p className="messages-online-hint">Watu ulio follow na wako follow back</p>
-        </div>
         <div className="messages-conversations-header">Conversations</div>
         {loading ? (
           <p className="messages-loading">Loading…</p>
         ) : list.length === 0 ? (
-          <p className="messages-empty">Hakuna malafiki bado. Follow watu na warudie follow.</p>
+          <p className="messages-empty">No conversations yet. Start a chat from someone's profile.</p>
         ) : (
           <ul className="messages-conversation-list">
             {list.map(({ user, lastMessage, lastMessageAt, unread }) => (
@@ -245,8 +228,7 @@ export default function Messages() {
           </>
         ) : (
           <div className="messages-chat-empty">
-            <p>Chagua mtu kuanza chat / Select a conversation to start chatting</p>
-            <p className="messages-chat-empty-hint">Malafiki wako watokea hapa. Unaweza kuwaonyesha profile, kupiga simu, au video call.</p>
+            <p>Select a conversation to start chatting</p>
           </div>
         )}
       </div>
