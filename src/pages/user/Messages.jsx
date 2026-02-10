@@ -107,7 +107,13 @@ export default function Messages() {
     try {
       const call = await initiateCall(receiverId, type);
       if (call?.roomId) {
-        const url = `${window.location.origin}/app/call?room=${call.roomId}&type=${type}&role=caller`;
+        const params = new URLSearchParams({
+          room: call.roomId,
+          type,
+          role: 'caller',
+          ...(call.id && { callId: call.id }),
+        });
+        const url = `${window.location.origin}/app/call?${params}`;
         window.open(url, '_blank', 'width=600,height=500');
       }
     } catch (err) {

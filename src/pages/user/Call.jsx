@@ -2,10 +2,11 @@
  * Voice/Video call using SRS (WHIP/WHEP).
  * Uses API proxy to avoid CORS (browser cannot fetch streaming.wakilfy.com directly).
  */
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { PhoneOff, Video, VideoOff, Mic, MicOff } from 'lucide-react';
 import { api } from '@/lib/api/client';
+import { endCall } from '@/lib/api/calls';
 import '@/styles/user-app.css';
 
 const APP = 'live';
@@ -52,6 +53,7 @@ export default function Call() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const roomId = searchParams.get('room') || '';
+  const callId = searchParams.get('callId') || '';
   const callType = (searchParams.get('type') || 'VIDEO').toUpperCase();
   const role = searchParams.get('role') || 'caller';
   const isVideo = callType === 'VIDEO';
@@ -67,15 +69,21 @@ export default function Call() {
   const publishPcRef = useRef(null);
   const playPcRef = useRef(null);
   const localStreamRef = useRef(null);
+  const endedRef = useRef(false);
 
-  const endCall = () => {
+  const handleEndCall = useCallback(() => {
+    if (endedRef.current) return;
+    endedRef.current = true;
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((t) => t.stop());
     }
     publishPcRef.current?.close();
     playPcRef.current?.close();
+    if (callId && role === 'caller') {
+      endCall(callId).catch(() => {});
+    }
     navigate('/app/messages');
-  };
+  }, [callId, role, navigate]);
 
   useEffect(() => {
     if (!roomId) {
@@ -149,6 +157,9 @@ export default function Call() {
             : (e.response?.data?.message || e.message || 'Failed to connect');
           setError(msg);
           setStatus('error');
+          if (callId && role === 'caller') {
+            endCall(callId).catch(() => {});
+          }
         }
       }
     };
@@ -177,7 +188,7 @@ export default function Call() {
       <div className="call-page call-page-error">
         <p>{error}</p>
         <p className="call-error-hint">Proxy via API. Ensure you are logged in and backend can reach SRS.</p>
-        <button type="button" className="call-btn-end" onClick={endCall}>
+        <button type="button" className="call-btn-end" onClick={handleEndCall}>
           <PhoneOff size={24} />
           End
         </button>
@@ -213,7 +224,7 @@ export default function Call() {
         >
           {audioEnabled ? <Mic size={24} /> : <MicOff size={24} />}
         </button>
-        <button type="button" className="call-btn-end" onClick={endCall} title="End call">
+        <button type="button" className="call-btn-end" onClick={handleEndCall} title="End call">
           <PhoneOff size={24} />
         </button>
         <button
