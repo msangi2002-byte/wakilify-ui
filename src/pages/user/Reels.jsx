@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { ThumbsUp, MessageCircle, Share2, MoreHorizontal, Plus, Play, ChevronUp, ChevronDown, X, Bookmark } from 'lucide-react';
-import { getReels, likePost, unlikePost, savePost, unsavePost } from '@/lib/api/posts';
-import { formatPostTime } from '@/lib/utils/dateUtils';
+import { getReels, likePost, unlikePost, savePost, unsavePost, getComments, addComment, deleteComment, likeComment, unlikeComment, sharePostToStory, createPost } from '@/lib/api/posts';
+import { formatPostTime, formatCommentTime } from '@/lib/utils/dateUtils';
+import { CommentItem } from '@/components/social/CommentItem';
+import { useAuthStore } from '@/store/auth.store';
 
 function normalizeReel(post) {
   const author = post.author ?? post.user ?? {};
@@ -51,8 +53,206 @@ function Avatar({ user, size = 40, className = '' }) {
 
 const SWIPE_THRESHOLD = 50;
 
+/** Comments drawer for a reel (post). Loads comments, add new, delete, like. */
+function ReelCommentsDrawer({ postId, onClose, onCommentCountChange }) {
+  const { user: currentUser } = useAuthStore();
+  const [comments, setComments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [commentText, setCommentText] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [replyText, setReplyText] = useState('');
+
+  const loadComments = useCallback(() => {
+    if (!postId) return;
+    setLoading(true);
+    getComments(postId, { page: 0, size: 50 })
+      .then((list) => setComments(Array.isArray(list) ? list : []))
+      .catch(() => setComments([]))
+      .finally(() => setLoading(false));
+  }, [postId]);
+
+  useEffect(() => {
+    loadComments();
+  }, [loadComments]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const content = commentText.trim();
+    if (!postId || !content || submitting) return;
+    setSubmitting(true);
+    try {
+      await addComment(postId, content);
+      setCommentText('');
+      const list = await getComments(postId, { page: 0, size: 50 });
+      const next = Array.isArray(list) ? list : [];
+      setComments(next);
+      onCommentCountChange?.(postId, next.length);
+    } catch (_) {}
+    finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSubmitReply = async (e, parentId) => {
+    e.preventDefault();
+    const content = replyText.trim();
+    if (!postId || !content || !parentId || submitting) return;
+    setSubmitting(true);
+    try {
+      await addComment(postId, content, parentId);
+      setReplyText('');
+      setReplyingTo(null);
+      const list = await getComments(postId, { page: 0, size: 50 });
+      const next = Array.isArray(list) ? list : [];
+      setComments(next);
+      onCommentCountChange?.(postId, next.length);
+    } catch (_) {}
+    finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (commentId) => {
+    try {
+      await deleteComment(commentId);
+      const list = await getComments(postId, { page: 0, size: 50 });
+      const next = Array.isArray(list) ? list : [];
+      setComments(next);
+      onCommentCountChange?.(postId, next.length);
+    } catch (_) {}
+  };
+
+  const handleLike = async (commentId, currentlyLiked) => {
+    try {
+      if (currentlyLiked) await unlikeComment(commentId);
+      else await likeComment(commentId);
+      const list = await getComments(postId, { page: 0, size: 50 });
+      setComments(Array.isArray(list) ? list : []);
+    } catch (_) {}
+  };
+
+  return (
+    <div className="reels-comments-overlay" onClick={onClose} role="presentation">
+      <div className="reels-comments-drawer" onClick={(e) => e.stopPropagation()}>
+        <div className="reels-comments-header">
+          <h3 className="reels-comments-title">Comments</h3>
+          <button type="button" className="reels-comments-close" onClick={onClose} aria-label="Close">
+            <X size={24} />
+          </button>
+        </div>
+        <ul className="reels-comments-list">
+          {loading ? (
+            <li className="reels-comments-loading">Loading…</li>
+          ) : comments.length === 0 ? (
+            <li className="reels-comments-empty">No comments yet.</li>
+          ) : (
+            comments.map((c) => (
+              <CommentItem
+                key={c.id}
+                comment={c}
+                currentUser={currentUser}
+                onDelete={handleDelete}
+                onLike={handleLike}
+                onReply={(id) => setReplyingTo(id)}
+                replyingTo={replyingTo}
+                replyText={replyText}
+                setReplyText={setReplyText}
+                onSubmitReply={handleSubmitReply}
+                commentSubmitting={submitting}
+                formatTime={formatCommentTime}
+              />
+            ))
+          )}
+        </ul>
+        <form onSubmit={handleSubmit} className="reels-comments-input-wrap">
+          <input
+            type="text"
+            className="reels-comments-input"
+            placeholder="Add a comment..."
+            value={commentText}
+            onChange={(e) => setCommentText(e.target.value)}
+            maxLength={2000}
+            disabled={submitting}
+          />
+          <button type="submit" className="reels-comments-submit" disabled={!commentText.trim() || submitting}>
+            Post
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+/** Share menu for a reel: Copy link, Share to story, Repost to feed */
+function ReelShareMenu({ item, onClose }) {
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(null); // 'copied' | 'story' | 'repost'
+
+  const handleCopyLink = async () => {
+    try {
+      const url = `${window.location.origin}/app/post/${item?.id ?? ''}`;
+      await navigator.clipboard.writeText(url);
+      setDone('copied');
+      setTimeout(onClose, 800);
+    } catch (_) {
+      onClose();
+    }
+  };
+
+  const handleShareToStory = async () => {
+    if (!item?.id || loading) return;
+    setLoading(true);
+    try {
+      await sharePostToStory(item.id, '');
+      setDone('story');
+      setTimeout(onClose, 800);
+    } catch (_) {}
+    finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRepost = async () => {
+    if (!item?.id || loading) return;
+    setLoading(true);
+    try {
+      await createPost({ caption: '', originalPostId: item.id, postType: 'POST', visibility: 'PUBLIC', files: [] });
+      setDone('repost');
+      setTimeout(onClose, 800);
+    } catch (_) {}
+    finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="reels-share-overlay" onClick={onClose} role="presentation">
+      <div className="reels-share-menu" onClick={(e) => e.stopPropagation()}>
+        <div className="reels-share-header">
+          <span className="reels-share-title">Share reel</span>
+          <button type="button" className="reels-share-close" onClick={onClose} aria-label="Close">
+            <X size={20} />
+          </button>
+        </div>
+        <div className="reels-share-actions">
+          <button type="button" className="reels-share-action" onClick={handleCopyLink}>
+            Copy link
+          </button>
+          <button type="button" className="reels-share-action" onClick={handleShareToStory} disabled={loading}>
+            {loading && done === 'story' ? 'Shared!' : 'Share to story'}
+          </button>
+          <button type="button" className="reels-share-action" onClick={handleRepost} disabled={loading}>
+            {loading && done === 'repost' ? 'Reposted!' : 'Repost to feed'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** List view: card per image – header (avatar, username, Following, time, more), video + play, footer (comment count left, Like Comment Share Save right) */
-function ReelCard({ item, index, onPlay, onLikeChange, onSaveChange }) {
+function ReelCard({ item, index, onPlay, onLikeChange, onSaveChange, onCommentClick, onShareClick }) {
   const [liked, setLiked] = useState(!!item.liked);
   const [likesCount, setLikesCount] = useState(item.likes ?? 0);
   const [saved, setSaved] = useState(!!item.saved);
@@ -127,11 +327,11 @@ function ReelCard({ item, index, onPlay, onLikeChange, onSaveChange }) {
             <ThumbsUp size={20} />
             <span>Like</span>
           </button>
-          <button type="button" className="reels-card-action">
+          <button type="button" className="reels-card-action" onClick={(e) => { e.stopPropagation(); onCommentClick?.(item); }}>
             <MessageCircle size={20} />
             <span>Comment</span>
           </button>
-          <button type="button" className="reels-card-action">
+          <button type="button" className="reels-card-action" onClick={(e) => { e.stopPropagation(); onShareClick?.(item); }}>
             <Share2 size={20} />
             <span>Share</span>
           </button>
@@ -145,7 +345,7 @@ function ReelCard({ item, index, onPlay, onLikeChange, onSaveChange }) {
   );
 }
 
-function ReelSlide({ item, isActive, onLikeChange, onSaveChange, onNext, onPrev }) {
+function ReelSlide({ item, isActive, onLikeChange, onSaveChange, onCommentClick, onShareClick, onNext, onPrev }) {
   const videoRef = useRef(null);
   const [liked, setLiked] = useState(!!item.liked);
   const [likesCount, setLikesCount] = useState(item.likes ?? 0);
@@ -269,11 +469,11 @@ function ReelSlide({ item, isActive, onLikeChange, onSaveChange, onNext, onPrev 
           <ThumbsUp size={32} />
           <span>{formatCount(likesCount)}</span>
         </button>
-        <button type="button" className="reels-action" aria-label="Comments">
+        <button type="button" className="reels-action" onClick={() => onCommentClick?.(item)} aria-label="Comments">
           <MessageCircle size={32} />
           <span>{formatCount(item.comments ?? 0)}</span>
         </button>
-        <button type="button" className="reels-action" aria-label="Share">
+        <button type="button" className="reels-action" onClick={() => onShareClick?.(item)} aria-label="Share">
           <Share2 size={32} />
           <span>{formatCount(item.shares ?? 0)}</span>
         </button>
@@ -307,6 +507,8 @@ export default function Reels() {
   const [hasMore, setHasMore] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [viewMode, setViewMode] = useState('list'); // 'list' = feed of cards, 'player' = full-height reel view
+  const [commentsPostId, setCommentsPostId] = useState(null);
+  const [shareItem, setShareItem] = useState(null);
   const loadMoreRef = useRef(null);
 
   const loadPage = useCallback((pageNum) => {
@@ -370,6 +572,11 @@ export default function Reels() {
   const handleSaveChange = useCallback((id, saved) => {
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, saved } : i)));
   }, []);
+  const handleCommentCountChange = useCallback((postId, newCount) => {
+    setItems((prev) => prev.map((i) => (i.id === postId ? { ...i, comments: newCount } : i)));
+  }, []);
+  const openComments = useCallback((item) => setCommentsPostId(item?.id ?? null), []);
+  const openShare = useCallback((item) => setShareItem(item ?? null), []);
 
   if (loading) {
     return (
@@ -417,6 +624,7 @@ export default function Reels() {
   // List view: feed of reel cards (like the reference image)
   if (viewMode === 'list') {
     return (
+      <>
       <div className="reels-page reels-page-list">
         <div className="reels-page-header reels-list-header">
           <h1 className="reels-page-title">Reels</h1>
@@ -437,6 +645,8 @@ export default function Reels() {
               }}
               onLikeChange={handleLikeChange}
               onSaveChange={handleSaveChange}
+              onCommentClick={openComments}
+              onShareClick={openShare}
             />
           ))}
           <div ref={loadMoreRef} className="reels-load-more-sentinel" aria-hidden />
@@ -447,6 +657,15 @@ export default function Reels() {
           )}
         </div>
       </div>
+      {commentsPostId && (
+        <ReelCommentsDrawer
+          postId={commentsPostId}
+          onClose={() => setCommentsPostId(null)}
+          onCommentCountChange={handleCommentCountChange}
+        />
+      )}
+      {shareItem && <ReelShareMenu item={shareItem} onClose={() => setShareItem(null)} />}
+      </>
     );
   }
 
@@ -456,6 +675,7 @@ export default function Reels() {
   const hasPrev = currentIndex > 0;
 
   return (
+    <>
     <div className="reels-page reels-page-feed">
       <button
         type="button"
@@ -471,6 +691,8 @@ export default function Reels() {
         isActive
         onLikeChange={handleLikeChange}
         onSaveChange={handleSaveChange}
+        onCommentClick={openComments}
+        onShareClick={openShare}
         onNext={hasNext ? () => setCurrentIndex((i) => i + 1) : undefined}
         onPrev={hasPrev ? () => setCurrentIndex((i) => i - 1) : undefined}
       />
@@ -486,5 +708,14 @@ export default function Reels() {
       )}
       <div ref={loadMoreRef} className="reels-load-more-sentinel" aria-hidden />
     </div>
+    {commentsPostId && (
+      <ReelCommentsDrawer
+        postId={commentsPostId}
+        onClose={() => setCommentsPostId(null)}
+        onCommentCountChange={handleCommentCountChange}
+      />
+    )}
+    {shareItem && <ReelShareMenu item={shareItem} onClose={() => setShareItem(null)} />}
+    </>
   );
 }

@@ -1,4 +1,4 @@
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   MoreHorizontal,
@@ -554,11 +554,16 @@ export default function Profile() {
               </Link>
             </div>
           )}
-          {!isOwnProfile && (
+          {!isOwnProfile && displayProfile?.id && (
             <div className="profile-fb-hero-actions">
-              <button type="button" className="profile-fb-btn profile-fb-btn-primary" disabled>
-                Message (coming soon)
-              </button>
+              <Link
+                to="/app/messages"
+                state={{ openUser: { id: displayProfile.id, name: displayProfile.name ?? displayProfile.username, profilePic: displayProfile.profilePic } }}
+                className="profile-fb-btn profile-fb-btn-primary"
+              >
+                <MessageCircle size={20} />
+                Message
+              </Link>
             </div>
           )}
         </div>

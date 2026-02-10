@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Send, ArrowLeft, Phone, Video } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
 import { getMutualFollows } from '@/lib/api/friends';
@@ -10,6 +11,7 @@ import '@/styles/user-app.css';
 
 export default function Messages() {
   const { user: currentUser } = useAuthStore();
+  const location = useLocation();
   const [mutualFollows, setMutualFollows] = useState([]);
   const [conversationsMap, setConversationsMap] = useState({});
   const [loading, setLoading] = useState(true);
@@ -69,6 +71,12 @@ export default function Messages() {
     if (selectedUser) loadMessages(selectedUser.id);
   }, [selectedUser?.id, loadMessages]);
 
+  // Open chat with user when navigating from profile (Message button)
+  useEffect(() => {
+    const openUser = location.state?.openUser;
+    if (openUser?.id) setSelectedUser(openUser);
+  }, [location.state?.openUser?.id]);
+
   const handleSend = async () => {
     if (!selectedUser?.id || !draft.trim() || sending) return;
     setSending(true);
@@ -112,7 +120,13 @@ export default function Messages() {
     }
   };
 
-  const list = mutualFollows.map((u) => {
+  const openUser = location.state?.openUser;
+  const listUsers =
+    openUser?.id && !mutualFollows.some((u) => String(u.id) === String(openUser.id))
+      ? [openUser, ...mutualFollows]
+      : mutualFollows;
+
+  const list = listUsers.map((u) => {
     const conv = conversationsMap[String(u.id)];
     return {
       user: u,

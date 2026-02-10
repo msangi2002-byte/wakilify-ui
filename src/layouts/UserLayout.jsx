@@ -16,6 +16,8 @@ import {
 import { useAuthStore } from '@/store/auth.store';
 import { logout as logoutApi } from '@/lib/api/auth';
 import { getIncomingCalls, answerCall, rejectCall } from '@/lib/api/calls';
+import { searchUsers } from '@/lib/api/users';
+import { getAllCommunities } from '@/lib/api/communities';
 import IncomingCallModal from '@/components/call/IncomingCallModal';
 import { APP_NAME, LOGO_PNG, LOGO_ICON } from '@/lib/constants/brand';
 import { clearAuth } from '@/store/auth.store';
@@ -96,7 +98,12 @@ export default function UserLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [incomingCall, setIncomingCall] = useState(null);
   const [callActionLoading, setCallActionLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState({ people: [], groups: [] });
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const menuRef = useRef(null);
+  const searchRef = useRef(null);
 
   const isHome = location.pathname === '/app' || location.pathname === '/app/';
   const isOnCallPage = location.pathname.startsWith('/app/call');
@@ -183,6 +190,54 @@ export default function UserLayout() {
     };
   }, [menuOpen]);
 
+  useEffect(() => {
+    if (!searchOpen) return;
+    function handleClickOutside(e) {
+      if (searchRef.current && !searchRef.current.contains(e.target)) setSearchOpen(false);
+    }
+    const id = setTimeout(() => document.addEventListener('click', handleClickOutside), 0);
+    return () => {
+      clearTimeout(id);
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [searchOpen]);
+
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (!q) {
+      setSearchResults({ people: [], groups: [] });
+      setSearchLoading(false);
+      return;
+    }
+    setSearchLoading(true);
+    const t = setTimeout(() => {
+      let cancelled = false;
+      Promise.all([
+        searchUsers(q, { page: 0, size: 15 }).then((res) => {
+          const content = res?.content ?? [];
+          return Array.isArray(content) ? content : [];
+        }),
+        getAllCommunities({ page: 0, size: 50 }).then((page) => {
+          const list = page?.content ?? [];
+          const arr = Array.isArray(list) ? list : [];
+          const lower = q.toLowerCase();
+          return arr.filter((g) => (g.name || '').toLowerCase().includes(lower));
+        }),
+      ])
+        .then(([people, groups]) => {
+          if (!cancelled) setSearchResults({ people, groups });
+        })
+        .catch(() => {
+          if (!cancelled) setSearchResults({ people: [], groups: [] });
+        })
+        .finally(() => {
+          if (!cancelled) setSearchLoading(false);
+        });
+      return () => { cancelled = true; };
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
   const handleLogout = async () => {
     setMenuOpen(false);
     try {
@@ -206,9 +261,83 @@ export default function UserLayout() {
             <BrandLogo size={40} />
             <span>{APP_NAME}</span>
           </Link>
-          <div className="user-app-search">
-            <Search size={20} className="text-[#65676b]" />
-            <input type="text" placeholder="Search" aria-label="Search" />
+          <div className="user-app-search-wrap" ref={searchRef}>
+            <div
+              className="user-app-search"
+              onClick={() => setSearchOpen(true)}
+              onFocus={() => setSearchOpen(true)}
+              role="search"
+            >
+              <Search size={20} className="user-app-search-icon" />
+              <input
+                type="text"
+                placeholder="Search people or groups"
+                aria-label="Search people or groups"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setSearchOpen(true)}
+              />
+            </div>
+            {searchOpen && (
+              <div className="global-search-dropdown">
+                {searchLoading ? (
+                  <div className="global-search-loading">Searching…</div>
+                ) : !searchQuery.trim() ? (
+                  <div className="global-search-hint">Type to search for people or groups</div>
+                ) : (
+                  <>
+                    {searchResults.people.length > 0 && (
+                      <div className="global-search-section">
+                        <div className="global-search-section-title">People</div>
+                        <ul className="global-search-list">
+                          {searchResults.people.map((u) => (
+                            <li key={u.id}>
+                              <Link
+                                to={`/app/profile/${u.id}`}
+                                className="global-search-item"
+                                onClick={() => { setSearchOpen(false); setSearchQuery(''); }}
+                              >
+                                <Avatar user={u} size={36} className="global-search-avatar" />
+                                <span className="global-search-item-name">{u.name ?? u.username ?? 'User'}</span>
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {searchResults.groups.length > 0 && (
+                      <div className="global-search-section">
+                        <div className="global-search-section-title">Groups</div>
+                        <ul className="global-search-list">
+                          {searchResults.groups.map((g) => (
+                            <li key={g.id}>
+                              <Link
+                                to={`/app/groups/${g.id}`}
+                                className="global-search-item"
+                                onClick={() => { setSearchOpen(false); setSearchQuery(''); }}
+                              >
+                                <div className="global-search-group-icon">
+                                  <Users size={20} />
+                                </div>
+                                <span className="global-search-item-name">{g.name ?? 'Group'}</span>
+                                {(g.membersCount ?? g.members_count) != null && (
+                                  <span className="global-search-item-meta">
+                                    {(g.membersCount ?? g.members_count).toLocaleString()} members
+                                  </span>
+                                )}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {!searchLoading && searchQuery.trim() && searchResults.people.length === 0 && searchResults.groups.length === 0 && (
+                      <div className="global-search-empty">No people or groups found</div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

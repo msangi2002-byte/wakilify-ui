@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { Users, LogOut, Loader2, Settings, X, ImagePlus } from 'lucide-react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Users, LogOut, Loader2, Settings, X, ImagePlus, ArrowLeft } from 'lucide-react';
 import { GroupPost } from '@/components/social/GroupPost';
 import { getCommunity, joinCommunity, leaveCommunity, updateCommunitySettings } from '@/lib/api/communities';
 import { getPostsByCommunity, createPost, uploadChunked, CHUNK_THRESHOLD_BYTES } from '@/lib/api/posts';
@@ -27,6 +27,7 @@ function mapPostToGroupPost(post, groupName) {
 
 export default function GroupDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [group, setGroup] = useState(null);
   const [groupLoading, setGroupLoading] = useState(true);
   const [groupError, setGroupError] = useState(null);
@@ -187,6 +188,17 @@ export default function GroupDetail() {
 
   return (
     <div className="groups-feed">
+      <div className="groups-detail-mobile-bar">
+        <button
+          type="button"
+          className="groups-detail-back"
+          onClick={() => navigate('/app/groups')}
+          aria-label="Back to groups"
+        >
+          <ArrowLeft size={24} />
+        </button>
+        <span className="groups-detail-mobile-title">{group.name}</span>
+      </div>
       <div className="group-detail-header">
         <div
           className="group-detail-cover"

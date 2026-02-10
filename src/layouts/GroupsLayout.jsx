@@ -43,8 +43,11 @@ export default function GroupsLayout() {
     (g.name || '').toLowerCase().includes(groupSearch.trim().toLowerCase())
   );
 
+  /* On mobile: show only list or only detail (like chat). Any :id route (group or create) = detail view. */
+  const isDetailView = !!id;
+
   return (
-    <div className="groups-page">
+    <div className={`groups-page ${isDetailView ? 'groups-mobile-detail-open' : ''}`}>
       <div className="groups-layout">
         <aside className="groups-sidebar">
           <div className="groups-sidebar-header">
