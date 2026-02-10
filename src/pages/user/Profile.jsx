@@ -11,8 +11,10 @@ import {
   Pencil,
   Camera,
   LayoutGrid,
-  Repeat,
-  UserSquare,
+  Home,
+  Users,
+  UserPlus,
+  Heart,
 } from 'lucide-react';
 import { useAuthStore, setAuth, getToken } from '@/store/auth.store';
 import { getMe, getUser, uploadProfilePic, uploadCoverPic } from '@/lib/api/users';
@@ -28,6 +30,7 @@ import {
   deleteComment,
 } from '@/lib/api/posts';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
+import { formatPostTime, formatCommentTime } from '@/lib/utils/dateUtils';
 import '@/styles/user-app.css';
 
 function Avatar({ user, size = 40, className = '' }) {
@@ -54,32 +57,6 @@ function Avatar({ user, size = 40, className = '' }) {
       {src ? <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initial}
     </div>
   );
-}
-
-function formatPostTime(createdAt) {
-  if (!createdAt) return '';
-  const date = new Date(createdAt);
-  const now = new Date();
-  const diffMs = now - date;
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m`;
-  if (diffHours < 24) return `${diffHours}h`;
-  if (diffDays < 7) return `${diffDays}d`;
-  return date.toLocaleDateString();
-}
-
-function formatCommentTime(createdAt) {
-  if (!createdAt) return '';
-  const date = new Date(createdAt);
-  const now = new Date();
-  const diffMs = now - date;
-  const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m`;
-  return date.toLocaleDateString();
 }
 
 function normalizePost(post) {
@@ -182,6 +159,19 @@ function ProfileFeedPost({ post, currentUser, saved: initialSaved = false, onSav
     }
   };
 
+  const handleEmojiClick = async (emoji) => {
+    if (!post.id || commentSubmitting) return;
+    setCommentSubmitting(true);
+    try {
+      await addComment(post.id, emoji);
+      setCommentText('');
+      setCommentsCount((c) => c + 1);
+      await loadComments();
+    } finally {
+      setCommentSubmitting(false);
+    }
+  };
+
   return (
     <div className="profile-fb-post">
       <div className="profile-fb-post-header">
@@ -273,52 +263,80 @@ function ProfileFeedPost({ post, currentUser, saved: initialSaved = false, onSav
         </div>
       </div>
       {showComments && (
-        <div className="profile-fb-post-comments">
+        <div className="feed-post-comments">
           {commentsLoading ? (
-            <p className="profile-fb-post-comments-loading">Loading…</p>
+            <p className="feed-post-comments-loading">Loading…</p>
           ) : (
-            <ul className="profile-fb-post-comments-list">
+            <ul className="feed-post-comments-list">
               {comments.map((c) => {
                 const author = c.author ?? c.user ?? {};
+                const name = author.name ?? author.username ?? 'User';
                 const isOwn = currentUser?.id && (author.id === currentUser.id || c.userId === currentUser.id);
+                const likeCount = c.likesCount ?? c.likes_count ?? 0;
                 return (
-                  <li key={c.id} className="profile-fb-post-comment">
-                    <Avatar user={author} size={32} />
-                    <div className="profile-fb-post-comment-body">
-                      <div className="profile-fb-post-comment-bubble">
-                        <span className="profile-fb-post-comment-author">{author.name ?? 'User'}</span>
-                        <span className="profile-fb-post-comment-content">{c.content ?? c.text ?? ''}</span>
-                      </div>
-                      <span className="profile-fb-post-comment-time">{formatCommentTime(c.createdAt)}</span>
-                      {isOwn && (
-                        <button type="button" className="profile-fb-post-comment-delete" onClick={async () => {
-                          try {
-                            await deleteComment(c.id);
-                            setComments((prev) => prev.filter((x) => x.id !== c.id));
-                            setCommentsCount((n) => Math.max(0, n - 1));
-                          } catch (_) {}
-                        }}>
-                          Delete
+                  <li key={c.id} className="feed-post-comment-item">
+                    <Avatar user={author} size={36} className="feed-post-comment-avatar" />
+                    <div className="feed-post-comment-main">
+                      <div className="feed-post-comment-head">
+                        <div className="feed-post-comment-meta">
+                          <span className="feed-post-comment-author">{name}</span>
+                          <span className="feed-post-comment-time">{formatCommentTime(c.createdAt)}</span>
+                        </div>
+                        <button type="button" className="feed-post-comment-like" aria-label="Like comment" title="Like">
+                          <Heart size={16} />
+                          {likeCount > 0 && <span className="feed-post-comment-like-count">{likeCount}</span>}
                         </button>
-                      )}
+                      </div>
+                      <p className="feed-post-comment-content">{c.content ?? c.text ?? ''}</p>
+                      <div className="feed-post-comment-actions">
+                        <button type="button" className="feed-post-comment-reply">Reply</button>
+                        {isOwn && (
+                          <button
+                            type="button"
+                            className="feed-post-comment-delete"
+                            onClick={async () => {
+                              try {
+                                await deleteComment(c.id);
+                                setComments((prev) => prev.filter((x) => x.id !== c.id));
+                                setCommentsCount((n) => Math.max(0, n - 1));
+                              } catch (_) {}
+                            }}
+                            aria-label="Delete comment"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </li>
                 );
               })}
             </ul>
           )}
-          <form onSubmit={handleSubmitComment} className="profile-fb-post-comment-form">
-            <Avatar user={currentUser} size={32} />
-            <input
-              type="text"
-              placeholder="Write a comment..."
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              className="profile-fb-post-comment-input"
-              maxLength={2000}
-            />
-            <button type="submit" className="profile-fb-post-comment-submit" disabled={!commentText.trim() || commentSubmitting}>
-              {commentSubmitting ? '…' : 'Comment'}
+          <div className="feed-post-comment-emoji-bar">
+            <button type="button" className="feed-post-comment-emoji" aria-label="Heart" onClick={() => handleEmojiClick('❤️')}>❤️</button>
+            <button type="button" className="feed-post-comment-emoji" aria-label="Clap" onClick={() => handleEmojiClick('🙌')}>🙌</button>
+            <button type="button" className="feed-post-comment-emoji" aria-label="Fire" onClick={() => handleEmojiClick('🔥')}>🔥</button>
+            <button type="button" className="feed-post-comment-emoji" aria-label="Sad" onClick={() => handleEmojiClick('😢')}>😢</button>
+            <button type="button" className="feed-post-comment-emoji" aria-label="Love" onClick={() => handleEmojiClick('🥰')}>🥰</button>
+            <button type="button" className="feed-post-comment-emoji" aria-label="Surprise" onClick={() => handleEmojiClick('😮')}>😮</button>
+            <button type="button" className="feed-post-comment-emoji" aria-label="Laugh" onClick={() => handleEmojiClick('😂')}>😂</button>
+          </div>
+          <form onSubmit={handleSubmitComment} className="feed-post-comment-form">
+            <Avatar user={currentUser} size={36} className="feed-post-comment-form-avatar" />
+            <div className="feed-post-comment-form-wrap">
+              <input
+                type="text"
+                placeholder="Add a comment..."
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                className="feed-post-comment-input"
+                maxLength={2000}
+              />
+              <button type="button" className="feed-post-comment-gif" aria-label="GIF">GIF</button>
+            </div>
+            <button type="submit" className="feed-post-comment-submit-btn" disabled={!commentText.trim() || commentSubmitting} aria-label="Post comment">
+              {commentSubmitting ? '…' : <MessageCircle size={20} />}
             </button>
           </form>
         </div>
@@ -458,6 +476,11 @@ export default function Profile() {
     );
   }
 
+  const handleStr = displayProfile?.username ?? (displayProfile?.name ?? 'user').replace(/\s+/g, '').toLowerCase() || 'user';
+  const postsCount = posts.length;
+  const formatStat = (n) => (n >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(n));
+  const totalLikes = posts.reduce((sum, p) => sum + (p.likesCount ?? 0), 0);
+
   return (
     <div className="profile-fb">
       {/* Cover + avatar + name + actions */}
@@ -482,6 +505,7 @@ export default function Profile() {
         </>
       )}
       <div className="profile-fb-cover-wrap">
+        {/* Background image */}
         <div
           className="profile-fb-cover"
           style={{
@@ -502,8 +526,9 @@ export default function Profile() {
             {coverUploading ? 'Uploading…' : displayProfile?.coverPic ? 'Edit cover photo' : 'Add cover photo'}
           </button>
         )}
-        <div className="profile-fb-identity">
-          <div className="profile-fb-avatar-wrap">
+        {/* Profile image centered, action buttons to the right */}
+        <div className="profile-fb-hero">
+          <div className="profile-fb-hero-avatar-wrap">
             <Avatar user={displayProfile} size={168} className="profile-fb-avatar" />
             {isOwnProfile && (
               <button
@@ -517,35 +542,49 @@ export default function Profile() {
               </button>
             )}
           </div>
-          <div className="profile-fb-name-row">
-            <h1 className="profile-fb-name">{displayProfile?.name ?? 'User'}</h1>
-            <div className="profile-fb-actions">
-              {isOwnProfile ? (
-                <>
-                  <Link to="/app/stories/create" className="profile-fb-btn profile-fb-btn-primary">
-                    <Plus size={20} />
-                    Add to Story
-                  </Link>
-                  <Link to="/app/settings" className="profile-fb-btn profile-fb-btn-secondary">
-                    <Pencil size={18} />
-                    Edit Profile
-                  </Link>
-                  <button type="button" className="profile-fb-btn profile-fb-btn-icon" aria-label="More">
-                    <MoreHorizontal size={20} />
-                  </button>
-                </>
-              ) : (
-                <button type="button" className="profile-fb-btn profile-fb-btn-primary" disabled>
-                  Message (coming soon)
-                </button>
-              )}
+          {isOwnProfile && (
+            <div className="profile-fb-hero-actions">
+              <Link to="/app/stories/create" className="profile-fb-btn profile-fb-btn-primary">
+                <Plus size={20} />
+                Add to history
+              </Link>
+              <Link to="/app/settings" className="profile-fb-btn profile-fb-btn-secondary">
+                <Pencil size={18} />
+                Edit profile
+              </Link>
             </div>
-            {(displayProfile?.bio || displayProfile?.work) && (
-              <p className="profile-fb-bio">
-                {displayProfile.bio || displayProfile.work || ''}
-              </p>
-            )}
+          )}
+          {!isOwnProfile && (
+            <div className="profile-fb-hero-actions">
+              <button type="button" className="profile-fb-btn profile-fb-btn-primary" disabled>
+                Message (coming soon)
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Information / Bio section: stats left, bio right */}
+      <div className="profile-fb-info">
+        <div className="profile-fb-stats-col">
+          <div className="profile-fb-stat-row">
+            <span className="profile-fb-stat-label">Total likes</span>
+            <span className="profile-fb-stat-value">{formatStat(totalLikes)}</span>
           </div>
+          <div className="profile-fb-stat-row">
+            <span className="profile-fb-stat-label">Total Follower</span>
+            <span className="profile-fb-stat-value">{formatStat(displayProfile?.followersCount ?? 0)}</span>
+          </div>
+          <div className="profile-fb-stat-row">
+            <span className="profile-fb-stat-label">Total Following</span>
+            <span className="profile-fb-stat-value">{formatStat(displayProfile?.followingCount ?? 0)}</span>
+          </div>
+        </div>
+        <div className="profile-fb-bio-section">
+          <h2 className="profile-fb-bio-section-title">Bio</h2>
+          <p className="profile-fb-bio-section-text">
+            {displayProfile?.bio || displayProfile?.work || 'No bio yet.'}
+          </p>
         </div>
       </div>
 
@@ -558,17 +597,16 @@ export default function Profile() {
       <div className="profile-fb-main profile-fb-main-no-sidebar">
         {/* Main content: icon tab bar + grid */}
         <div className="profile-fb-content">
-          {/* Icon tab bar (Grid = image/video posts, Repeat = saved, UserSquare = tagged) */}
-          <div className="profile-fb-tabs" role="tablist" aria-label="Profile content tabs">
+          {/* Content tabs: Post, Saved, Tagged post */}
+          <div className="profile-fb-tabs profile-fb-tabs-text" role="tablist" aria-label="Profile content tabs">
             <button
               type="button"
               role="tab"
               aria-selected={profileTab === 'posts'}
-              aria-label="Image and video posts"
               className={`profile-fb-tab ${profileTab === 'posts' ? 'active' : ''}`}
               onClick={() => setProfileTab('posts')}
             >
-              <LayoutGrid size={24} />
+              Post
               <span className="profile-fb-tab-indicator" />
             </button>
             {isOwnProfile && (
@@ -577,22 +615,20 @@ export default function Profile() {
                   type="button"
                   role="tab"
                   aria-selected={profileTab === 'saved'}
-                  aria-label="Saved posts"
                   className={`profile-fb-tab ${profileTab === 'saved' ? 'active' : ''}`}
                   onClick={() => setProfileTab('saved')}
                 >
-                  <Repeat size={24} />
+                  Saved
                   <span className="profile-fb-tab-indicator" />
                 </button>
                 <button
                   type="button"
                   role="tab"
                   aria-selected={profileTab === 'tagged'}
-                  aria-label="Tagged posts"
                   className={`profile-fb-tab ${profileTab === 'tagged' ? 'active' : ''}`}
                   onClick={() => setProfileTab('tagged')}
                 >
-                  <UserSquare size={24} />
+                  Tagged post
                   <span className="profile-fb-tab-indicator" />
                 </button>
               </>

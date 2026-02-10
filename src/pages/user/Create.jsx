@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ImagePlus, X, Loader2 } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ImagePlus, X, Loader2, Video } from 'lucide-react';
 import { createPost, uploadChunked, CHUNK_THRESHOLD_BYTES } from '@/lib/api/posts';
 import { UploadProgressBar } from '@/components/ui/UploadProgressBar';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
@@ -13,6 +13,9 @@ const VISIBILITY_OPTIONS = [
 
 export default function Create() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isReel = searchParams.get('type') === 'reel';
+
   const fileInputRef = useRef(null);
   const [caption, setCaption] = useState('');
   const [visibility, setVisibility] = useState('PUBLIC');
@@ -25,14 +28,15 @@ export default function Create() {
   const handleFileChange = (e) => {
     const chosen = Array.from(e.target.files || []);
     if (chosen.length === 0) return;
-    setFiles((prev) => [...prev, ...chosen].slice(0, 10));
+    const maxFiles = isReel ? 1 : 10;
+    setFiles((prev) => [...prev, ...chosen].slice(0, maxFiles));
     setPreviews((prev) => {
       const next = [...prev];
-      chosen.forEach((file) => {
+      chosen.slice(0, maxFiles - next.length).forEach((file) => {
         const url = URL.createObjectURL(file);
         next.push(url);
       });
-      return next.slice(0, 10);
+      return next.slice(0, maxFiles);
     });
     e.target.value = '';
   };
@@ -48,12 +52,18 @@ export default function Create() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    if (!caption.trim() && files.length === 0) {
+    if (isReel) {
+      if (files.length === 0) {
+        setError('Please add a video for your reel.');
+        return;
+      }
+    } else if (!caption.trim() && files.length === 0) {
       setError('Add a caption or at least one photo.');
       return;
     }
     setSubmitting(true);
     setUploadProgress(0);
+    const postType = isReel ? 'REEL' : 'POST';
     try {
       const hasLargeFile = files.some((f) => f.size > CHUNK_THRESHOLD_BYTES);
       if (hasLargeFile && files.length > 0) {
@@ -68,20 +78,20 @@ export default function Create() {
         await createPost({
           caption: caption.trim(),
           visibility,
-          postType: 'POST',
+          postType,
           mediaUrls,
         });
       } else {
         await createPost({
           caption: caption.trim(),
           visibility,
-          postType: 'POST',
+          postType,
           files,
         });
       }
-      navigate('/app');
+      navigate(isReel ? '/app/reels' : '/app');
     } catch (err) {
-      const msg = getApiErrorMessage(err, 'Failed to create post.');
+      const msg = getApiErrorMessage(err, isReel ? 'Failed to create reel.' : 'Failed to create post.');
       const status = err.response?.status;
       setError(
         status === 403
@@ -97,12 +107,12 @@ export default function Create() {
   return (
     <div className="user-app-create">
       <div className="user-app-card user-app-create-card">
-        <h1 className="user-app-create-title">Create post</h1>
+        <h1 className="user-app-create-title">{isReel ? 'Create reel' : 'Create post'}</h1>
         <form onSubmit={handleSubmit} className="user-app-create-form">
           <div className="user-app-create-field">
             <textarea
               className="user-app-create-caption"
-              placeholder="What's on your mind?"
+              placeholder={isReel ? 'Add a description...' : "What's on your mind?"}
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
               rows={4}
@@ -124,34 +134,40 @@ export default function Create() {
             </select>
           </div>
           <div className="user-app-create-field">
-            <label className="user-app-create-label">Photos (optional)</label>
+            <label className="user-app-create-label">
+              {isReel ? 'Video (required)' : 'Photos (optional)'}
+            </label>
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
-              multiple
+              accept={isReel ? 'video/*' : 'image/*'}
+              multiple={!isReel}
               className="user-app-create-file-input"
               onChange={handleFileChange}
-              aria-label="Add photos"
+              aria-label={isReel ? 'Add video' : 'Add photos'}
             />
             <button
               type="button"
               className="user-app-create-add-photos"
               onClick={() => fileInputRef.current?.click()}
             >
-              <ImagePlus size={20} />
-              Add photos
+              {isReel ? <Video size={20} /> : <ImagePlus size={20} />}
+              {isReel ? 'Add video' : 'Add photos'}
             </button>
             {previews.length > 0 && (
               <div className="user-app-create-previews">
                 {previews.map((url, i) => (
                   <div key={i} className="user-app-create-preview-wrap">
-                    <img src={url} alt="" className="user-app-create-preview-img" />
+                    {isReel ? (
+                      <video src={url} className="user-app-create-preview-img" controls style={{ maxHeight: 200, width: '100%', objectFit: 'contain' }} />
+                    ) : (
+                      <img src={url} alt="" className="user-app-create-preview-img" />
+                    )}
                     <button
                       type="button"
                       className="user-app-create-preview-remove"
                       onClick={() => removeFile(i)}
-                      aria-label="Remove photo"
+                      aria-label="Remove"
                     >
                       <X size={16} />
                     </button>
@@ -168,7 +184,7 @@ export default function Create() {
             <button
               type="button"
               className="user-app-create-btn user-app-create-btn-secondary"
-              onClick={() => navigate('/app')}
+              onClick={() => navigate(isReel ? '/app/reels' : '/app')}
               disabled={submitting}
             >
               Cancel
@@ -184,11 +200,11 @@ export default function Create() {
                 ) : (
                   <>
                     <Loader2 size={18} className="user-app-create-spinner" />
-                    Posting…
+                    {isReel ? 'Posting reel…' : 'Posting…'}
                   </>
                 )
               ) : (
-                'Post'
+                isReel ? 'Post reel' : 'Post'
               )}
             </button>
           </div>

@@ -5,22 +5,8 @@ import { getMutualFollows } from '@/lib/api/friends';
 import { getConversations, getConversation, sendMessage } from '@/lib/api/messages';
 import { initiateCall } from '@/lib/api/calls';
 import { UserProfileMenu } from '@/components/ui/UserProfileMenu';
+import { formatPostTime } from '@/lib/utils/dateUtils';
 import '@/styles/user-app.css';
-
-function formatTime(createdAt) {
-  if (!createdAt) return '';
-  const date = new Date(createdAt);
-  const now = new Date();
-  const diffMs = now - date;
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m`;
-  if (diffHours < 24) return `${diffHours}h`;
-  if (diffDays < 7) return `${diffDays}d`;
-  return date.toLocaleDateString();
-}
 
 export default function Messages() {
   const { user: currentUser } = useAuthStore();
@@ -167,7 +153,7 @@ export default function Messages() {
                     <span className="messages-conv-preview">{lastMessage || 'Start chat'}</span>
                   </div>
                   <div className="messages-conv-right">
-                    {lastMessageAt && <span className="messages-conv-time">{formatTime(lastMessageAt)}</span>}
+                    {lastMessageAt && <span className="messages-conv-time">{formatPostTime(lastMessageAt)}</span>}
                     {unread > 0 && <span className="messages-conv-unread">{unread}</span>}
                   </div>
                 </div>
@@ -223,7 +209,7 @@ export default function Messages() {
                   <div key={msg.id} className={`messages-bubble ${msg.isMe ? 'from-me' : ''}`}>
                     <span className="messages-bubble-text">{msg.content}</span>
                     <span className="messages-bubble-time">
-                      {msg.createdAt ? formatTime(msg.createdAt) : ''}
+                      {msg.createdAt ? formatPostTime(msg.createdAt) : ''}
                     </span>
                   </div>
                 ))

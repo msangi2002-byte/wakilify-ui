@@ -5,6 +5,7 @@ import { UserProfileMenu } from '@/components/ui/UserProfileMenu';
 import { getTrendingHashtags, getPostsByHashtag } from '@/lib/api/hashtags';
 import { useAuthStore } from '@/store/auth.store';
 import { likePost, unlikePost } from '@/lib/api/posts';
+import { formatPostTime } from '@/lib/utils/dateUtils';
 import '@/styles/user-app.css';
 
 function Avatar({ user, size = 40, className = '' }) {
@@ -31,21 +32,6 @@ function Avatar({ user, size = 40, className = '' }) {
       {src ? <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initial}
     </div>
   );
-}
-
-function formatPostTime(createdAt) {
-  if (!createdAt) return '';
-  const date = new Date(createdAt);
-  const now = new Date();
-  const diffMs = now - date;
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m`;
-  if (diffHours < 24) return `${diffHours}h`;
-  if (diffDays < 7) return `${diffDays}d`;
-  return date.toLocaleDateString();
 }
 
 function isVideoItem(m) {

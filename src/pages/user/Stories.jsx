@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { getStories } from '@/lib/api/posts';
 import { useAuthStore } from '@/store/auth.store';
+import { parseApiDate } from '@/lib/utils/dateUtils';
 import '@/styles/user-app.css';
 
 function groupStoriesByAuthor(stories, currentUserId) {
@@ -18,15 +19,15 @@ function groupStoriesByAuthor(stories, currentUserId) {
   }
   const list = Array.from(map.values());
   for (const g of list) {
-    g.stories.sort((a, b) => new Date(b.createdAt ?? 0) - new Date(a.createdAt ?? 0));
+    g.stories.sort((a, b) => (parseApiDate(b.createdAt)?.getTime() ?? 0) - (parseApiDate(a.createdAt)?.getTime() ?? 0));
   }
   list.sort((a, b) => {
     const aIsMe = a.authorId === currentUserId ? 1 : 0;
     const bIsMe = b.authorId === currentUserId ? 1 : 0;
     if (aIsMe !== bIsMe) return bIsMe - aIsMe;
-    const aTime = a.stories[0]?.createdAt ?? '';
-    const bTime = b.stories[0]?.createdAt ?? '';
-    return new Date(bTime) - new Date(aTime);
+    const aTime = parseApiDate(a.stories[0]?.createdAt)?.getTime() ?? 0;
+    const bTime = parseApiDate(b.stories[0]?.createdAt)?.getTime() ?? 0;
+    return bTime - aTime;
   });
   return list;
 }

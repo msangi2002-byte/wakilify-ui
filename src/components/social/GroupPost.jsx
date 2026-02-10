@@ -4,21 +4,7 @@ import { UserProfileMenu } from '@/components/ui/UserProfileMenu';
 import { CommentItem } from '@/components/social/CommentItem';
 import { likePost, unlikePost, getComments, addComment, deleteComment, likeComment, unlikeComment } from '@/lib/api/posts';
 import { useAuthStore } from '@/store/auth.store';
-
-function formatCommentTime(createdAt) {
-  if (!createdAt) return '';
-  const date = new Date(createdAt);
-  const now = new Date();
-  const diffMs = now - date;
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m`;
-  if (diffHours < 24) return `${diffHours}h`;
-  if (diffDays < 7) return `${diffDays}d`;
-  return date.toLocaleDateString();
-}
+import { formatCommentTime } from '@/lib/utils/dateUtils';
 
 function Avatar({ user, size = 40, className = '' }) {
   const src = user?.profilePic;
@@ -327,20 +313,21 @@ export function GroupPost({
             </ul>
           )}
           <form onSubmit={handleSubmitComment} className="feed-post-comment-form">
-            <Avatar user={currentUser} size={32} className="feed-post-comment-form-avatar" />
+            <Avatar user={currentUser} size={36} className="feed-post-comment-form-avatar" />
             <div className="feed-post-comment-form-wrap">
               <input
                 type="text"
                 className="feed-post-comment-input"
-                placeholder="Write a comment..."
+                placeholder="Add a comment..."
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
                 maxLength={2000}
               />
-              <button type="submit" className="feed-post-comment-submit" disabled={!commentText.trim() || commentSubmitting}>
-                {commentSubmitting ? '…' : 'Comment'}
-              </button>
+              <button type="button" className="feed-post-comment-gif" aria-label="GIF">GIF</button>
             </div>
+            <button type="submit" className="feed-post-comment-submit-btn" disabled={!commentText.trim() || commentSubmitting} aria-label="Post comment">
+              {commentSubmitting ? '…' : <MessageCircle size={20} />}
+            </button>
           </form>
         </div>
       )}

@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ImagePlus, Users, Video, MoreHorizontal, Plus, ThumbsUp, MessageCircle, Share2 } from 'lucide-react';
+import { ImagePlus, Users, Video, MoreHorizontal, Plus, ThumbsUp, MessageCircle, Share2, Play } from 'lucide-react';
 import { UserProfileMenu } from '@/components/ui/UserProfileMenu';
 import { CommentItem } from '@/components/social/CommentItem';
+import { VideoFullscreenOverlay } from '@/components/social/VideoFullscreenOverlay';
 import { useAuthStore } from '@/store/auth.store';
 import { getFeed, getPublicFeed, getStories, likePost, unlikePost, savePost, unsavePost, sharePostToStory, getComments, addComment, deleteComment, createPost, likeComment, unlikeComment } from '@/lib/api/posts';
 import { followUser, unfollowUser } from '@/lib/api/friends';
 import { blockUser } from '@/lib/api/users';
 import { createReport } from '@/lib/api/reports';
+import { parseApiDate, formatPostTime, formatCommentTime } from '@/lib/utils/dateUtils';
 
 function groupStoriesByAuthor(stories, currentUserId) {
   const map = new Map();
@@ -22,15 +24,15 @@ function groupStoriesByAuthor(stories, currentUserId) {
   }
   const list = Array.from(map.values());
   for (const g of list) {
-    g.stories.sort((a, b) => new Date(b.createdAt ?? 0) - new Date(a.createdAt ?? 0));
+    g.stories.sort((a, b) => (parseApiDate(b.createdAt)?.getTime() ?? 0) - (parseApiDate(a.createdAt)?.getTime() ?? 0));
   }
   list.sort((a, b) => {
     const aIsMe = a.authorId === currentUserId ? 1 : 0;
     const bIsMe = b.authorId === currentUserId ? 1 : 0;
     if (aIsMe !== bIsMe) return bIsMe - aIsMe;
-    const aTime = a.stories[0]?.createdAt ?? '';
-    const bTime = b.stories[0]?.createdAt ?? '';
-    return new Date(bTime) - new Date(aTime);
+    const aTime = parseApiDate(a.stories[0]?.createdAt)?.getTime() ?? 0;
+    const bTime = parseApiDate(b.stories[0]?.createdAt)?.getTime() ?? 0;
+    return bTime - aTime;
   });
   return list;
 }
@@ -68,37 +70,7 @@ function Avatar({ user, size = 40, className = '' }) {
   );
 }
 
-function formatPostTime(createdAt) {
-  if (!createdAt) return '';
-  const date = new Date(createdAt);
-  const now = new Date();
-  const diffMs = now - date;
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m`;
-  if (diffHours < 24) return `${diffHours}h`;
-  if (diffDays < 7) return `${diffDays}d`;
-  return date.toLocaleDateString();
-}
-
-function formatCommentTime(createdAt) {
-  if (!createdAt) return '';
-  const date = new Date(createdAt);
-  const now = new Date();
-  const diffMs = now - date;
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m`;
-  if (diffHours < 24) return `${diffHours}h`;
-  if (diffDays < 7) return `${diffDays}d`;
-  return date.toLocaleDateString();
-}
-
-function FeedPost({ id, author, time, description, media = [], hashtags = [], liked: initialLiked = false, likesCount: initialLikesCount = 0, commentsCount: initialCommentsCount = 0, sharesCount = 0, saved: initialSaved = false, authorIsFollowed: initialAuthorIsFollowed = false, onFollowChange, onSaveChange }) {
+function FeedPost({ id, author, time, description, media = [], hashtags = [], liked: initialLiked = false, likesCount: initialLikesCount = 0, commentsCount: initialCommentsCount = 0, sharesCount = 0, saved: initialSaved = false, authorIsFollowed: initialAuthorIsFollowed = false, onFollowChange, onSaveChange, videoIndex, onOpenVideo }) {
   const { user: currentUser } = useAuthStore();
   const isSelf = currentUser?.id && author?.id && currentUser.id === author.id;
   const [liked, setLiked] = useState(!!initialLiked);
@@ -124,8 +96,14 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], li
   const [replyingTo, setReplyingTo] = useState(null);
   const [replyText, setReplyText] = useState('');
   const [commentsCount, setCommentsCount] = useState(initialCommentsCount);
+  const [videoFullscreenOpen, setVideoFullscreenOpen] = useState(false);
   const shortDesc = description && description.length > 120 ? description.slice(0, 120) + '...' : description;
   const showSeeMore = description && description.length > 120 && !expanded;
+  const rawVideoUrl = media?.length === 1 && media[0]?.isVideo
+    ? (typeof media[0] === 'string' ? media[0] : media[0]?.url)
+    : null;
+  const videoUrl = typeof rawVideoUrl === 'string' && rawVideoUrl.trim() ? rawVideoUrl.trim() : null;
+  const hasSingleVideo = !!videoUrl && media?.length === 1 && media[0]?.isVideo;
 
   const handleLikeClick = async () => {
     if (!id || likeLoading) return;
@@ -400,17 +378,51 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], li
       )}
       {(media?.length > 0) && (
         <div className="feed-post-body">
-          {media.map((item, i) => {
-            const url = typeof item === 'string' ? item : item?.url;
-            const isVideo = typeof item === 'object' && item?.isVideo;
-            if (!url) return null;
-            return isVideo ? (
-              <video key={i} src={url} controls playsInline className="feed-post-video" />
-            ) : (
-              <img key={i} src={url} alt="" loading="lazy" />
-            );
-          })}
+          {hasSingleVideo ? (
+            <div
+              className="feed-post-video-wrap"
+              onClick={() => { if (onOpenVideo != null && videoIndex != null) onOpenVideo(videoIndex); else setVideoFullscreenOpen(true); }}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (onOpenVideo != null && videoIndex != null) onOpenVideo(videoIndex); else setVideoFullscreenOpen(true); } }}
+              aria-label="Play video"
+            >
+              <video src={videoUrl} playsInline className="feed-post-video" muted loop onError={() => {}} />
+              <div className="feed-post-video-play-overlay">
+                <Play size={72} className="feed-post-video-play-icon" fill="currentColor" />
+              </div>
+            </div>
+          ) : (
+            media.map((item, i) => {
+              const url = typeof item === 'string' ? item : item?.url;
+              const isVideo = typeof item === 'object' && item?.isVideo;
+              if (!url) return null;
+              return isVideo ? (
+                <video key={i} src={url} controls playsInline className="feed-post-video" />
+              ) : (
+                <img key={i} src={url} alt="" loading="lazy" />
+              );
+            })
+          )}
         </div>
+      )}
+      {hasSingleVideo && onOpenVideo == null && (
+        <VideoFullscreenOverlay
+          isOpen={videoFullscreenOpen}
+          onClose={() => setVideoFullscreenOpen(false)}
+          videoUrl={videoUrl}
+          description={description}
+          author={author}
+          postId={id}
+          liked={liked}
+          likesCount={likesCount}
+          commentsCount={commentsCount}
+          saved={saved}
+          onLike={handleLikeClick}
+          onComment={() => { setVideoFullscreenOpen(false); handleCommentClick(); }}
+          onShare={() => { setVideoFullscreenOpen(false); setShareOpen(true); }}
+          onSave={handleSaveClick}
+        />
       )}
       <div className="feed-post-engagement">
         <div className="feed-post-counts">
@@ -501,20 +513,21 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], li
             </ul>
           )}
           <form onSubmit={handleSubmitComment} className="feed-post-comment-form">
-            <Avatar user={currentUser} size={32} className="feed-post-comment-form-avatar" />
+            <Avatar user={currentUser} size={36} className="feed-post-comment-form-avatar" />
             <div className="feed-post-comment-form-wrap">
               <input
                 type="text"
                 className="feed-post-comment-input"
-                placeholder="Write a comment..."
+                placeholder="Add a comment..."
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
                 maxLength={2000}
               />
-              <button type="submit" className="feed-post-comment-submit" disabled={!commentText.trim() || commentSubmitting}>
-                {commentSubmitting ? '…' : 'Comment'}
-              </button>
+              <button type="button" className="feed-post-comment-gif" aria-label="GIF">GIF</button>
             </div>
+            <button type="submit" className="feed-post-comment-submit-btn" disabled={!commentText.trim() || commentSubmitting} aria-label="Post comment">
+              {commentSubmitting ? '…' : <MessageCircle size={20} />}
+            </button>
           </form>
         </div>
       )}
@@ -564,6 +577,16 @@ function normalizePost(post) {
   };
 }
 
+function getVideoUrl(post) {
+  const m = post?.media?.[0];
+  const url = typeof m === 'string' ? m : m?.url;
+  return typeof url === 'string' && url.trim() ? url.trim() : null;
+}
+
+function isSingleVideoPost(post) {
+  return post?.media?.length === 1 && post.media[0]?.isVideo && getVideoUrl(post);
+}
+
 export default function Home() {
   const { user } = useAuthStore();
   const [posts, setPosts] = useState([]);
@@ -571,6 +594,10 @@ export default function Home() {
   const [error, setError] = useState('');
   const [storyGroups, setStoryGroups] = useState([]);
   const [storiesLoading, setStoriesLoading] = useState(true);
+  const [videoOverlayOpen, setVideoOverlayOpen] = useState(false);
+  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
+
+  const videoPosts = posts.filter(isSingleVideoPost);
 
   useEffect(() => {
     let cancelled = false;
@@ -694,23 +721,73 @@ export default function Home() {
           </Link>
         </div>
       )}
-      {!loading && posts.length > 0 && posts.map((p) => (
-        <FeedPost
-          key={p.id ?? p.time + p.description?.slice(0, 20)}
-          id={p.id}
-          author={p.author}
-          time={p.time}
-          description={p.description}
-          media={p.media}
-          hashtags={p.hashtags}
-          liked={p.liked}
-          likesCount={p.likesCount}
-          commentsCount={p.commentsCount}
-          sharesCount={p.sharesCount}
-          saved={p.saved}
-          authorIsFollowed={p.authorIsFollowed}
-        />
-      ))}
+      {!loading && posts.length > 0 && posts.map((p) => {
+        const videoIndex = videoPosts.findIndex((v) => v.id === p.id);
+        return (
+          <FeedPost
+            key={p.id ?? p.time + p.description?.slice(0, 20)}
+            id={p.id}
+            author={p.author}
+            time={p.time}
+            description={p.description}
+            media={p.media}
+            hashtags={p.hashtags}
+            liked={p.liked}
+            likesCount={p.likesCount}
+            commentsCount={p.commentsCount}
+            sharesCount={p.sharesCount}
+            saved={p.saved}
+            authorIsFollowed={p.authorIsFollowed}
+            videoIndex={videoIndex >= 0 ? videoIndex : undefined}
+            onOpenVideo={videoIndex >= 0 ? (idx) => { setCurrentVideoIndex(idx); setVideoOverlayOpen(true); } : undefined}
+          />
+        );
+      })}
+
+      {videoOverlayOpen && videoPosts.length > 0 && (() => {
+        const current = videoPosts[currentVideoIndex];
+        if (!current) return null;
+        const videoUrl = getVideoUrl(current);
+        if (!videoUrl) return null;
+        const handleOverlayLike = async () => {
+          const next = !current.liked;
+          setPosts((prev) => prev.map((p) => (p.id === current.id ? { ...p, liked: next, likesCount: next ? p.likesCount + 1 : Math.max(0, p.likesCount - 1) } : p)));
+          try {
+            if (next) await likePost(current.id);
+            else await unlikePost(current.id);
+          } catch (_) {}
+        };
+        const handleOverlaySave = async () => {
+          setPosts((prev) => prev.map((p) => (p.id === current.id ? { ...p, saved: !p.saved } : p)));
+          try {
+            if (current.saved) await unsavePost(current.id);
+            else await savePost(current.id);
+          } catch (_) {}
+        };
+        return (
+          <VideoFullscreenOverlay
+            key={current.id}
+            isOpen={videoOverlayOpen}
+            onClose={() => setVideoOverlayOpen(false)}
+            videoUrl={videoUrl}
+            description={current.description}
+            author={current.author}
+            postId={current.id}
+            liked={current.liked}
+            likesCount={current.likesCount}
+            commentsCount={current.commentsCount}
+            saved={current.saved}
+            onLike={handleOverlayLike}
+            onComment={() => { setVideoOverlayOpen(false); }}
+            onShare={() => setVideoOverlayOpen(false)}
+            onSave={handleOverlaySave}
+            hasNext={currentVideoIndex < videoPosts.length - 1}
+            hasPrev={currentVideoIndex > 0}
+            onSwipeUp={() => setCurrentVideoIndex((i) => Math.min(i + 1, videoPosts.length - 1))}
+            onSwipeDown={() => setCurrentVideoIndex((i) => Math.max(0, i - 1))}
+          />
+        );
+      })()}
     </>
   );
 }

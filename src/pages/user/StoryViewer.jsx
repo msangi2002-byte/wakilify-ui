@@ -4,6 +4,7 @@ import { X, Eye } from 'lucide-react';
 import { UserProfileMenu } from '@/components/ui/UserProfileMenu';
 import { getStories, recordStoryView, getStoryViewers } from '@/lib/api/posts';
 import { useAuthStore } from '@/store/auth.store';
+import { parseApiDate, formatPostTime } from '@/lib/utils/dateUtils';
 import '@/styles/user-app.css';
 
 const STORY_DURATION_MS = 5000;
@@ -34,21 +35,6 @@ function Avatar({ user, size = 40, className = '' }) {
   );
 }
 
-function formatStoryTime(createdAt) {
-  if (!createdAt) return '';
-  const date = new Date(createdAt);
-  const now = new Date();
-  const diffMs = now - date;
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString();
-}
-
 /**
  * Group flat list of story posts by author id.
  * Returns [{ authorId, author: { id, name, profilePic }, stories: [ ... ] }]
@@ -67,15 +53,15 @@ function groupStoriesByAuthor(stories, currentUserId) {
   }
   const list = Array.from(map.values());
   for (const g of list) {
-    g.stories.sort((a, b) => new Date(b.createdAt ?? 0) - new Date(a.createdAt ?? 0));
+    g.stories.sort((a, b) => (parseApiDate(b.createdAt)?.getTime() ?? 0) - (parseApiDate(a.createdAt)?.getTime() ?? 0));
   }
   list.sort((a, b) => {
     const aIsMe = a.authorId === currentUserId ? 1 : 0;
     const bIsMe = b.authorId === currentUserId ? 1 : 0;
     if (aIsMe !== bIsMe) return bIsMe - aIsMe;
-    const aTime = a.stories[0]?.createdAt ?? '';
-    const bTime = b.stories[0]?.createdAt ?? '';
-    return new Date(bTime) - new Date(aTime);
+    const aTime = parseApiDate(a.stories[0]?.createdAt)?.getTime() ?? 0;
+    const bTime = parseApiDate(b.stories[0]?.createdAt)?.getTime() ?? 0;
+    return bTime - aTime;
   });
   return list;
 }
@@ -334,7 +320,7 @@ export default function StoryViewer() {
       <div className="story-viewer-header">
         <UserProfileMenu user={currentGroup.author} avatarSize={40} className="story-viewer-author" />
         <div className="story-viewer-meta">
-          <span className="story-viewer-time">{formatStoryTime(currentStory?.createdAt)}</span>
+          <span className="story-viewer-time">{formatPostTime(currentStory?.createdAt)}</span>
         </div>
         {isMyStory && currentStory?.id && (
           <button type="button" className="story-viewer-viewers-btn" onClick={openViewers} aria-label="Viewers">

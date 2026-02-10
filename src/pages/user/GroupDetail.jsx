@@ -6,22 +6,8 @@ import { getCommunity, joinCommunity, leaveCommunity, updateCommunitySettings } 
 import { getPostsByCommunity, createPost, uploadChunked, CHUNK_THRESHOLD_BYTES } from '@/lib/api/posts';
 import { UploadProgressBar } from '@/components/ui/UploadProgressBar';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
+import { formatPostTime } from '@/lib/utils/dateUtils';
 import '@/styles/user-app.css';
-
-function formatPostTime(createdAt) {
-  if (!createdAt) return '';
-  const date = new Date(createdAt);
-  const now = new Date();
-  const diffMs = now - date;
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m`;
-  if (diffHours < 24) return `${diffHours}h`;
-  if (diffDays < 7) return `${diffDays}d`;
-  return date.toLocaleDateString();
-}
 
 function mapPostToGroupPost(post, groupName) {
   const media = post.media ?? [];

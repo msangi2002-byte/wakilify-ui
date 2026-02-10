@@ -12,6 +12,7 @@ import {
   UserCheck,
 } from 'lucide-react';
 import { getNotifications, markNotificationRead, markAllNotificationsRead } from '@/lib/api/notifications';
+import { formatPostTime } from '@/lib/utils/dateUtils';
 
 const ICON_BY_TYPE = {
   LIKE: Heart,
@@ -22,21 +23,6 @@ const ICON_BY_TYPE = {
   FOLLOW: UserPlus,
   SYSTEM: Bell,
 };
-
-function formatNotifTime(createdAt) {
-  if (!createdAt) return '';
-  const date = new Date(createdAt);
-  const now = new Date();
-  const diffMs = now - date;
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString();
-}
 
 function linkForNotification(n) {
   if (n.type === 'FOLLOW' && n.actor?.id) return `/app/profile/${n.actor.id}`;
@@ -65,7 +51,7 @@ function NotificationItem({ item, onMarkRead }) {
         {item.actor?.name && item.type !== 'FOLLOW' && (
           <span className="notif-item-desc">{item.actor.name}</span>
         )}
-        <span className="notif-item-time">{formatNotifTime(item.createdAt)}</span>
+        <span className="notif-item-time">{formatPostTime(item.createdAt)}</span>
       </div>
       {!item.isRead && <span className="notif-item-dot" aria-hidden />}
     </Link>
