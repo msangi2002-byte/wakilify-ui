@@ -112,6 +112,7 @@ export default function Messages() {
           type,
           role: 'caller',
           ...(call.id && { callId: call.id }),
+          ...(receiverId && { peerUserId: receiverId }),
         });
         const url = `${window.location.origin}/app/call?${params}`;
         window.open(url, '_blank', 'width=600,height=500');

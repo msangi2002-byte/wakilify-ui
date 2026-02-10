@@ -4,11 +4,43 @@
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { PhoneOff, Video, VideoOff, Mic, MicOff } from 'lucide-react';
+import { PhoneOff, Video, VideoOff, Mic, MicOff, User } from 'lucide-react';
 import axios from 'axios';
 import { api } from '@/lib/api/client';
 import { endCall } from '@/lib/api/calls';
+import { getUser, getMe } from '@/lib/api/users';
 import '@/styles/user-app.css';
+
+/** Profile avatar for call (when video is off) – WhatsApp style */
+function CallProfileAvatar({ user, size = 120, className = '' }) {
+  const src = user?.profilePic ?? user?.avatar;
+  const name = user?.name ?? user?.username ?? '';
+  const initial = name ? name.charAt(0).toUpperCase() : '?';
+  return (
+    <div
+      className={`call-profile-avatar ${className}`.trim()}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        overflow: 'hidden',
+        background: 'linear-gradient(135deg, #374151, #1f2937)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#fff',
+        fontWeight: 600,
+        fontSize: size * 0.4,
+      }}
+    >
+      {src ? (
+        <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      ) : (
+        initial || <User size={size * 0.5} strokeWidth={1.5} />
+      )}
+    </div>
+  );
+}
 
 const APP = 'live';
 const DEFAULT_RTC_BASE = 'https://streaming.wakilfy.com/rtc/v1';
@@ -73,11 +105,16 @@ export default function Call() {
   const callType = (searchParams.get('type') || 'VIDEO').toUpperCase();
   const role = searchParams.get('role') || 'caller';
   const isVideo = callType === 'VIDEO';
+  const peerUserId = searchParams.get('peerUserId') || '';
 
   const [status, setStatus] = useState('connecting');
   const [error, setError] = useState('');
   const [videoEnabled, setVideoEnabled] = useState(isVideo);
   const [audioEnabled, setAudioEnabled] = useState(true);
+  const [peerUser, setPeerUser] = useState(null);
+  const [meUser, setMeUser] = useState(null);
+  const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
+  const [hasLocalVideoTrack, setHasLocalVideoTrack] = useState(false);
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -131,6 +168,7 @@ export default function Call() {
         }
         localStreamRef.current = stream;
         if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+        setHasLocalVideoTrack(stream.getVideoTracks().length > 0);
 
         setStatus('publishing');
 
@@ -151,8 +189,16 @@ export default function Call() {
         playPcRef.current = playPc;
         playPc.ontrack = (e) => {
           if (!cancelled && remoteVideoRef.current) {
-            remoteVideoRef.current.srcObject = e.streams[0];
+            const stream = e.streams[0];
+            remoteVideoRef.current.srcObject = stream;
             setStatus('connected');
+            const videoTracks = stream.getVideoTracks();
+            const hasVideo = videoTracks.some((t) => t.enabled);
+            setHasRemoteVideo(hasVideo);
+            videoTracks.forEach((t) => {
+              t.addEventListener('unmute', () => setHasRemoteVideo(true));
+              t.addEventListener('mute', () => setHasRemoteVideo(false));
+            });
           }
         };
 
@@ -208,6 +254,27 @@ export default function Call() {
     localStreamRef.current.getAudioTracks().forEach((t) => { t.enabled = audioEnabled; });
   }, [audioEnabled]);
 
+  // Fetch peer and me for profile avatars (WhatsApp-style when video off)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [peer, me] = await Promise.all([
+          peerUserId ? getUser(peerUserId) : Promise.resolve(null),
+          getMe(),
+        ]);
+        if (!cancelled) {
+          if (peer) setPeerUser(peer);
+          if (me) setMeUser(me);
+        }
+      } catch (_) {}
+    })();
+    return () => { cancelled = true; };
+  }, [peerUserId]);
+
+  const showLocalVideo = videoEnabled && hasLocalVideoTrack;
+  const showRemoteVideo = hasRemoteVideo;
+
   if (error) {
     return (
       <div className="call-page call-page-error">
@@ -225,7 +292,19 @@ export default function Call() {
     <div className="call-page">
       <div className="call-videos">
         <div className="call-remote-wrap">
-          <video ref={remoteVideoRef} autoPlay playsInline className="call-video call-remote" />
+          <video
+            ref={remoteVideoRef}
+            autoPlay
+            playsInline
+            className="call-video call-remote"
+            style={{ visibility: showRemoteVideo ? 'visible' : 'hidden' }}
+          />
+          {!showRemoteVideo && (
+            <div className="call-remote-profile">
+              <CallProfileAvatar user={peerUser} size={160} />
+              {peerUser?.name && <span className="call-remote-name">{peerUser.name}</span>}
+            </div>
+          )}
           {status !== 'connected' && (
             <div className="call-status-overlay">
               {(status === 'connecting' || status === 'publishing' || status === 'playing') && 'Connecting…'}
@@ -236,7 +315,19 @@ export default function Call() {
           )}
         </div>
         <div className="call-local-wrap">
-          <video ref={localVideoRef} autoPlay playsInline muted className="call-video call-local" />
+          <video
+            ref={localVideoRef}
+            autoPlay
+            playsInline
+            muted
+            className="call-video call-local"
+            style={{ visibility: showLocalVideo ? 'visible' : 'hidden' }}
+          />
+          {!showLocalVideo && (
+            <div className="call-local-profile">
+              <CallProfileAvatar user={meUser} size={80} />
+            </div>
+          )}
         </div>
       </div>
       <div className="call-controls">

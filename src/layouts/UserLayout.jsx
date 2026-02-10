@@ -141,7 +141,10 @@ export default function UserLayout() {
       const roomId = call?.roomId ?? incomingCall?.roomId;
       if (roomId) {
         const type = ((call?.type ?? incomingCall?.type) || 'VIDEO').toUpperCase();
-        navigate(`/app/call?room=${roomId}&type=${type}&role=callee`);
+        const peerId = incomingCall?.caller?.id;
+        const q = new URLSearchParams({ room: roomId, type, role: 'callee' });
+        if (peerId) q.set('peerUserId', String(peerId));
+        navigate(`/app/call?${q.toString()}`);
       }
     } catch (err) {
       console.error('Answer call failed:', err);
