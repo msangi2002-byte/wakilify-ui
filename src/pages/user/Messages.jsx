@@ -38,25 +38,49 @@ export default function Messages() {
     return () => { cancelled = true; };
   }, [loadConversations]);
 
-  const loadMessages = useCallback(async (otherUserId) => {
+  // Auto-refresh conversations list in background (real-time feel)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadConversations();
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [loadConversations]);
+
+  const currentUserId = currentUser?.id;
+
+  const loadMessages = useCallback(async (otherUserId, isBackgroundRefresh = false) => {
     if (!otherUserId) return;
-    setMessagesLoading(true);
+    if (!isBackgroundRefresh) setMessagesLoading(true);
     try {
-      await markConversationRead(otherUserId);
+      if (!isBackgroundRefresh) await markConversationRead(otherUserId);
       const list = await getConversation(otherUserId);
       const arr = Array.isArray(list) ? list : [];
-      setMessages(arr.reverse());
-      loadConversations();
+      const withIsMe = arr.map((m) => ({
+        ...m,
+        isMe: String(m.senderId || m.sender?.id || '') === String(currentUserId || '') || m.isMe,
+      }));
+      setMessages(withIsMe.reverse());
+      if (!isBackgroundRefresh) loadConversations();
     } catch {
-      setMessages([]);
+      if (!isBackgroundRefresh) setMessages([]);
     } finally {
-      setMessagesLoading(false);
+      if (!isBackgroundRefresh) setMessagesLoading(false);
     }
-  }, [loadConversations]);
+  }, [loadConversations, currentUserId]);
 
   useEffect(() => {
     if (selectedUser) loadMessages(selectedUser.id);
   }, [selectedUser?.id, loadMessages]);
+
+  // Real-time chat: poll messages for open conversation so new messages appear automatically
+  useEffect(() => {
+    if (!selectedUser?.id || !currentUserId) return;
+    const interval = setInterval(() => {
+      loadMessages(selectedUser.id, true);
+      loadConversations();
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [selectedUser?.id, currentUserId, loadMessages, loadConversations]);
 
   // Open chat with user when navigating from profile (Message button)
   useEffect(() => {
