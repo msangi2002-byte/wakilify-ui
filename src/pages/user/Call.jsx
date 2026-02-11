@@ -263,24 +263,64 @@ export default function Call() {
     const videoSender = senders.find((s) => s.track?.kind === 'video');
     if (!videoSender) return;
     setSwitchingCamera(true);
-    try {
-      const nextFacing = facingMode === 'user' ? 'environment' : 'user';
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: nextFacing },
-        audio: false,
-      });
-      const newVideoTrack = stream.getVideoTracks()[0];
-      if (!newVideoTrack) {
-        stream.getTracks().forEach((t) => t.stop());
-        return;
-      }
-      const oldVideoTrack = localStreamRef.current.getVideoTracks()[0];
-      if (oldVideoTrack) {
+    const oldVideoTrack = localStreamRef.current.getVideoTracks()[0];
+    const nextFacing = facingMode === 'user' ? 'environment' : 'user';
+
+    const tryGetNewStream = async (stopOldFirst) => {
+      if (stopOldFirst && oldVideoTrack) {
         localStreamRef.current.removeTrack(oldVideoTrack);
         oldVideoTrack.stop();
       }
+      let stream = null;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: nextFacing } },
+          audio: false,
+        });
+        return stream;
+      } catch (_) {
+        try {
+          if (stream) stream.getTracks().forEach((t) => t.stop());
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { exact: nextFacing } },
+            audio: false,
+          });
+          return stream;
+        } catch (_) {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const videoInputs = devices.filter((d) => d.kind === 'videoinput');
+          if (videoInputs.length >= 2) {
+            const currentId = oldVideoTrack?.getSettings?.()?.deviceId;
+            const currentIdx = videoInputs.findIndex((d) => d.deviceId === currentId);
+            const nextIdx = currentIdx >= 0 ? (currentIdx + 1) % videoInputs.length : 0;
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: videoInputs[nextIdx].deviceId ? { deviceId: { exact: videoInputs[nextIdx].deviceId } } : true,
+              audio: false,
+            });
+            return stream;
+          }
+        }
+      }
+      return null;
+    };
+
+    try {
+      let stream = await tryGetNewStream(false);
+      if (!stream) stream = await tryGetNewStream(true);
+      const newVideoTrack = stream?.getVideoTracks()[0];
+      if (!newVideoTrack || !stream) {
+        if (stream) stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
+      const stillHasOld = localStreamRef.current.getVideoTracks().includes(oldVideoTrack);
+      if (oldVideoTrack && stillHasOld) {
+        localStreamRef.current.removeTrack(oldVideoTrack);
+        oldVideoTrack.stop();
+      }
+      newVideoTrack.enabled = true;
       localStreamRef.current.addTrack(newVideoTrack);
-      if (localVideoRef.current?.srcObject) {
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = null;
         localVideoRef.current.srcObject = localStreamRef.current;
       }
       await videoSender.replaceTrack(newVideoTrack);
