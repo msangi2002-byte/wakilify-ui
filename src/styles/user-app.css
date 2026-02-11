@@ -1640,6 +1640,47 @@
   background: #d8dadf;
 }
 
+.group-detail-post-wrap {
+  margin-bottom: 16px;
+}
+
+.group-detail-post-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  padding: 0 4px;
+}
+
+.group-detail-pinned-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #7c3aed;
+}
+
+.group-detail-pin-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #65676b;
+  background: #e4e6eb;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.group-detail-pin-btn:hover {
+  background: #d8dadf;
+  color: #050505;
+}
+
 /* Group settings modal */
 .group-settings-overlay {
   position: fixed;
@@ -4130,14 +4171,54 @@
 
 .profile-fb-hero-actions {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
   gap: 10px;
-  align-items: stretch;
+  align-items: center;
 }
 
 .profile-fb-hero-actions .profile-fb-btn {
-  min-width: 160px;
+  min-width: 100px;
   justify-content: center;
+}
+
+.profile-fb-menu-wrap {
+  position: relative;
+}
+
+.profile-fb-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+}
+
+.profile-fb-menu-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  min-width: 140px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.profile-fb-menu-item {
+  display: block;
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 0.9375rem;
+  text-align: left;
+  border: none;
+  background: none;
+  color: #050505;
+  cursor: pointer;
+}
+
+.profile-fb-menu-item:hover {
+  background: #f0f0f0;
 }
 
 /* Info section: stats left, bio right */
@@ -4206,6 +4287,16 @@
   color: #050505;
   line-height: 1.5;
   white-space: pre-wrap;
+}
+
+.profile-fb-bio-section-meta {
+  margin: 8px 0 0 0;
+  font-size: 0.875rem;
+  color: #65676b;
+}
+
+.profile-fb-bio-location {
+  display: inline-block;
 }
 
 .profile-fb-avatar-wrap {
@@ -5714,6 +5805,137 @@
   cursor: not-allowed;
 }
 
+.friends-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.friends-section-header .friends-section-title {
+  margin: 0;
+}
+
+.friends-upload-contacts-btn {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #7c3aed;
+  background: #f3e8ff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.friends-upload-contacts-btn:hover {
+  background: #e9d5ff;
+}
+
+.friends-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.friends-modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.friends-modal h3 {
+  margin: 0 0 8px 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.friends-modal-desc {
+  margin: 0 0 16px 0;
+  font-size: 0.875rem;
+  color: #65676b;
+}
+
+.friends-modal label {
+  display: block;
+  margin-bottom: 12px;
+}
+
+.friends-modal label span {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 4px;
+  color: #050505;
+}
+
+.friends-modal-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 0.9375rem;
+  border: 1px solid #e4e6eb;
+  border-radius: 8px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.friends-modal-input:focus {
+  outline: none;
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2);
+}
+
+.friends-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.friends-btn-primary {
+  padding: 10px 20px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #fff;
+  background: #7c3aed;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.friends-btn-primary:hover:not(:disabled) {
+  background: #6d28d9;
+}
+
+.friends-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.friends-btn-secondary {
+  padding: 10px 20px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #050505;
+  background: #e4e6eb;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.friends-btn-secondary:hover {
+  background: #d8dadf;
+}
+
 /* ========== Messages page ========== */
 .messages-page {
   display: grid;
@@ -6278,6 +6500,35 @@
 .settings-blocked-name {
   font-weight: 500;
   color: #050505;
+}
+
+.settings-activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.settings-activity-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 0;
+  border-bottom: 1px solid #e4e6eb;
+}
+
+.settings-activity-item:last-child {
+  border-bottom: none;
+}
+
+.settings-activity-time {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #050505;
+}
+
+.settings-activity-meta {
+  font-size: 0.8125rem;
+  color: #65676b;
 }
 
 .settings-row-control {

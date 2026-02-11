@@ -37,9 +37,11 @@ export default function Register() {
     month: '',
     year: '',
     gender: 'female',
+    currentCity: '',
     region: '',
     country: 'Tanzania',
     interests: '',
+    referralCode: '',
   });
 
   const update = (name, value) => {
@@ -81,10 +83,12 @@ export default function Register() {
       role: 'USER',
       email: emailTrim || undefined,
       phone: phoneFormatted || undefined,
+      currentCity: (form.currentCity || '').trim() || undefined,
       region: (form.region || '').trim() || undefined,
       country: (form.country || '').trim() || undefined,
       dateOfBirth,
       interests: (form.interests || '').trim() || undefined,
+      referralCode: (form.referralCode || '').trim() || undefined,
     };
     setLoading(true);
     try {
@@ -109,6 +113,7 @@ export default function Register() {
   return (
     <div className="auth-form">
       <h2>Create an account</h2>
+      <p className="auth-form-hint">Taarifa za mji na mkoa zitasaidia kupata watu karibu na mapendekezo.</p>
       {error && <div className="auth-error" role="alert">{error}</div>}
       <form onSubmit={handleSubmit} noValidate>
         <div className="auth-field-row">
@@ -236,6 +241,18 @@ export default function Register() {
         </div>
 
         <div className="auth-field">
+          <label htmlFor="currentCity">City (Mji)</label>
+          <input
+            id="currentCity"
+            type="text"
+            placeholder="e.g. Dar es Salaam, Mwanza"
+            value={form.currentCity}
+            onChange={(e) => update('currentCity', e.target.value)}
+            autoComplete="address-level2"
+          />
+        </div>
+
+        <div className="auth-field">
           <label htmlFor="region">Region (Mkoa)</label>
           <select
             id="region"
@@ -279,6 +296,17 @@ export default function Register() {
             placeholder="e.g. Music, Sports, Tech"
             value={form.interests}
             onChange={(e) => update('interests', e.target.value)}
+          />
+        </div>
+
+        <div className="auth-field">
+          <label htmlFor="referralCode">Referral code (si lazima)</label>
+          <input
+            id="referralCode"
+            type="text"
+            placeholder="Agent referral code"
+            value={form.referralCode}
+            onChange={(e) => update('referralCode', e.target.value)}
           />
         </div>
 

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Users, LogOut, Loader2, Settings, X, ImagePlus, ArrowLeft } from 'lucide-react';
+import { Users, LogOut, Loader2, Settings, X, ImagePlus, ArrowLeft, Pin, PinOff } from 'lucide-react';
 import { GroupPost } from '@/components/social/GroupPost';
-import { getCommunity, joinCommunity, leaveCommunity, updateCommunitySettings } from '@/lib/api/communities';
+import { getCommunity, joinCommunity, leaveCommunity, updateCommunitySettings, pinPost, unpinPost } from '@/lib/api/communities';
 import { getPostsByCommunity, createPost, uploadChunked, CHUNK_THRESHOLD_BYTES } from '@/lib/api/posts';
 import { UploadProgressBar } from '@/components/ui/UploadProgressBar';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
@@ -22,6 +22,8 @@ function mapPostToGroupPost(post, groupName) {
     likesCount: post.reactionsCount ?? 0,
     commentsCount: post.commentsCount ?? 0,
     sharesCount: post.sharesCount ?? 0,
+    isPinned: !!post.isPinned,
+    pinnedAt: post.pinnedAt,
   };
 }
 
@@ -114,6 +116,16 @@ export default function GroupDetail() {
     } finally {
       setSettingsSaving(false);
     }
+  };
+
+  const handlePinPost = async (postId, currentlyPinned) => {
+    if (!id || !postId || !isAdmin) return;
+    try {
+      if (currentlyPinned) await unpinPost(id, postId);
+      else await pinPost(id, postId);
+      const list = await getPostsByCommunity(id, { size: 50 });
+      setPosts(Array.isArray(list) ? list : []);
+    } catch (_) {}
   };
 
   const handleCreatePost = async (e) => {
@@ -361,20 +373,40 @@ export default function GroupDetail() {
           posts.map((post) => {
             const mapped = mapPostToGroupPost(post, groupName);
             return (
-              <GroupPost
-                key={mapped.id}
-                postId={post.id}
-                author={mapped.author}
-                groupName={mapped.groupName}
-                time={mapped.time}
-                description={mapped.description}
-                images={mapped.images}
-                likesCount={mapped.likesCount}
-                commentsCount={mapped.commentsCount}
-                sharesCount={mapped.sharesCount}
-                showGroupContext
-                initialLiked={!!post.userReaction}
-              />
+              <div key={mapped.id} className="group-detail-post-wrap">
+                <div className="group-detail-post-meta">
+                  {mapped.isPinned && (
+                    <span className="group-detail-pinned-badge">
+                      <Pin size={14} />
+                      Pinned
+                    </span>
+                  )}
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      className="group-detail-pin-btn"
+                      onClick={() => handlePinPost(post.id, mapped.isPinned)}
+                      title={mapped.isPinned ? 'Unpin post' : 'Pin post'}
+                    >
+                      {mapped.isPinned ? <PinOff size={16} /> : <Pin size={16} />}
+                      {mapped.isPinned ? 'Unpin' : 'Pin'}
+                    </button>
+                  )}
+                </div>
+                <GroupPost
+                  postId={post.id}
+                  author={mapped.author}
+                  groupName={mapped.groupName}
+                  time={mapped.time}
+                  description={mapped.description}
+                  images={mapped.images}
+                  likesCount={mapped.likesCount}
+                  commentsCount={mapped.commentsCount}
+                  sharesCount={mapped.sharesCount}
+                  showGroupContext
+                  initialLiked={!!post.userReaction}
+                />
+              </div>
             );
           })
         )}

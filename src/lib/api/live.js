@@ -90,3 +90,29 @@ export async function getMyStreams(page = 0, size = 20) {
     totalPages: out?.totalPages ?? 1,
   };
 }
+
+/** GET /api/v1/live/:liveId/comments – list comments for a live stream */
+export async function getLiveComments(liveId, params = {}) {
+  const { data } = await api.get(`/live/${liveId}/comments`, {
+    params: { page: 0, size: 50, ...params },
+  });
+  const out = unwrap({ data });
+  return Array.isArray(out?.content) ? out.content : (Array.isArray(out) ? out : []);
+}
+
+/** POST /api/v1/live/:liveId/comments – add comment (body: { content }) */
+export async function addLiveComment(liveId, content) {
+  const { data } = await api.post(`/live/${liveId}/comments`, { content: (content || '').trim() });
+  return unwrap({ data }) ?? data;
+}
+
+/**
+ * Get my join request for this live (viewer). When accepted, includes guestStreamKey
+ * so the guest can publish and appear on the same live.
+ * GET /api/v1/live/:liveId/my-join-request
+ */
+export async function getMyJoinRequest(liveId) {
+  const { data } = await api.get(`/live/${liveId}/my-join-request`);
+  const out = unwrap({ data });
+  return out?.data ?? out ?? null;
+}

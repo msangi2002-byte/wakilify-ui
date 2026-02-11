@@ -102,3 +102,87 @@ export async function getBlockedUsers(params = {}) {
   });
   return data?.data ?? data;
 }
+
+/**
+ * Get nearby users (same country; order: city → region → country)
+ * GET /api/v1/users/nearby?page=0&size=20
+ */
+export async function getNearbyUsers(params = {}) {
+  const { data } = await api.get('/users/nearby', {
+    params: { page: 0, size: 20, ...params },
+  });
+  return data?.data ?? data;
+}
+
+/**
+ * Upload contacts for People You May Know (phones, emails – stored hashed)
+ * POST /api/v1/users/me/contacts
+ * Body: { phones?: string[], emails?: string[] }
+ */
+export async function uploadContacts({ phones = [], emails = [] }) {
+  const { data } = await api.post('/users/me/contacts', {
+    phones: Array.isArray(phones) ? phones : [],
+    emails: Array.isArray(emails) ? emails : [],
+  });
+  return data?.data ?? data;
+}
+
+/**
+ * Get People You May Know (scored: contact + location + mutuals + interests)
+ * GET /api/v1/users/people-you-may-know?page=0&size=20
+ */
+export async function getPeopleYouMayKnow(params = {}) {
+  const { data } = await api.get('/users/people-you-may-know', {
+    params: { page: 0, size: 20, ...params },
+  });
+  return data?.data ?? data;
+}
+
+/**
+ * Get login activity (IP, device, browser)
+ * GET /api/v1/users/me/login-activity?page=0&size=20
+ */
+export async function getLoginActivity(params = {}) {
+  const { data } = await api.get('/users/me/login-activity', {
+    params: { page: 0, size: 20, ...params },
+  });
+  return data?.data ?? data;
+}
+
+// ——— Restrict user (see only public posts) ———
+/** POST /api/v1/users/:userId/restrict */
+export async function restrictUser(userId) {
+  const { data } = await api.post(`/users/${userId}/restrict`);
+  return data?.data ?? data;
+}
+
+/** DELETE /api/v1/users/:userId/restrict */
+export async function unrestrictUser(userId) {
+  const { data } = await api.delete(`/users/${userId}/restrict`);
+  return data?.data ?? data;
+}
+
+/** GET /api/v1/users/me/restricted?page=0&size=20 */
+export async function getRestrictedUsers(params = {}) {
+  const { data } = await api.get('/users/me/restricted', {
+    params: { page: 0, size: 20, ...params },
+  });
+  return data?.data ?? data;
+}
+
+// ——— Follow (if backend uses /users/:id/follow; else keep using friends.js /social/follow) ———
+/** GET /api/v1/users/:userId/followers?page=0&size=20 */
+export async function getFollowers(userId, params = {}) {
+  const { data } = await api.get(`/users/${userId}/followers`, {
+    params: { page: 0, size: 20, ...params },
+  });
+  return data?.data ?? data;
+}
+
+/** GET /api/v1/users/:userId/following?page=0&size=20 */
+export async function getFollowingList(userId, params = {}) {
+  const { data } = await api.get(`/users/${userId}/following`, {
+    params: { page: 0, size: 20, ...params },
+  });
+  return data?.data ?? data;
+}

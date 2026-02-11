@@ -1,7 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/store/auth.store';
 import { getFollowing, followUser, unfollowUser } from '@/lib/api/friends';
-import { searchUsers, getSuggestedUsers } from '@/lib/api/users';
+import {
+  searchUsers,
+  getSuggestedUsers,
+  getNearbyUsers,
+  getPeopleYouMayKnow,
+  uploadContacts,
+} from '@/lib/api/users';
 
 function UserAvatar({ user, size = 48 }) {
   const name = user?.name || 'User';
@@ -74,6 +80,14 @@ export default function Friends() {
   const [searching, setSearching] = useState(false);
   const [suggested, setSuggested] = useState([]);
   const [suggestedLoading, setSuggestedLoading] = useState(false);
+  const [nearby, setNearby] = useState([]);
+  const [nearbyLoading, setNearbyLoading] = useState(false);
+  const [peopleYouMayKnow, setPeopleYouMayKnow] = useState([]);
+  const [pymkLoading, setPymkLoading] = useState(false);
+  const [contactsModalOpen, setContactsModalOpen] = useState(false);
+  const [contactsPhones, setContactsPhones] = useState('');
+  const [contactsEmails, setContactsEmails] = useState('');
+  const [contactsSubmitting, setContactsSubmitting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -111,6 +125,59 @@ export default function Friends() {
       });
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setNearbyLoading(true);
+    getNearbyUsers({ page: 0, size: 20 })
+      .then((res) => {
+        if (!cancelled && res?.content) setNearby(res.content.map(normalizeUser));
+      })
+      .catch(() => {
+        if (!cancelled) setNearby([]);
+      })
+      .finally(() => {
+        if (!cancelled) setNearbyLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setPymkLoading(true);
+    getPeopleYouMayKnow({ page: 0, size: 20 })
+      .then((res) => {
+        if (!cancelled && res?.content) setPeopleYouMayKnow(res.content.map(normalizeUser));
+      })
+      .catch(() => {
+        if (!cancelled) setPeopleYouMayKnow([]);
+      })
+      .finally(() => {
+        if (!cancelled) setPymkLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleUploadContacts = async () => {
+    const phones = contactsPhones.trim().split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean);
+    const emails = contactsEmails.trim().split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean);
+    if (phones.length === 0 && emails.length === 0) return;
+    setContactsSubmitting(true);
+    try {
+      await uploadContacts({ phones, emails });
+      setContactsModalOpen(false);
+      setContactsPhones('');
+      setContactsEmails('');
+      setPymkLoading(true);
+      const res = await getPeopleYouMayKnow({ page: 0, size: 20 });
+      setPeopleYouMayKnow((res?.content ?? []).map(normalizeUser));
+    } catch (_) {
+      // keep modal open
+    } finally {
+      setContactsSubmitting(false);
+      setPymkLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -215,11 +282,11 @@ export default function Friends() {
         </section>
       )}
 
-      <section className="friends-section" aria-label="People you may know">
-        <h2 className="friends-section-title">People you may know</h2>
+      <section className="friends-section" aria-label="Suggested (region & country)">
+        <h2 className="friends-section-title">Suggested (region & country)</h2>
         {suggestedLoading && <p className="friends-list-loading">Loading…</p>}
         {!suggestedLoading && suggested.length === 0 && (
-          <p className="friends-list-empty">No suggestions right now. Try searching for users above.</p>
+          <p className="friends-list-empty">No suggestions right now.</p>
         )}
         {!suggestedLoading && suggested.length > 0 && (
           <ul className="friends-list">
@@ -227,6 +294,84 @@ export default function Friends() {
           </ul>
         )}
       </section>
+
+      <section className="friends-section" aria-label="People nearby">
+        <h2 className="friends-section-title">People nearby (city → region → country)</h2>
+        {nearbyLoading && <p className="friends-list-loading">Loading…</p>}
+        {!nearbyLoading && nearby.length === 0 && (
+          <p className="friends-list-empty">No one nearby right now. Add city/region in profile.</p>
+        )}
+        {!nearbyLoading && nearby.length > 0 && (
+          <ul className="friends-list">
+            {nearby.map((u) => renderUserRow(u, setNearby))}
+          </ul>
+        )}
+      </section>
+
+      <section className="friends-section" aria-label="People you may know">
+        <div className="friends-section-header">
+          <h2 className="friends-section-title">People you may know</h2>
+          <button
+            type="button"
+            className="friends-upload-contacts-btn"
+            onClick={() => setContactsModalOpen(true)}
+            title="Sync contacts to find friends"
+          >
+            Sync contacts
+          </button>
+        </div>
+        {pymkLoading && <p className="friends-list-loading">Loading…</p>}
+        {!pymkLoading && peopleYouMayKnow.length === 0 && (
+          <p className="friends-list-empty">Sync contacts or add location to get suggestions.</p>
+        )}
+        {!pymkLoading && peopleYouMayKnow.length > 0 && (
+          <ul className="friends-list">
+            {peopleYouMayKnow.map((u) => renderUserRow(u, setPeopleYouMayKnow))}
+          </ul>
+        )}
+      </section>
+
+      {contactsModalOpen && (
+        <div className="friends-modal-overlay" role="dialog" aria-label="Upload contacts">
+          <div className="friends-modal">
+            <h3>Sync contacts</h3>
+            <p className="friends-modal-desc">Phones and emails are stored hashed. We match with Wakify users only.</p>
+            <label>
+              <span>Phones (one per line or comma-separated)</span>
+              <textarea
+                value={contactsPhones}
+                onChange={(e) => setContactsPhones(e.target.value)}
+                placeholder="+255712345678"
+                rows={3}
+                className="friends-modal-input"
+              />
+            </label>
+            <label>
+              <span>Emails</span>
+              <textarea
+                value={contactsEmails}
+                onChange={(e) => setContactsEmails(e.target.value)}
+                placeholder="friend@example.com"
+                rows={2}
+                className="friends-modal-input"
+              />
+            </label>
+            <div className="friends-modal-actions">
+              <button type="button" className="friends-btn-secondary" onClick={() => setContactsModalOpen(false)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="friends-btn-primary"
+                onClick={handleUploadContacts}
+                disabled={contactsSubmitting || (!contactsPhones.trim() && !contactsEmails.trim())}
+              >
+                {contactsSubmitting ? 'Syncing…' : 'Sync'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <section className="friends-section" aria-label="People you follow">
         <h2 className="friends-section-title">People you follow</h2>

@@ -17,7 +17,8 @@ import {
   Heart,
 } from 'lucide-react';
 import { useAuthStore, setAuth, getToken } from '@/store/auth.store';
-import { getMe, getUser, uploadProfilePic, uploadCoverPic } from '@/lib/api/users';
+import { getMe, getUser, uploadProfilePic, uploadCoverPic, blockUser } from '@/lib/api/users';
+import { followUser, unfollowUser } from '@/lib/api/friends';
 import {
   getPostsByUser,
   getSavedPosts,
@@ -358,11 +359,15 @@ export default function Profile() {
   const [error, setError] = useState('');
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [coverUploading, setCoverUploading] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const avatarInputRef = useRef(null);
   const coverInputRef = useRef(null);
 
   const userId = paramUserId && paramUserId !== 'me' ? paramUserId : authUser?.id;
   const isOwnProfile = !paramUserId || paramUserId === 'me' || (authUser?.id && paramUserId === authUser.id);
+  const isFollowingProfile = profile?.isFollowing ?? isFollowing;
 
   useEffect(() => {
     if (!userId) return;
@@ -378,6 +383,7 @@ export default function Profile() {
       .then(([profileData, postsList]) => {
         if (cancelled) return;
         setProfile(profileData);
+        setIsFollowing(!!profileData?.isFollowing);
         setPosts(Array.isArray(postsList) ? postsList.map(normalizePost) : []);
       })
       .catch((err) => {
@@ -556,14 +562,66 @@ export default function Profile() {
           )}
           {!isOwnProfile && displayProfile?.id && (
             <div className="profile-fb-hero-actions">
+              <button
+                type="button"
+                className={`profile-fb-btn ${isFollowingProfile ? 'profile-fb-btn-secondary' : 'profile-fb-btn-primary'}`}
+                onClick={async () => {
+                  if (followLoading) return;
+                  setFollowLoading(true);
+                  try {
+                    if (isFollowingProfile) {
+                      await unfollowUser(displayProfile.id);
+                      setIsFollowing(false);
+                    } else {
+                      await followUser(displayProfile.id);
+                      setIsFollowing(true);
+                    }
+                  } catch (_) {}
+                  setFollowLoading(false);
+                }}
+                disabled={followLoading}
+              >
+                {followLoading ? '…' : isFollowingProfile ? 'Following' : 'Follow'}
+              </button>
               <Link
                 to="/app/messages"
                 state={{ openUser: { id: displayProfile.id, name: displayProfile.name ?? displayProfile.username, profilePic: displayProfile.profilePic } }}
-                className="profile-fb-btn profile-fb-btn-primary"
+                className="profile-fb-btn profile-fb-btn-secondary"
               >
                 <MessageCircle size={20} />
                 Message
               </Link>
+              <div className="profile-fb-menu-wrap">
+                <button
+                  type="button"
+                  className="profile-fb-btn profile-fb-btn-icon"
+                  onClick={() => setMenuOpen((o) => !o)}
+                  aria-label="More options"
+                  aria-expanded={menuOpen}
+                >
+                  <MoreHorizontal size={20} />
+                </button>
+                {menuOpen && (
+                  <>
+                    <div className="profile-fb-menu-backdrop" onClick={() => setMenuOpen(false)} aria-hidden />
+                    <div className="profile-fb-menu-dropdown">
+                      <button
+                        type="button"
+                        className="profile-fb-menu-item"
+                        onClick={async () => {
+                          try {
+                            await blockUser(displayProfile.id);
+                            setMenuOpen(false);
+                            navigate('/app/friends');
+                          } catch (_) {}
+                        }}
+                      >
+                        Block
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -573,15 +631,19 @@ export default function Profile() {
       <div className="profile-fb-info">
         <div className="profile-fb-stats-col">
           <div className="profile-fb-stat-row">
+            <span className="profile-fb-stat-label">Posts</span>
+            <span className="profile-fb-stat-value">{formatStat(displayProfile?.postsCount ?? postsCount)}</span>
+          </div>
+          <div className="profile-fb-stat-row">
             <span className="profile-fb-stat-label">Total likes</span>
             <span className="profile-fb-stat-value">{formatStat(totalLikes)}</span>
           </div>
           <div className="profile-fb-stat-row">
-            <span className="profile-fb-stat-label">Total Follower</span>
+            <span className="profile-fb-stat-label">Followers</span>
             <span className="profile-fb-stat-value">{formatStat(displayProfile?.followersCount ?? 0)}</span>
           </div>
           <div className="profile-fb-stat-row">
-            <span className="profile-fb-stat-label">Total Following</span>
+            <span className="profile-fb-stat-label">Following</span>
             <span className="profile-fb-stat-value">{formatStat(displayProfile?.followingCount ?? 0)}</span>
           </div>
         </div>
@@ -590,6 +652,20 @@ export default function Profile() {
           <p className="profile-fb-bio-section-text">
             {displayProfile?.bio || displayProfile?.work || 'No bio yet.'}
           </p>
+          {(displayProfile?.currentCity || displayProfile?.region || displayProfile?.country) && (
+            <p className="profile-fb-bio-section-meta">
+              <span className="profile-fb-bio-location">
+                {[displayProfile.currentCity, displayProfile.region, displayProfile.country].filter(Boolean).join(', ')}
+              </span>
+            </p>
+          )}
+          {(displayProfile?.work || displayProfile?.education || displayProfile?.interests) && (
+            <p className="profile-fb-bio-section-meta">
+              {displayProfile.work && <span>{displayProfile.work}</span>}
+              {displayProfile.education && <span> · {displayProfile.education}</span>}
+              {displayProfile.interests && <span> · {displayProfile.interests}</span>}
+            </p>
+          )}
         </div>
       </div>
 

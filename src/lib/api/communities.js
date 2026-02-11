@@ -99,3 +99,21 @@ export async function createCommunity({ name, description, type = 'GROUP', priva
   const { data } = await api.post('/communities', formData);
   return data?.data ?? data;
 }
+
+/**
+ * Pin a post in a community (admin only)
+ * POST /api/v1/communities/:id/posts/:postId/pin
+ */
+export async function pinPost(communityId, postId) {
+  const { data } = await api.post(`/communities/${communityId}/posts/${postId}/pin`);
+  return data?.data ?? data;
+}
+
+/**
+ * Unpin a post in a community (admin only)
+ * DELETE /api/v1/communities/:id/posts/:postId/pin
+ */
+export async function unpinPost(communityId, postId) {
+  const { data } = await api.delete(`/communities/${communityId}/posts/${postId}/pin`);
+  return data?.data ?? data;
+}

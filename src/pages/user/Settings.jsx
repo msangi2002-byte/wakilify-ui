@@ -2,7 +2,16 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuthStore, setAuth, getToken } from '@/store/auth.store';
 import { useUIStore, setUI, subscribeUI } from '@/store/ui.store';
-import { uploadProfilePic, uploadCoverPic, getBlockedUsers, unblockUser } from '@/lib/api/users';
+import {
+  uploadProfilePic,
+  uploadCoverPic,
+  getBlockedUsers,
+  unblockUser,
+  updateMe,
+  getRestrictedUsers,
+  unrestrictUser,
+  getLoginActivity,
+} from '@/lib/api/users';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import {
   User,
@@ -107,6 +116,68 @@ export default function Settings() {
     return () => { cancelled = true; };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    setRestrictedLoading(true);
+    getRestrictedUsers({ page: 0, size: 50 })
+      .then((res) => {
+        if (!cancelled) setRestrictedUsers(res?.content ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setRestrictedUsers([]);
+      })
+      .finally(() => {
+        if (!cancelled) setRestrictedLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoginActivityLoading(true);
+    getLoginActivity({ page: 0, size: 20 })
+      .then((res) => {
+        if (!cancelled) setLoginActivity((res?.content ?? []));
+      })
+      .catch(() => {
+        if (!cancelled) setLoginActivity([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoginActivityLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleSaveProfile = async () => {
+    setProfileSaving(true);
+    setProfileSaveError('');
+    try {
+      const updated = await updateMe({
+        name: profileForm.name?.trim() || undefined,
+        bio: profileForm.bio?.trim() || undefined,
+        work: profileForm.work?.trim() || undefined,
+        education: profileForm.education?.trim() || undefined,
+        currentCity: profileForm.currentCity?.trim() || undefined,
+        region: profileForm.region?.trim() || undefined,
+        country: profileForm.country?.trim() || undefined,
+        hometown: profileForm.hometown?.trim() || undefined,
+        interests: profileForm.interests?.trim() || undefined,
+        relationshipStatus: profileForm.relationshipStatus || undefined,
+        gender: profileForm.gender || undefined,
+        dateOfBirth: profileForm.dateOfBirth || undefined,
+        website: profileForm.website?.trim() || undefined,
+        profileVisibility: profileForm.profileVisibility,
+        followingListVisibility: profileForm.followingListVisibility,
+      });
+      const token = getToken();
+      if (token && updated) setAuth(updated, token);
+    } catch (err) {
+      setProfileSaveError(getApiErrorMessage(err, 'Failed to save profile'));
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
   const handleUnblock = async (userId) => {
     try {
       await unblockUser(userId);
@@ -114,13 +185,57 @@ export default function Settings() {
     } catch (_) {}
   };
 
-  const displayName = user?.name ?? '';
-  const displayEmail = user?.email ?? '';
+  const [profileForm, setProfileForm] = useState({
+    name: user?.name ?? '',
+    bio: user?.bio ?? '',
+    work: user?.work ?? '',
+    education: user?.education ?? '',
+    currentCity: user?.currentCity ?? '',
+    region: user?.region ?? '',
+    country: user?.country ?? '',
+    hometown: user?.hometown ?? '',
+    interests: user?.interests ?? '',
+    relationshipStatus: user?.relationshipStatus ?? '',
+    gender: user?.gender ?? '',
+    dateOfBirth: user?.dateOfBirth ?? '',
+    website: user?.website ?? '',
+    profileVisibility: user?.profileVisibility ?? 'PUBLIC',
+    followingListVisibility: user?.followingListVisibility ?? 'PUBLIC',
+  });
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileSaveError, setProfileSaveError] = useState('');
+  const [restrictedUsers, setRestrictedUsers] = useState([]);
+  const [restrictedLoading, setRestrictedLoading] = useState(false);
+  const [loginActivity, setLoginActivity] = useState([]);
+  const [loginActivityLoading, setLoginActivityLoading] = useState(false);
   const avatarInputRef = useRef(null);
   const coverInputRef = useRef(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [coverUploading, setCoverUploading] = useState(false);
   const [photoError, setPhotoError] = useState('');
+
+  useEffect(() => {
+    if (user) {
+      setProfileForm((prev) => ({
+        ...prev,
+        name: user.name ?? '',
+        bio: user.bio ?? '',
+        work: user.work ?? '',
+        education: user.education ?? '',
+        currentCity: user.currentCity ?? '',
+        region: user.region ?? '',
+        country: user.country ?? '',
+        hometown: user.hometown ?? '',
+        interests: user.interests ?? '',
+        relationshipStatus: user.relationshipStatus ?? '',
+        gender: user.gender ?? '',
+        dateOfBirth: user.dateOfBirth ?? '',
+        website: user.website ?? '',
+        profileVisibility: user.profileVisibility ?? 'PUBLIC',
+        followingListVisibility: user.followingListVisibility ?? 'PUBLIC',
+      }));
+    }
+  }, [user]);
 
   const handleAvatarChange = async (e) => {
     const file = e.target.files?.[0];
@@ -230,24 +345,106 @@ export default function Settings() {
       <section className="user-app-card settings-section">
         <h2 className="settings-section-title">
           <User size={20} />
-          Account
+          Account & profile
         </h2>
         <SettingRow label="Display name" description="Name shown on your profile">
           <input
             type="text"
             className="settings-input"
-            defaultValue={displayName}
+            value={profileForm.name}
+            onChange={(e) => setProfileForm((p) => ({ ...p, name: e.target.value }))}
             placeholder="Your name"
             aria-label="Display name"
           />
         </SettingRow>
-        <SettingRow label="Email" description="Used for login and notifications">
+        <SettingRow label="Bio" description="Short bio on your profile">
           <input
-            type="email"
+            type="text"
             className="settings-input"
-            defaultValue={displayEmail}
-            placeholder="you@example.com"
-            aria-label="Email"
+            value={profileForm.bio}
+            onChange={(e) => setProfileForm((p) => ({ ...p, bio: e.target.value }))}
+            placeholder="About you"
+            aria-label="Bio"
+          />
+        </SettingRow>
+        <SettingRow label="City (Mji)" description="Used for people nearby">
+          <input
+            type="text"
+            className="settings-input"
+            value={profileForm.currentCity}
+            onChange={(e) => setProfileForm((p) => ({ ...p, currentCity: e.target.value }))}
+            placeholder="e.g. Dar es Salaam"
+            aria-label="City"
+          />
+        </SettingRow>
+        <SettingRow label="Region" description="Mkoa">
+          <input
+            type="text"
+            className="settings-input"
+            value={profileForm.region}
+            onChange={(e) => setProfileForm((p) => ({ ...p, region: e.target.value }))}
+            placeholder="Region"
+            aria-label="Region"
+          />
+        </SettingRow>
+        <SettingRow label="Country" description="Taifa">
+          <input
+            type="text"
+            className="settings-input"
+            value={profileForm.country}
+            onChange={(e) => setProfileForm((p) => ({ ...p, country: e.target.value }))}
+            placeholder="e.g. Tanzania"
+            aria-label="Country"
+          />
+        </SettingRow>
+        <SettingRow label="Hometown" description="Optional">
+          <input
+            type="text"
+            className="settings-input"
+            value={profileForm.hometown}
+            onChange={(e) => setProfileForm((p) => ({ ...p, hometown: e.target.value }))}
+            placeholder="Hometown"
+            aria-label="Hometown"
+          />
+        </SettingRow>
+        <SettingRow label="Work" description="Job or profession">
+          <input
+            type="text"
+            className="settings-input"
+            value={profileForm.work}
+            onChange={(e) => setProfileForm((p) => ({ ...p, work: e.target.value }))}
+            placeholder="Work"
+            aria-label="Work"
+          />
+        </SettingRow>
+        <SettingRow label="Education" description="School or university">
+          <input
+            type="text"
+            className="settings-input"
+            value={profileForm.education}
+            onChange={(e) => setProfileForm((p) => ({ ...p, education: e.target.value }))}
+            placeholder="Education"
+            aria-label="Education"
+          />
+        </SettingRow>
+        <SettingRow label="Interests" description="Hobbies, comma-separated">
+          <input
+            type="text"
+            className="settings-input"
+            value={profileForm.interests}
+            onChange={(e) => setProfileForm((p) => ({ ...p, interests: e.target.value }))}
+            placeholder="e.g. Music, Sports"
+            aria-label="Interests"
+          />
+        </SettingRow>
+        <SettingRow label="Website" description="Your website URL">
+          <input
+            type="url"
+            className="settings-input"
+            value={profileForm.website}
+            onChange={(e) => setProfileForm((p) => ({ ...p, website: e.target.value }))}
+            placeholder="https://..."
+            aria-label="Website"
           />
         </SettingRow>
         <SettingRow
@@ -271,9 +468,17 @@ export default function Settings() {
             </button>
           </div>
         </SettingRow>
+        {profileSaveError && (
+          <p className="settings-error" role="alert">{profileSaveError}</p>
+        )}
         <div className="settings-section-actions">
-          <button type="button" className="settings-btn settings-btn-primary">
-            Save changes
+          <button
+            type="button"
+            className="settings-btn settings-btn-primary"
+            onClick={handleSaveProfile}
+            disabled={profileSaving}
+          >
+            {profileSaving ? 'Saving…' : 'Save changes'}
           </button>
         </div>
       </section>
@@ -433,10 +638,30 @@ export default function Settings() {
           label="Profile visibility"
           description="Who can see your profile and posts"
         >
-          <select className="settings-select" aria-label="Profile visibility">
-            <option value="public">Everyone</option>
-            <option value="friends">Friends only</option>
-            <option value="private">Only me</option>
+          <select
+            className="settings-select"
+            aria-label="Profile visibility"
+            value={profileForm.profileVisibility}
+            onChange={(e) => setProfileForm((p) => ({ ...p, profileVisibility: e.target.value }))}
+          >
+            <option value="PUBLIC">Everyone</option>
+            <option value="FOLLOWERS">Followers only</option>
+            <option value="PRIVATE">Only me</option>
+          </select>
+        </SettingRow>
+        <SettingRow
+          label="Following list visibility"
+          description="Who can see your followers and following lists"
+        >
+          <select
+            className="settings-select"
+            aria-label="Following list visibility"
+            value={profileForm.followingListVisibility}
+            onChange={(e) => setProfileForm((p) => ({ ...p, followingListVisibility: e.target.value }))}
+          >
+            <option value="PUBLIC">Everyone</option>
+            <option value="FOLLOWERS">Followers only</option>
+            <option value="PRIVATE">Only me</option>
           </select>
         </SettingRow>
         <SettingRow
@@ -476,6 +701,74 @@ export default function Settings() {
                 <button type="button" className="settings-btn settings-btn-secondary" onClick={() => handleUnblock(u.id)}>
                   Unblock
                 </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="user-app-card settings-section">
+        <h2 className="settings-section-title">
+          <EyeOff size={20} />
+          Restricted users
+        </h2>
+        <p className="settings-row-desc" style={{ marginBottom: 12 }}>
+          Watu uliozuia. Wanaona posts zako za public tu.
+        </p>
+        {restrictedLoading ? (
+          <p className="settings-loading">Loading…</p>
+        ) : restrictedUsers.length === 0 ? (
+          <p className="settings-empty">Hakuna watu uliozuia.</p>
+        ) : (
+          <ul className="settings-blocked-list">
+            {restrictedUsers.map((u) => (
+              <li key={u.id} className="settings-blocked-item">
+                <div className="settings-blocked-info">
+                  {u.profilePic ? (
+                    <img src={u.profilePic} alt="" className="settings-blocked-avatar" />
+                  ) : (
+                    <div className="settings-blocked-avatar settings-blocked-avatar-initial">{u.name?.charAt(0) ?? '?'}</div>
+                  )}
+                  <span className="settings-blocked-name">{u.name ?? 'User'}</span>
+                </div>
+                <button
+                  type="button"
+                  className="settings-btn settings-btn-secondary"
+                  onClick={async () => {
+                    try {
+                      await unrestrictUser(u.id);
+                      setRestrictedUsers((prev) => prev.filter((x) => x.id !== u.id));
+                    } catch (_) {}
+                  }}
+                >
+                  Unrestrict
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="user-app-card settings-section">
+        <h2 className="settings-section-title">
+          <MapPin size={20} />
+          Login activity
+        </h2>
+        <p className="settings-row-desc" style={{ marginBottom: 12 }}>
+          Recent logins (device, browser, IP).
+        </p>
+        {loginActivityLoading ? (
+          <p className="settings-loading">Loading…</p>
+        ) : loginActivity.length === 0 ? (
+          <p className="settings-empty">No login history.</p>
+        ) : (
+          <ul className="settings-activity-list">
+            {loginActivity.map((entry, i) => (
+              <li key={entry.id ?? i} className="settings-activity-item">
+                <span className="settings-activity-time">{entry.loggedAt ?? entry.createdAt ?? '—'}</span>
+                <span className="settings-activity-meta">
+                  {[entry.device, entry.browser, entry.ip].filter(Boolean).join(' · ') || '—'}
+                </span>
               </li>
             ))}
           </ul>
