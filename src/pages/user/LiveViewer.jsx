@@ -39,7 +39,12 @@ function mapCommentToMessage(c) {
   const author = c.author ?? c.user ?? {};
   return {
     id: c.id,
-    user: { name: author.name ?? 'User', profilePic: author.profilePic },
+    user: {
+      id: c.authorId ?? author.id,
+      name: c.authorName ?? author.name ?? 'User',
+      profilePic: c.authorProfilePic ?? author.profilePic,
+      isHost: c.isHost ?? author.isHost,
+    },
     text: c.content ?? c.text ?? '',
   };
 }
@@ -59,6 +64,48 @@ function Avatar({ user, size = 44 }) {
       }}
     >
       {src ? <img src={src} alt="" className="w-full h-full object-cover" /> : initial}
+    </div>
+  );
+}
+
+/** Small tile that plays one guest HLS stream – "yupo live" for viewers */
+function GuestStreamTile({ streamUrl, requesterName }) {
+  const videoRef = useRef(null);
+  const hlsRef = useRef(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !streamUrl || !streamUrl.includes('.m3u8')) return;
+    let hls = null;
+    if (Hls.isSupported()) {
+      hls = new Hls({ maxBufferLength: 10 });
+      hls.loadSource(streamUrl);
+      hls.attachMedia(video);
+      hlsRef.current = hls;
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = streamUrl;
+    }
+    return () => {
+      if (hls) {
+        hls.destroy();
+        hlsRef.current = null;
+      }
+      if (video.src) video.src = '';
+    };
+  }, [streamUrl]);
+
+  return (
+    <div className="shrink-0 w-24 h-32 rounded-xl overflow-hidden bg-black/60 border border-white/20 flex flex-col">
+      <video
+        ref={videoRef}
+        className="w-full h-full object-cover flex-1"
+        autoPlay
+        muted
+        playsInline
+      />
+      <p className="text-white text-[10px] font-medium truncate px-1 py-0.5 bg-black/50 text-center">
+        {requesterName || 'Guest'}
+      </p>
     </div>
   );
 }
@@ -93,6 +140,7 @@ export default function LiveViewer() {
   const [guestWhipStarted, setGuestWhipStarted] = useState(false);
   const [guestWhipStarting, setGuestWhipStarting] = useState(false);
   const [guestWhipError, setGuestWhipError] = useState(null);
+  const [floatingLikes, setFloatingLikes] = useState([]);
   const guestPcRef = useRef(null);
   const guestStreamRef = useRef(null);
   const guestPreviewRef = useRef(null);
@@ -166,6 +214,18 @@ export default function LiveViewer() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  // Refresh live details (e.g. guestStreams when host accepts someone) so viewers see "wapo live"
+  useEffect(() => {
+    if (!id || !live?.id || live?.status !== 'LIVE') return;
+    const interval = setInterval(() => {
+      getLiveById(id)
+        .then((data) => setLive(data))
+        .catch(() => {});
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [id, live?.id, live?.status]);
+
+  // Load comments once
   useEffect(() => {
     if (!id || !live?.id) return;
     let cancelled = false;
@@ -182,6 +242,20 @@ export default function LiveViewer() {
       });
     return () => { cancelled = true; };
   }, [id, live?.id]);
+
+  // Real-time comments: poll every 3s so everyone sees new messages
+  useEffect(() => {
+    if (!id || !live?.id || live?.status !== 'LIVE') return;
+    const poll = () => {
+      getLiveComments(id)
+        .then((list) => {
+          if (Array.isArray(list)) setMessages(list.map(mapCommentToMessage));
+        })
+        .catch(() => {});
+    };
+    const interval = setInterval(poll, 3000);
+    return () => clearInterval(interval);
+  }, [id, live?.id, live?.status]);
 
   // Poll my join request when viewer has sent a request (so we know when host accepted)
   useEffect(() => {
@@ -277,6 +351,9 @@ export default function LiveViewer() {
       .then(() => {
         setLiked(true);
         setLive((prev) => (prev ? { ...prev, likesCount: (prev.likesCount ?? 0) + 1 } : null));
+        const item = { key: Date.now(), userId: user?.id, userName: user?.name, userProfilePic: user?.profilePic };
+        setFloatingLikes((prev) => [...prev, item]);
+        setTimeout(() => setFloatingLikes((p) => p.filter((x) => x.key !== item.key)), 4000);
       })
       .catch(() => {});
   };
@@ -519,6 +596,58 @@ export default function LiveViewer() {
         </div>
       )}
 
+      {/* Like animation: pill floats up with user who liked, clickable → profile */}
+      {floatingLikes.length > 0 && (
+        <div className="absolute left-4 bottom-44 z-30 flex flex-col gap-2 pointer-events-none md:bottom-32">
+          {floatingLikes.map((item) => (
+            <motion.div
+              key={item.key}
+              initial={{ opacity: 1, y: 0, scale: 0.9 }}
+              animate={{ opacity: 0, y: -120, scale: 1 }}
+              transition={{ duration: 3.5, ease: 'easeOut' }}
+              className="pointer-events-auto"
+            >
+              <button
+                type="button"
+                onClick={() => item.userId && navigate(`/app/profile/${item.userId}`)}
+                className="flex items-center gap-2 px-3 py-2 rounded-full bg-pink-500/90 hover:bg-pink-500 text-white shadow-lg border border-white/20 transition-colors"
+              >
+                <div className="w-7 h-7 rounded-full overflow-hidden bg-white/20 shrink-0">
+                  {item.userProfilePic ? (
+                    <img src={item.userProfilePic} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="w-full h-full flex items-center justify-center text-xs font-bold">
+                      {item.userName?.charAt(0).toUpperCase() || '?'}
+                    </span>
+                  )}
+                </div>
+                <span className="text-sm font-semibold truncate max-w-[120px]">{item.userName || 'Someone'}</span>
+                <Heart className="w-4 h-4 fill-current shrink-0" />
+              </button>
+            </motion.div>
+          ))}
+        </div>
+      )}
+
+      {/* Guests on live – viewers see "yupo live" for each accepted guest */}
+      {Array.isArray(live?.guestStreams) && live.guestStreams.length > 0 && (
+        <div className="absolute left-4 bottom-28 z-20 flex flex-col gap-1.5 max-w-[calc(100vw-2rem)]">
+          <p className="text-white/90 text-xs font-semibold flex items-center gap-1.5">
+            <Radio className="w-3.5 h-3.5 text-green-400" />
+            Wapo live
+          </p>
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
+            {live.guestStreams.map((g) => (
+              <GuestStreamTile
+                key={g.streamKey || g.requesterId}
+                streamUrl={g.streamUrl}
+                requesterName={g.requesterName}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Top bar */}
       <div className="absolute top-0 left-0 right-0 z-10 p-4 pt-6 pb-20 bg-gradient-to-b from-black/80 to-transparent">
         <div className="flex items-center justify-between">
@@ -617,13 +746,14 @@ export default function LiveViewer() {
         )}
       </div>
 
-      {/* Live chat overlay (bottom sheet on mobile / right sidebar on desktop) */}
+      {/* Live chat: solid dark background, messages clear; click name → profile */}
       {showChat && (
-        <div className="absolute bottom-20 left-2 right-2 top-auto z-20 max-h-56 rounded-xl overflow-hidden bg-black/70 backdrop-blur-md border border-white/10 md:left-auto md:right-4 md:top-24 md:bottom-24 md:max-h-[50vh] md:w-80">
+        <div className="absolute bottom-20 left-2 right-2 top-auto z-20 max-h-56 rounded-xl overflow-hidden shadow-xl border border-white/10 md:left-auto md:right-4 md:top-24 md:bottom-24 md:max-h-[50vh] md:w-80">
           <LiveChat
             messages={messages}
             onSendMessage={handleSendMessage}
-            isTransparent={true}
+            onAuthorClick={(u) => u?.id && navigate(`/app/profile/${u.id}`)}
+            solidBackground={true}
             showInput={true}
             className="h-full"
           />

@@ -114,5 +114,5 @@ export async function addLiveComment(liveId, content) {
 export async function getMyJoinRequest(liveId) {
   const { data } = await api.get(`/live/${liveId}/my-join-request`);
   const out = unwrap({ data });
-  return out?.data ?? out ?? null;
+  return out ?? null;
 }
