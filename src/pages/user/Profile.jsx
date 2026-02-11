@@ -15,7 +15,9 @@ import {
   Users,
   UserPlus,
   Heart,
+  Sparkles,
 } from 'lucide-react';
+import { ROLES } from '@/types/roles';
 import { useAuthStore, setAuth, getToken } from '@/store/auth.store';
 import { getMe, getUser, uploadProfilePic, uploadCoverPic, blockUser } from '@/lib/api/users';
 import { followUser, unfollowUser } from '@/lib/api/friends';
@@ -550,6 +552,12 @@ export default function Profile() {
           </div>
           {isOwnProfile && (
             <div className="profile-fb-hero-actions">
+              {(String(authUser?.role ?? '').toLowerCase() === ROLES.AGENT) && (
+                <Link to="/agent" className="profile-fb-btn profile-fb-btn-primary">
+                  <Sparkles size={20} />
+                  Agent Dashboard
+                </Link>
+              )}
               <Link to="/app/stories/create" className="profile-fb-btn profile-fb-btn-primary">
                 <Plus size={20} />
                 Add to history

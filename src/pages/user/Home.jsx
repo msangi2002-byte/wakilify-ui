@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ImagePlus, Users, Video, MoreHorizontal, Plus, ThumbsUp, MessageCircle, Share2, Play } from 'lucide-react';
+import { ImagePlus, Users, Video, MoreHorizontal, Plus, ThumbsUp, MessageCircle, Share2, Play, Sparkles } from 'lucide-react';
 import { UserProfileMenu } from '@/components/ui/UserProfileMenu';
 import { CommentItem } from '@/components/social/CommentItem';
 import { VideoFullscreenOverlay } from '@/components/social/VideoFullscreenOverlay';
@@ -11,6 +11,7 @@ import { followUser, unfollowUser } from '@/lib/api/friends';
 import { blockUser } from '@/lib/api/users';
 import { createReport } from '@/lib/api/reports';
 import { parseApiDate, formatPostTime, formatCommentTime } from '@/lib/utils/dateUtils';
+import { ROLES } from '@/types/roles';
 
 function groupStoriesByAuthor(stories, currentUserId) {
   const map = new Map();
@@ -759,13 +760,20 @@ export default function Home() {
           </Link>
         </div>
       )}
-      {user?.id && !loading && posts.length > 0 && (
-        <div className="user-app-card home-discover-card" style={{ padding: '12px 16px', marginBottom: 12 }}>
+      {user?.id && !loading && (
+        <div className="user-app-card home-discover-card" style={{ padding: '12px 16px', marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <Link to="/app/friends" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: 'inherit' }}>
             <Users size={20} className="home-discover-icon" style={{ color: '#7c3aed' }} />
             <span style={{ flex: 1, fontSize: 14 }}>Discover people near you</span>
             <span style={{ fontSize: 13, color: '#7c3aed', fontWeight: 600 }}>Find People →</span>
           </Link>
+          {String(user?.role ?? '').toLowerCase() !== ROLES.AGENT && (
+            <Link to="/app/register-agent" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: 'inherit', paddingTop: 8, borderTop: '1px solid #e4e6eb' }}>
+              <Sparkles size={20} style={{ color: '#7c3aed' }} />
+              <span style={{ flex: 1, fontSize: 14 }}>Become an agent</span>
+              <span style={{ fontSize: 13, color: '#7c3aed', fontWeight: 600 }}>Register →</span>
+            </Link>
+          )}
         </div>
       )}
       {!loading && posts.length > 0 && posts.map((p) => {

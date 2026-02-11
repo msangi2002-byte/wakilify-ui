@@ -39,6 +39,7 @@ const Groups = lazy(() => import('@/pages/user/Groups'));
 const GroupDetail = lazy(() => import('@/pages/user/GroupDetail'));
 const GroupCreate = lazy(() => import('@/pages/user/GroupCreate'));
 const UserSettings = lazy(() => import('@/pages/user/Settings'));
+const RegisterAgent = lazy(() => import('@/pages/user/RegisterAgent'));
 const Notifications = lazy(() => import('@/pages/user/Notifications'));
 
 const BusinessDashboard = lazy(() => import('@/pages/business/Dashboard'));
@@ -50,6 +51,7 @@ const Stats = lazy(() => import('@/pages/business/Stats'));
 const BusinessSettings = lazy(() => import('@/pages/business/Settings'));
 
 const AgentDashboard = lazy(() => import('@/pages/agent/Dashboard'));
+const AgentRequests = lazy(() => import('@/pages/agent/Requests'));
 const Activate = lazy(() => import('@/pages/agent/Activate'));
 const Commissions = lazy(() => import('@/pages/agent/Commissions'));
 const AgentWithdrawals = lazy(() => import('@/pages/agent/Withdrawals'));
@@ -128,6 +130,7 @@ const router = createBrowserRouter([
             ],
           },
           { path: 'settings', element: <Suspense fallback={<Fallback />}><UserSettings /></Suspense> },
+          { path: 'register-agent', element: <Suspense fallback={<Fallback />}><RegisterAgent /></Suspense> },
         ],
       },
       {
@@ -160,6 +163,7 @@ const router = createBrowserRouter([
         ),
         children: [
           { index: true, element: <Suspense fallback={<Fallback />}><AgentDashboard /></Suspense> },
+          { path: 'requests', element: <Suspense fallback={<Fallback />}><AgentRequests /></Suspense> },
           { path: 'activate', element: <Suspense fallback={<Fallback />}><Activate /></Suspense> },
           { path: 'commissions', element: <Suspense fallback={<Fallback />}><Commissions /></Suspense> },
           { path: 'withdrawals', element: <Suspense fallback={<Fallback />}><AgentWithdrawals /></Suspense> },

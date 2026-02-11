@@ -11,8 +11,11 @@ import {
   getRestrictedUsers,
   unrestrictUser,
   getLoginActivity,
+  createBusinessRequest,
 } from '@/lib/api/users';
+import { searchAgents } from '@/lib/api/agent';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
+import { ROLES } from '@/types/roles';
 import {
   User,
   Eye,
@@ -28,6 +31,9 @@ import {
   CreditCard,
   Package,
   Camera,
+  Building2,
+  Sparkles,
+  X,
 } from 'lucide-react';
 
 function SettingRow({ label, description, children }) {
@@ -97,6 +103,70 @@ export default function Settings() {
   };
   const [marketplaceState, setMarketplacePref] = useState(marketplacePrefs);
   const setMarketplace = (key, value) => setMarketplacePref((s) => ({ ...s, [key]: value }));
+
+  const [businessRequestOpen, setBusinessRequestOpen] = useState(false);
+  const [businessRequestForm, setBusinessRequestForm] = useState({ businessName: '', ownerPhone: '', category: '', region: '', agentCode: '' });
+  const [businessRequestLoading, setBusinessRequestLoading] = useState(false);
+  const [businessRequestError, setBusinessRequestError] = useState('');
+  const [businessRequestSuccess, setBusinessRequestSuccess] = useState('');
+  const [agentSearchQuery, setAgentSearchQuery] = useState('');
+  const [agentSearchResults, setAgentSearchResults] = useState([]);
+  const [agentSearching, setAgentSearching] = useState(false);
+
+  useEffect(() => {
+    const q = agentSearchQuery?.trim();
+    if (!q || q.length < 2) {
+      setAgentSearchResults([]);
+      return undefined;
+    }
+    const t = setTimeout(async () => {
+      setAgentSearching(true);
+      try {
+        const res = await searchAgents(q, { page: 0, size: 10 });
+        setAgentSearchResults(Array.isArray(res?.content) ? res.content : []);
+      } catch {
+        setAgentSearchResults([]);
+      } finally {
+        setAgentSearching(false);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [agentSearchQuery]);
+
+  const handleSelectAgent = (a) => {
+    const display = a.name ? `${a.name} (${a.agentCode || ''})` : (a.agentCode || a.email || '');
+    setBusinessRequestForm((f) => ({ ...f, agentCode: a.agentCode || '' }));
+    setAgentSearchQuery(display);
+    setAgentSearchResults([]);
+  };
+  const handleSubmitBusinessRequest = async (e) => {
+    e.preventDefault();
+    setBusinessRequestError('');
+    setBusinessRequestSuccess('');
+    if (!businessRequestForm.businessName?.trim() || !businessRequestForm.ownerPhone?.trim() || !businessRequestForm.agentCode?.trim()) {
+      setBusinessRequestError('Business name, owner phone and agent code are required.');
+      return;
+    }
+    setBusinessRequestLoading(true);
+    try {
+      await createBusinessRequest({
+        businessName: businessRequestForm.businessName.trim(),
+        ownerPhone: businessRequestForm.ownerPhone.trim(),
+        category: businessRequestForm.category?.trim() || undefined,
+        region: businessRequestForm.region?.trim() || undefined,
+        agentCode: businessRequestForm.agentCode.trim(),
+      });
+      setBusinessRequestSuccess('Request submitted. Your selected agent will contact you.');
+      setBusinessRequestForm({ businessName: '', ownerPhone: '', category: '', region: '', agentCode: '' });
+      setAgentSearchQuery('');
+      setAgentSearchResults([]);
+      setTimeout(() => { setBusinessRequestOpen(false); setBusinessRequestSuccess(''); }, 2000);
+    } catch (err) {
+      setBusinessRequestError(getApiErrorMessage(err, 'Failed to submit request'));
+    } finally {
+      setBusinessRequestLoading(false);
+    }
+  };
 
   const [blockedUsers, setBlockedUsers] = useState([]);
   const [blockedLoading, setBlockedLoading] = useState(false);
@@ -541,6 +611,28 @@ export default function Settings() {
         </SettingRow>
       </section>
 
+      {String(user?.role ?? '').toLowerCase() === ROLES.USER && (
+        <section className="user-app-card settings-section">
+          <h2 className="settings-section-title">
+            <Building2 size={20} />
+            Become a business
+          </h2>
+          <p className="settings-row-desc" style={{ marginBottom: 12 }}>
+            Request to open a business on Wakilfy. Choose an agent who will guide you through activation and verification.
+          </p>
+          <div className="settings-section-actions">
+            <button
+              type="button"
+              className="settings-btn settings-btn-primary"
+              onClick={() => setBusinessRequestOpen(true)}
+            >
+              <Sparkles size={20} />
+              Request to become a business
+            </button>
+          </div>
+        </section>
+      )}
+
       <section id="marketplace" className="user-app-card settings-section">
         <h2 className="settings-section-title">
           <ShoppingBag size={20} />
@@ -789,6 +881,145 @@ export default function Settings() {
           </button>
         </SettingRow>
       </section>
+
+      {businessRequestOpen && (
+        <div className="settings-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="business-request-title">
+          <div className="settings-modal-card">
+            <div className="settings-modal-header">
+              <h2 id="business-request-title" className="settings-modal-title">
+                <Building2 size={22} />
+                Request to become a business
+              </h2>
+              <button
+                type="button"
+                className="settings-modal-close"
+                onClick={() => { setBusinessRequestOpen(false); setBusinessRequestError(''); setBusinessRequestSuccess(''); setAgentSearchQuery(''); setAgentSearchResults([]); }}
+                aria-label="Close"
+              >
+                <X size={22} />
+              </button>
+            </div>
+            <form onSubmit={handleSubmitBusinessRequest} className="settings-modal-body">
+              <SettingRow label="Business name" description="Required">
+                <input
+                  type="text"
+                  className="settings-input"
+                  placeholder="e.g. Mama Ntilie Food"
+                  value={businessRequestForm.businessName}
+                  onChange={(e) => setBusinessRequestForm((f) => ({ ...f, businessName: e.target.value }))}
+                  required
+                />
+              </SettingRow>
+              <SettingRow label="Your phone" description="Contact for activation">
+                <input
+                  type="tel"
+                  className="settings-input"
+                  placeholder="+255787654321"
+                  value={businessRequestForm.ownerPhone}
+                  onChange={(e) => setBusinessRequestForm((f) => ({ ...f, ownerPhone: e.target.value }))}
+                  required
+                />
+              </SettingRow>
+              <SettingRow label="Category" description="Optional">
+                <input
+                  type="text"
+                  className="settings-input"
+                  placeholder="e.g. Food & Beverage"
+                  value={businessRequestForm.category}
+                  onChange={(e) => setBusinessRequestForm((f) => ({ ...f, category: e.target.value }))}
+                />
+              </SettingRow>
+              <SettingRow label="Region" description="Optional">
+                <input
+                  type="text"
+                  className="settings-input"
+                  placeholder="e.g. Dar es Salaam"
+                  value={businessRequestForm.region}
+                  onChange={(e) => setBusinessRequestForm((f) => ({ ...f, region: e.target.value }))}
+                />
+              </SettingRow>
+              <SettingRow label="Agent" description="Search by agent’s name or email; select from the list. Required.">
+                <div className="settings-agent-select-wrap">
+                  <div className="settings-agent-search-row">
+                    <input
+                      type="text"
+                      className="settings-input"
+                      placeholder="Search by agent name or email..."
+                      value={agentSearchQuery}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setAgentSearchQuery(v);
+                        if (businessRequestForm.agentCode) {
+                          setBusinessRequestForm((f) => ({ ...f, agentCode: '' }));
+                        }
+                      }}
+                      autoComplete="off"
+                      aria-describedby="agent-results-hint"
+                    />
+                    {agentSearching && (
+                      <span className="settings-agent-search-loading" aria-hidden>Searching…</span>
+                    )}
+                  </div>
+                  {agentSearchResults.length > 0 && (
+                    <ul
+                      id="agent-results-hint"
+                      className="settings-agent-results"
+                      role="listbox"
+                    >
+                      {agentSearchResults.map((a) => (
+                        <li key={a.id} role="option">
+                          <button
+                            type="button"
+                            className={`settings-agent-result-item ${businessRequestForm.agentCode === a.agentCode ? 'selected' : ''}`}
+                            onClick={() => handleSelectAgent(a)}
+                          >
+                            <span className="settings-agent-result-name">
+                              {a.name || 'Agent'}
+                              {(a.status || '').toUpperCase() === 'PENDING' && (
+                                <span className="settings-agent-result-pending"> (Pending approval)</span>
+                              )}
+                            </span>
+                            {(a.email || a.agentCode) && (
+                              <span className="settings-agent-result-code">
+                                {[a.email, a.agentCode].filter(Boolean).join(' · ')}
+                              </span>
+                            )}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {agentSearchQuery.trim().length >= 2 && !agentSearching && agentSearchResults.length === 0 && (
+                    <p className="settings-agent-no-results">No agents found. Try another name or code.</p>
+                  )}
+                </div>
+              </SettingRow>
+              {businessRequestError && (
+                <p className="settings-error" role="alert">{businessRequestError}</p>
+              )}
+              {businessRequestSuccess && (
+                <p className="settings-success" role="status">{businessRequestSuccess}</p>
+              )}
+              <div className="settings-modal-actions">
+                <button
+                  type="button"
+                  className="settings-btn settings-btn-secondary"
+                  onClick={() => { setBusinessRequestOpen(false); setBusinessRequestError(''); setBusinessRequestSuccess(''); setAgentSearchQuery(''); setAgentSearchResults([]); }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="settings-btn settings-btn-primary"
+                  disabled={businessRequestLoading}
+                >
+                  {businessRequestLoading ? 'Submitting…' : 'Submit request'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

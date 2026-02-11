@@ -12,7 +12,9 @@ import {
   Settings,
   User,
   LogOut,
+  Sparkles,
 } from 'lucide-react';
+import { ROLES } from '@/types/roles';
 import { useAuthStore } from '@/store/auth.store';
 import { logout as logoutApi } from '@/lib/api/auth';
 import { getIncomingCalls, answerCall, rejectCall } from '@/lib/api/calls';
@@ -383,6 +385,14 @@ export default function UserLayout() {
                     Profile
                   </Link>
                 </li>
+                {String(user?.role ?? '').toLowerCase() === ROLES.AGENT && (
+                  <li>
+                    <Link to="/agent" onClick={() => setMenuOpen(false)}>
+                      <Sparkles size={20} />
+                      Agent Dashboard
+                    </Link>
+                  </li>
+                )}
                 <li>
                   <Link to="/app/settings" onClick={() => setMenuOpen(false)}>
                     <Settings size={20} />
@@ -411,19 +421,27 @@ export default function UserLayout() {
       <div className="user-app-body">
         <aside className="user-app-sidebar">
           <ul className="user-app-sidebar-list">
-            {leftNav.map((item) => (
-              <li key={item.label}>
-                <Link
-                  to={item.to}
-                  className="user-app-sidebar-link"
-                >
-                  <span className="icon-wrap">
-                    <item.icon size={20} />
-                  </span>
-                  {item.label}
-                </Link>
-              </li>
-            ))}
+            {[
+              ...leftNav,
+              ...(String(user?.role ?? '').toLowerCase() === ROLES.AGENT
+                ? [{ to: '/agent', icon: Sparkles, label: 'Agent Dashboard' }]
+                : []),
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <li key={item.to + item.label}>
+                  <Link
+                    to={item.to}
+                    className="user-app-sidebar-link"
+                  >
+                    <span className="icon-wrap">
+                      <Icon size={20} />
+                    </span>
+                    {item.label}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </aside>
 

@@ -9,7 +9,8 @@ export function RoleGuard({ children, allowedRoles = [] }) {
     return <Navigate to="/auth/login" replace />;
   }
 
-  const hasRole = allowedRoles.includes(user.role);
+  const userRole = String(user.role ?? '').toLowerCase();
+  const hasRole = allowedRoles.some((r) => String(r).toLowerCase() === userRole);
   if (!hasRole) {
     return <Navigate to="/" replace />;
   }

@@ -1,6 +1,16 @@
 import { api } from './client';
 
 /**
+ * Request to become a business (user selects an agent; agent sees request in dashboard).
+ * POST /api/v1/users/me/business-requests
+ * Body: { businessName, ownerPhone, category?, region?, district?, ward?, street?, description?, agentCode }
+ */
+export async function createBusinessRequest(body) {
+  const { data } = await api.post('/users/me/business-requests', body);
+  return data?.data ?? data;
+}
+
+/**
  * Get current user profile (auth required)
  * GET /api/v1/users/me
  */
