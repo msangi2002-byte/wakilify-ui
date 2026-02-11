@@ -6195,9 +6195,11 @@
   flex-direction: column;
   gap: 12px;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .messages-bubble {
+  position: relative;
   max-width: 75%;
   padding: 10px 14px;
   border-radius: 18px;
@@ -6288,37 +6290,193 @@
   cursor: not-allowed;
 }
 
-.messages-chat-voice-stop {
+/* WhatsApp/Instagram style voice recording bar */
+.messages-voice-recording-bar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  background: #f0f9f4;
+  border: 1px solid #25d366;
   border-radius: 24px;
-  background: #fee2e2;
-  color: #dc2626;
+}
+.messages-voice-waveform {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 28px;
+}
+.messages-voice-bar {
+  width: 3px;
+  height: 12px;
+  background: #25d366;
+  border-radius: 2px;
+  animation: messages-voice-pulse 0.6s ease-in-out infinite alternate;
+}
+@keyframes messages-voice-pulse {
+  0% { height: 6px; opacity: 0.6; }
+  100% { height: 24px; opacity: 1; }
+}
+.messages-voice-timer {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #0d0d0d;
+  min-width: 36px;
+}
+.messages-voice-hint {
+  font-size: 0.8125rem;
+  color: #65676b;
+  flex: 1;
+}
+.messages-voice-send-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #25d366;
+  color: #fff;
   border: none;
   cursor: pointer;
-  font-size: 0.875rem;
-  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
 }
-.messages-chat-voice-stop:hover {
-  background: #fecaca;
+.messages-voice-send-btn:hover {
+  background: #20bd5a;
+}
+.messages-voice-cancel-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: transparent;
+  color: #65676b;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+.messages-voice-cancel-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: #0d0d0d;
 }
 
 .messages-voice-wrap {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  min-width: 200px;
+  min-width: 180px;
+  max-width: 260px;
 }
 .messages-voice-player {
   width: 100%;
-  max-width: 260px;
-  height: 40px;
+  height: 36px;
   outline: none;
+  border-radius: 8px;
+}
+.messages-voice-player::-webkit-media-controls-panel {
+  background: rgba(0, 0, 0, 0.05);
+}
+.messages-bubble.from-me .messages-voice-player::-webkit-media-controls-panel {
+  background: rgba(255, 255, 255, 0.15);
 }
 .messages-voice-time {
   margin-top: 2px;
+  font-size: 0.7rem;
+  opacity: 0.85;
+}
+
+.messages-reply-preview {
+  display: block;
+  padding: 6px 10px;
+  margin: -4px -10px 6px -10px;
+  background: rgba(0, 0, 0, 0.1);
+  border-left: 3px solid #7c3aed;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+.messages-reply-name {
+  display: block;
+  font-weight: 600;
+  color: #7c3aed;
+}
+.messages-reply-text {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: inherit;
+  opacity: 0.9;
+}
+.messages-bubble-reply-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  padding: 4px;
+  border: none;
+  background: rgba(0, 0, 0, 0.1);
+  color: inherit;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0.7;
+  display: none;
+}
+.messages-bubble:hover .messages-bubble-reply-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.messages-bubble-reply-btn:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.messages-reply-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #f3e8ff;
+  border-top: 1px solid #e4e6eb;
+}
+.messages-reply-bar-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+.messages-reply-bar-icon {
+  color: #7c3aed;
+  flex-shrink: 0;
+}
+.messages-reply-bar-name {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #7c3aed;
+}
+.messages-reply-bar-text {
+  display: block;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #374151;
+}
+.messages-reply-bar-cancel {
+  padding: 4px;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.messages-reply-bar-cancel:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #374151;
 }
 
 .messages-chat-empty {

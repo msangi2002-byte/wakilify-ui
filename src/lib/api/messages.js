@@ -36,11 +36,10 @@ export async function uploadMessageMedia(file) {
 }
 
 /**
- * Send a message (text or voice note).
+ * Send a message (text, voice note, or reply).
  * POST /api/v1/messages
- * Body: { recipientId, content?, type?, mediaUrl? }
- * - type: 'TEXT' | 'VOICE' | 'IMAGE' | 'VIDEO' | 'DOCUMENT'
- * - For voice: type 'VOICE', mediaUrl from uploadMessageMedia, content can be ''
+ * Body: { recipientId, content?, type?, mediaUrl?, replyToId? }
+ * - replyToId: message ID you're replying to (optional)
  */
 export async function sendMessage(recipientId, content, options = {}) {
   const body = {
@@ -48,6 +47,7 @@ export async function sendMessage(recipientId, content, options = {}) {
     content: content ?? '',
     ...(options.type && { type: options.type }),
     ...(options.mediaUrl && { mediaUrl: options.mediaUrl }),
+    ...(options.replyToId && { replyToId: options.replyToId }),
   };
   const { data } = await api.post('/messages', body);
   return data?.data ?? data;

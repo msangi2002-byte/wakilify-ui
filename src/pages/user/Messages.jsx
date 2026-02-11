@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Send, ArrowLeft, Phone, Video, Mic, Square } from 'lucide-react';
+import { Send, ArrowLeft, Phone, Video, Mic, Square, Reply, X } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
 import { getConversations, getConversation, sendMessage, markConversationRead, uploadMessageMedia } from '@/lib/api/messages';
 import { initiateCall } from '@/lib/api/calls';
@@ -21,8 +21,11 @@ export default function Messages() {
   const [calling, setCalling] = useState(null);
   const [recording, setRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [replyTo, setReplyTo] = useState(null);
   const mediaRecorderRef = useRef(null);
   const recordingIntervalRef = useRef(null);
+  const messagesEndRef = useRef(null);
+  const pendingVoiceActionRef = useRef('send');
 
   const loadConversations = useCallback(async () => {
     try {
@@ -63,7 +66,8 @@ export default function Messages() {
         ...m,
         isMe: String(m.senderId || m.sender?.id || '') === String(currentUserId || '') || m.isMe,
       }));
-      setMessages(withIsMe.reverse());
+      const oldestFirst = [...withIsMe].reverse();
+      setMessages(oldestFirst);
       if (!isBackgroundRefresh) loadConversations();
     } catch {
       if (!isBackgroundRefresh) setMessages([]);
@@ -75,6 +79,10 @@ export default function Messages() {
   useEffect(() => {
     if (selectedUser) loadMessages(selectedUser.id);
   }, [selectedUser?.id, loadMessages]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   // Real-time chat: poll messages for open conversation so new messages appear automatically
   useEffect(() => {
@@ -97,12 +105,15 @@ export default function Messages() {
     setSending(true);
     const text = draft.trim();
     setDraft('');
+    const replyToId = replyTo?.id;
+    setReplyTo(null);
     try {
-      const msg = await sendMessage(selectedUser.id, text);
+      const msg = await sendMessage(selectedUser.id, text, replyToId ? { replyToId } : {});
       setMessages((prev) => [...prev, { ...msg, isMe: true }]);
       loadConversations();
     } catch {
       setDraft(text);
+      if (replyToId) setReplyTo({ id: replyToId, content: text, senderName: currentUser?.name });
     } finally {
       setSending(false);
     }
@@ -118,13 +129,16 @@ export default function Messages() {
       recorder.ondataavailable = (e) => e.data.size > 0 && chunks.push(e.data);
       recorder.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
+        if (pendingVoiceActionRef.current === 'cancel') return;
         if (chunks.length === 0) return;
         const blob = new Blob(chunks, { type: mimeType });
         const file = new File([blob], `voice-${Date.now()}.webm`, { type: blob.type });
+        const replyToId = replyTo?.id;
+        setReplyTo(null);
         setSending(true);
         try {
           const url = await uploadMessageMedia(file);
-          const msg = await sendMessage(selectedUser.id, '', { type: 'VOICE', mediaUrl: url });
+          const msg = await sendMessage(selectedUser.id, '', { type: 'VOICE', mediaUrl: url, ...(replyToId && { replyToId }) });
           setMessages((prev) => [...prev, { ...msg, isMe: true }]);
           loadConversations();
         } catch {
@@ -142,15 +156,30 @@ export default function Messages() {
       console.error('Microphone access failed:', err);
       alert('Cannot access microphone. Allow microphone permission for voice notes.');
     }
-  }, [selectedUser?.id, recording, sending]);
+  }, [selectedUser?.id, recording, sending, replyTo?.id]);
 
   const stopRecording = useCallback(() => {
     if (!recording || !mediaRecorderRef.current?.recorder) return;
+    pendingVoiceActionRef.current = 'send';
     if (recordingIntervalRef.current) {
       clearInterval(recordingIntervalRef.current);
       recordingIntervalRef.current = null;
     }
     mediaRecorderRef.current.recorder.stop();
+    mediaRecorderRef.current = null;
+    setRecording(false);
+    setRecordingSeconds(0);
+  }, [recording]);
+
+  const cancelRecording = useCallback(() => {
+    if (!recording || !mediaRecorderRef.current?.recorder) return;
+    pendingVoiceActionRef.current = 'cancel';
+    if (recordingIntervalRef.current) {
+      clearInterval(recordingIntervalRef.current);
+      recordingIntervalRef.current = null;
+    }
+    mediaRecorderRef.current.recorder.stop();
+    mediaRecorderRef.current.stream?.getTracks().forEach((t) => t.stop());
     mediaRecorderRef.current = null;
     setRecording(false);
     setRecordingSeconds(0);
@@ -290,6 +319,12 @@ export default function Messages() {
               ) : (
                 messages.map((msg) => (
                   <div key={msg.id} className={`messages-bubble ${msg.isMe ? 'from-me' : ''}`}>
+                    {msg.replyTo && (
+                      <div className="messages-reply-preview">
+                        <span className="messages-reply-name">{msg.replyTo.senderName}</span>
+                        <span className="messages-reply-text">{msg.replyTo.content || '📎 Media'}</span>
+                      </div>
+                    )}
                     {(msg.type === 'VOICE' && msg.mediaUrl) ? (
                       <div className="messages-voice-wrap">
                         <audio controls src={msg.mediaUrl} className="messages-voice-player" />
@@ -305,44 +340,88 @@ export default function Messages() {
                         </span>
                       </>
                     )}
+                    <button
+                      type="button"
+                      className="messages-bubble-reply-btn"
+                      onClick={() => setReplyTo({ id: msg.id, content: msg.content || (msg.type === 'VOICE' ? 'Voice note' : 'Media'), senderName: msg.senderName })}
+                      aria-label="Reply"
+                      title="Reply"
+                    >
+                      <Reply size={14} />
+                    </button>
                   </div>
                 ))
               )}
+              <div ref={messagesEndRef} />
             </div>
+            {replyTo && (
+              <div className="messages-reply-bar">
+                <div className="messages-reply-bar-content">
+                  <Reply size={16} className="messages-reply-bar-icon" />
+                  <div>
+                    <span className="messages-reply-bar-name">{replyTo.senderName}</span>
+                    <span className="messages-reply-bar-text">{replyTo.content}</span>
+                  </div>
+                </div>
+                <button type="button" className="messages-reply-bar-cancel" onClick={() => setReplyTo(null)} aria-label="Cancel reply">
+                  <X size={18} />
+                </button>
+              </div>
+            )}
             <div className="messages-chat-input-wrap">
               {recording ? (
-                <button
-                  type="button"
-                  className="messages-chat-voice-stop"
-                  onClick={stopRecording}
-                  aria-label="Stop recording"
-                >
-                  <Square size={20} fill="currentColor" />
-                  <span>{recordingSeconds}s</span>
-                </button>
+                <div className="messages-voice-recording-bar">
+                  <div className="messages-voice-waveform">
+                    {[...Array(24)].map((_, i) => (
+                      <span key={i} className="messages-voice-bar" style={{ animationDelay: `${i * 0.04}s` }} />
+                    ))}
+                  </div>
+                  <span className="messages-voice-timer">
+                    {Math.floor(recordingSeconds / 60)}:{(recordingSeconds % 60).toString().padStart(2, '0')}
+                  </span>
+                  <span className="messages-voice-hint">Tap to send</span>
+                  <button
+                    type="button"
+                    className="messages-voice-send-btn"
+                    onClick={stopRecording}
+                    aria-label="Send voice note"
+                  >
+                    <Send size={22} />
+                  </button>
+                  <button
+                    type="button"
+                    className="messages-voice-cancel-btn"
+                    onClick={cancelRecording}
+                    aria-label="Cancel"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
               ) : (
-                <button
-                  type="button"
-                  className="messages-chat-voice-btn"
-                  onClick={startRecording}
-                  disabled={sending}
-                  title="Voice note"
-                  aria-label="Record voice note"
-                >
-                  <Mic size={22} />
-                </button>
+                <>
+                  <button
+                    type="button"
+                    className="messages-chat-voice-btn"
+                    onClick={startRecording}
+                    disabled={sending}
+                    title="Voice note"
+                    aria-label="Record voice note"
+                  >
+                    <Mic size={22} />
+                  </button>
+                  <input
+                    type="text"
+                    className="messages-chat-input"
+                    placeholder="Type a message..."
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
+                  />
+                  <button type="button" className="messages-chat-send" onClick={handleSend} disabled={!draft.trim() || sending} aria-label="Send">
+                    <Send size={20} />
+                  </button>
+                </>
               )}
-              <input
-                type="text"
-                className="messages-chat-input"
-                placeholder="Type a message..."
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
-              />
-              <button type="button" className="messages-chat-send" onClick={handleSend} disabled={!draft.trim() || sending} aria-label="Send">
-                <Send size={20} />
-              </button>
             </div>
           </>
         ) : (
