@@ -6266,6 +6266,61 @@
   background: #6d28d9;
 }
 
+.messages-chat-voice-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #e4e6eb;
+  color: #5f6368;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+.messages-chat-voice-btn:hover:not(:disabled) {
+  background: #d8dadf;
+  color: #7c3aed;
+}
+.messages-chat-voice-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.messages-chat-voice-stop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 24px;
+  background: #fee2e2;
+  color: #dc2626;
+  border: none;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.messages-chat-voice-stop:hover {
+  background: #fecaca;
+}
+
+.messages-voice-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 200px;
+}
+.messages-voice-player {
+  width: 100%;
+  max-width: 260px;
+  height: 40px;
+  outline: none;
+}
+.messages-voice-time {
+  margin-top: 2px;
+}
+
 .messages-chat-empty {
   flex: 1;
   display: flex;

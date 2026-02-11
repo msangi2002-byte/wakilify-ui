@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Send, ArrowLeft, Phone, Video } from 'lucide-react';
+import { Send, ArrowLeft, Phone, Video, Mic, Square } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
-import { getConversations, getConversation, sendMessage, markConversationRead } from '@/lib/api/messages';
+import { getConversations, getConversation, sendMessage, markConversationRead, uploadMessageMedia } from '@/lib/api/messages';
 import { initiateCall } from '@/lib/api/calls';
 import { UserProfileMenu } from '@/components/ui/UserProfileMenu';
 import { formatPostTime } from '@/lib/utils/dateUtils';
@@ -19,6 +19,10 @@ export default function Messages() {
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [calling, setCalling] = useState(null);
+  const [recording, setRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const mediaRecorderRef = useRef(null);
+  const recordingIntervalRef = useRef(null);
 
   const loadConversations = useCallback(async () => {
     try {
@@ -103,6 +107,64 @@ export default function Messages() {
       setSending(false);
     }
   };
+
+  const startRecording = useCallback(async () => {
+    if (!selectedUser?.id || recording || sending) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
+      const recorder = new MediaRecorder(stream);
+      const chunks = [];
+      recorder.ondataavailable = (e) => e.data.size > 0 && chunks.push(e.data);
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        if (chunks.length === 0) return;
+        const blob = new Blob(chunks, { type: mimeType });
+        const file = new File([blob], `voice-${Date.now()}.webm`, { type: blob.type });
+        setSending(true);
+        try {
+          const url = await uploadMessageMedia(file);
+          const msg = await sendMessage(selectedUser.id, '', { type: 'VOICE', mediaUrl: url });
+          setMessages((prev) => [...prev, { ...msg, isMe: true }]);
+          loadConversations();
+        } catch {
+          // ignore
+        } finally {
+          setSending(false);
+        }
+      };
+      recorder.start(1000);
+      mediaRecorderRef.current = { recorder, stream };
+      setRecording(true);
+      setRecordingSeconds(0);
+      recordingIntervalRef.current = setInterval(() => setRecordingSeconds((s) => s + 1), 1000);
+    } catch (err) {
+      console.error('Microphone access failed:', err);
+      alert('Cannot access microphone. Allow microphone permission for voice notes.');
+    }
+  }, [selectedUser?.id, recording, sending]);
+
+  const stopRecording = useCallback(() => {
+    if (!recording || !mediaRecorderRef.current?.recorder) return;
+    if (recordingIntervalRef.current) {
+      clearInterval(recordingIntervalRef.current);
+      recordingIntervalRef.current = null;
+    }
+    mediaRecorderRef.current.recorder.stop();
+    mediaRecorderRef.current = null;
+    setRecording(false);
+    setRecordingSeconds(0);
+  }, [recording]);
+
+  useEffect(() => {
+    return () => {
+      if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+      if (mediaRecorderRef.current?.recorder?.state === 'recording') {
+        mediaRecorderRef.current.recorder.stop();
+        mediaRecorderRef.current.stream?.getTracks().forEach((t) => t.stop());
+      }
+    };
+  }, []);
 
   const handleCall = async (type) => {
     if (!selectedUser?.id || calling) return;
@@ -228,15 +290,48 @@ export default function Messages() {
               ) : (
                 messages.map((msg) => (
                   <div key={msg.id} className={`messages-bubble ${msg.isMe ? 'from-me' : ''}`}>
-                    <span className="messages-bubble-text">{msg.content}</span>
-                    <span className="messages-bubble-time">
-                      {msg.createdAt ? formatPostTime(msg.createdAt) : ''}
-                    </span>
+                    {(msg.type === 'VOICE' && msg.mediaUrl) ? (
+                      <div className="messages-voice-wrap">
+                        <audio controls src={msg.mediaUrl} className="messages-voice-player" />
+                        <span className="messages-bubble-time messages-voice-time">
+                          {msg.createdAt ? formatPostTime(msg.createdAt) : ''}
+                        </span>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="messages-bubble-text">{msg.content}</span>
+                        <span className="messages-bubble-time">
+                          {msg.createdAt ? formatPostTime(msg.createdAt) : ''}
+                        </span>
+                      </>
+                    )}
                   </div>
                 ))
               )}
             </div>
             <div className="messages-chat-input-wrap">
+              {recording ? (
+                <button
+                  type="button"
+                  className="messages-chat-voice-stop"
+                  onClick={stopRecording}
+                  aria-label="Stop recording"
+                >
+                  <Square size={20} fill="currentColor" />
+                  <span>{recordingSeconds}s</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="messages-chat-voice-btn"
+                  onClick={startRecording}
+                  disabled={sending}
+                  title="Voice note"
+                  aria-label="Record voice note"
+                >
+                  <Mic size={22} />
+                </button>
+              )}
               <input
                 type="text"
                 className="messages-chat-input"

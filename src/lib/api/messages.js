@@ -22,12 +22,34 @@ export async function getConversation(otherUserId, params = {}) {
 }
 
 /**
- * Send a message
- * POST /api/v1/messages
- * Body: { recipientId, content }
+ * Upload voice note (or message media). Returns { url }.
+ * POST /api/v1/messages/upload (multipart: file)
  */
-export async function sendMessage(recipientId, content) {
-  const { data } = await api.post('/messages', { recipientId, content });
+export async function uploadMessageMedia(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const { data } = await api.post('/messages/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  const out = data?.data ?? data;
+  return out?.url ?? out;
+}
+
+/**
+ * Send a message (text or voice note).
+ * POST /api/v1/messages
+ * Body: { recipientId, content?, type?, mediaUrl? }
+ * - type: 'TEXT' | 'VOICE' | 'IMAGE' | 'VIDEO' | 'DOCUMENT'
+ * - For voice: type 'VOICE', mediaUrl from uploadMessageMedia, content can be ''
+ */
+export async function sendMessage(recipientId, content, options = {}) {
+  const body = {
+    recipientId,
+    content: content ?? '',
+    ...(options.type && { type: options.type }),
+    ...(options.mediaUrl && { mediaUrl: options.mediaUrl }),
+  };
+  const { data } = await api.post('/messages', body);
   return data?.data ?? data;
 }
 
