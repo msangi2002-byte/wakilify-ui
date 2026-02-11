@@ -137,7 +137,7 @@ export default function LiveViewer() {
       if (localPreviewRef.current) localPreviewRef.current.srcObject = stream;
       setTimeout(() => setRetryCount((c) => c + 1), 3000);
     } catch (e) {
-      setWhipError(e?.message || 'Failed to start camera broadcast');
+      setWhipError(e?.message || 'Imeshindwa kuanza kamera. Jaribu tena au tumia OBS hapa chini.');
     } finally {
       setWhipStarting(false);
     }
