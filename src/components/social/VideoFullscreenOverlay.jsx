@@ -4,7 +4,7 @@
  * Optional onSwipeUp / onSwipeDown to go to next/previous video (scroll up = next).
  */
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Play, ThumbsUp, MessageCircle, Share2, Bookmark, ChevronUp, ChevronDown } from 'lucide-react';
+import { Play, ThumbsUp, MessageCircle, Share2, Bookmark } from 'lucide-react';
 
 const SWIPE_THRESHOLD = 50;
 
@@ -29,6 +29,7 @@ export function VideoFullscreenOverlay({
   hasPrev = false,
 }) {
   const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
   const videoRef = useRef(null);
   const [liked, setLiked] = useState(!!initialLiked);
   const [likesCount, setLikesCount] = useState(initialLikesCount);
@@ -68,6 +69,7 @@ export function VideoFullscreenOverlay({
   useEffect(() => {
     if (!isOpen) {
       setPlaying(false);
+      setProgress(0);
       if (videoRef.current) {
         videoRef.current.pause();
       }
@@ -76,7 +78,23 @@ export function VideoFullscreenOverlay({
     setLiked(!!initialLiked);
     setLikesCount(initialLikesCount ?? 0);
     setSaved(!!initialSaved);
-  }, [isOpen, initialLiked, initialLikesCount, initialSaved]);
+    setProgress(0);
+    const t = setTimeout(() => {
+      const v = videoRef.current;
+      if (v && videoUrl) {
+        v.play().then(() => setPlaying(true)).catch(() => {});
+      }
+    }, 100);
+    return () => clearTimeout(t);
+  }, [isOpen, initialLiked, initialLikesCount, initialSaved, videoUrl]);
+
+  useEffect(() => {
+    if (!isOpen || !videoRef.current) return;
+    const v = videoRef.current;
+    const onTimeUpdate = () => setProgress(v.duration ? (v.currentTime / v.duration) * 100 : 0);
+    v.addEventListener('timeupdate', onTimeUpdate);
+    return () => v.removeEventListener('timeupdate', onTimeUpdate);
+  }, [isOpen, videoUrl]);
 
   const handlePlayPause = () => {
     const v = videoRef.current;
@@ -120,24 +138,6 @@ export function VideoFullscreenOverlay({
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      <div className="video-fullscreen-topbar">
-        <button type="button" className="video-fullscreen-close" onClick={onClose} aria-label="Close">
-          <X size={24} />
-        </button>
-        <span className="video-fullscreen-title">{author?.name ?? 'Post'}</span>
-      </div>
-
-      {hasPrev && (
-        <button type="button" className="video-fullscreen-nav video-fullscreen-nav-prev" onClick={goPrev} aria-label="Previous video">
-          <ChevronDown size={32} />
-        </button>
-      )}
-      {hasNext && (
-        <button type="button" className="video-fullscreen-nav video-fullscreen-nav-next" onClick={goNext} aria-label="Next video">
-          <ChevronUp size={32} />
-        </button>
-      )}
-
       <div className="video-fullscreen-video-wrap" onClick={handlePlayPause}>
         <video
           ref={videoRef}
@@ -155,6 +155,10 @@ export function VideoFullscreenOverlay({
             <Play size={72} fill="currentColor" />
           </div>
         )}
+      </div>
+
+      <div className="video-fullscreen-progress-wrap">
+        <div className="video-fullscreen-progress-bar" style={{ width: `${progress}%` }} />
       </div>
 
       <div className="video-fullscreen-bottombar">

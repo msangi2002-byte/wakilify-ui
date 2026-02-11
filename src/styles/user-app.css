@@ -3526,10 +3526,10 @@
   opacity: 0.9;
 }
 
-/* Video fullscreen overlay: fills center section only (not sidebars), top bar, video, bottom bar */
+/* Video fullscreen overlay: below top nav, above bottom nav on mobile, video fits (contain) */
 .video-fullscreen-overlay {
   position: fixed;
-  top: 0;
+  top: calc(56px + env(safe-area-inset-top, 0));
   bottom: 0;
   left: 50%;
   transform: translateX(-50%);
@@ -3539,70 +3539,12 @@
   background: #000;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
 }
 
-.video-fullscreen-topbar {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  padding-top: calc(12px + env(safe-area-inset-top, 0));
-  background: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%);
-  color: #fff;
-}
-
-.video-fullscreen-close {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border: none;
-  background: rgba(255,255,255,0.15);
-  color: #fff;
-  border-radius: 50%;
-  cursor: pointer;
-}
-
-.video-fullscreen-close:hover {
-  background: rgba(255,255,255,0.25);
-}
-
-.video-fullscreen-title {
-  font-weight: 600;
-  font-size: 1rem;
-}
-
-.video-fullscreen-nav {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 2;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.video-fullscreen-nav:hover {
-  background: rgba(255, 255, 255, 0.35);
-}
-
-.video-fullscreen-nav-prev {
-  bottom: 100px;
-}
-
-.video-fullscreen-nav-next {
-  top: 80px;
+@media (max-width: 768px) {
+  .video-fullscreen-overlay {
+    bottom: calc(56px + env(safe-area-inset-bottom, 0));
+  }
 }
 
 .video-fullscreen-video-wrap {
@@ -3635,6 +3577,22 @@
   background: rgba(0,0,0,0.3);
   color: #fff;
   pointer-events: none;
+}
+
+.video-fullscreen-progress-wrap {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(255,255,255,0.25);
+  z-index: 2;
+}
+
+.video-fullscreen-progress-bar {
+  height: 100%;
+  background: #fff;
+  transition: width 0.15s linear;
 }
 
 .video-fullscreen-bottombar {
@@ -3726,6 +3684,12 @@
   width: 72px;
   height: 72px;
   opacity: 0.95;
+}
+
+.feed-post-video-play-overlay-hidden {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
 }
 
 /* Right sidebar */

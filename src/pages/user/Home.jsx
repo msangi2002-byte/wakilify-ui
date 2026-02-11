@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { ImagePlus, Users, Video, MoreHorizontal, Plus, ThumbsUp, MessageCircle, Share2, Play } from 'lucide-react';
 import { UserProfileMenu } from '@/components/ui/UserProfileMenu';
@@ -97,6 +97,9 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], li
   const [replyText, setReplyText] = useState('');
   const [commentsCount, setCommentsCount] = useState(initialCommentsCount);
   const [videoFullscreenOpen, setVideoFullscreenOpen] = useState(false);
+  const [feedVideoPlaying, setFeedVideoPlaying] = useState(false);
+  const feedVideoRef = useRef(null);
+  const feedVideoWrapRef = useRef(null);
   const shortDesc = description && description.length > 120 ? description.slice(0, 120) + '...' : description;
   const showSeeMore = description && description.length > 120 && !expanded;
   const rawVideoUrl = media?.length === 1 && media[0]?.isVideo
@@ -104,6 +107,28 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], li
     : null;
   const videoUrl = typeof rawVideoUrl === 'string' && rawVideoUrl.trim() ? rawVideoUrl.trim() : null;
   const hasSingleVideo = !!videoUrl && media?.length === 1 && media[0]?.isVideo;
+
+  useEffect(() => {
+    if (!hasSingleVideo || !feedVideoWrapRef.current || !feedVideoRef.current) return;
+    const wrap = feedVideoWrapRef.current;
+    const video = feedVideoRef.current;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const e = entries[0];
+        if (!e || !video) return;
+        if (e.isIntersecting) {
+          video.muted = true;
+          video.play().then(() => setFeedVideoPlaying(true)).catch(() => {});
+        } else {
+          video.pause();
+          setFeedVideoPlaying(false);
+        }
+      },
+      { rootMargin: '0px', threshold: 0.25 }
+    );
+    observer.observe(wrap);
+    return () => observer.disconnect();
+  }, [hasSingleVideo, videoUrl]);
 
   const handleLikeClick = async () => {
     if (!id || likeLoading) return;
@@ -380,15 +405,27 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], li
         <div className="feed-post-body">
           {hasSingleVideo ? (
             <div
+              ref={feedVideoWrapRef}
               className="feed-post-video-wrap"
               onClick={() => { if (onOpenVideo != null && videoIndex != null) onOpenVideo(videoIndex); else setVideoFullscreenOpen(true); }}
               role="button"
               tabIndex={0}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (onOpenVideo != null && videoIndex != null) onOpenVideo(videoIndex); else setVideoFullscreenOpen(true); } }}
+              onFocus={() => { const v = feedVideoRef.current; if (v) { v.muted = true; v.play().catch(() => {}); } }}
               aria-label="Play video"
             >
-              <video src={videoUrl} playsInline className="feed-post-video" muted loop onError={() => {}} />
-              <div className="feed-post-video-play-overlay">
+              <video
+                ref={feedVideoRef}
+                src={videoUrl}
+                playsInline
+                className="feed-post-video"
+                muted
+                loop
+                onError={() => {}}
+                onPlay={() => setFeedVideoPlaying(true)}
+                onPause={() => setFeedVideoPlaying(false)}
+              />
+              <div className={`feed-post-video-play-overlay ${feedVideoPlaying ? 'feed-post-video-play-overlay-hidden' : ''}`}>
                 <Play size={72} className="feed-post-video-play-icon" fill="currentColor" />
               </div>
             </div>
