@@ -8,7 +8,7 @@ function Avatar({ host, size = 56 }) {
   const initial = name.charAt(0).toUpperCase();
   return (
     <div
-      className="rounded-full overflow-hidden flex items-center justify-center text-white font-semibold shrink-0 ring-2 ring-white/80 ring-offset-2 ring-offset-[#0f0f0f]"
+      className="rounded-full overflow-hidden flex items-center justify-center text-white font-semibold shrink-0 ring-2 ring-white/80 ring-offset-2 ring-offset-white"
       style={{
         width: size,
         height: size,
@@ -38,7 +38,7 @@ export function LiveCard({ live, index = 0 }) {
     >
       <Link
         to={`/app/live/${live?.id}`}
-        className="block rounded-2xl overflow-hidden bg-[#1a1a1a] border border-white/10 hover:border-pink-500/50 transition-all duration-300 group"
+        className="block rounded-2xl overflow-hidden bg-white border border-gray-200 hover:border-pink-500/50 hover:shadow-lg transition-all duration-300 group"
       >
         {/* Thumbnail area – gradient or thumbnail */}
         <div className="relative aspect-[4/5] min-h-[200px] bg-gradient-to-br from-violet-900/40 via-[#1a1a1a] to-fuchsia-900/30 overflow-hidden">
