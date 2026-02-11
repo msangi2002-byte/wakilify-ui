@@ -3526,7 +3526,7 @@
   opacity: 0.9;
 }
 
-/* Video fullscreen overlay: below top nav, above bottom nav on mobile, video fits (contain) */
+/* Video fullscreen overlay: reels-style layout (video + right actions + bottom-left info) */
 .video-fullscreen-overlay {
   position: fixed;
   top: calc(56px + env(safe-area-inset-top, 0));
@@ -3548,19 +3548,20 @@
 }
 
 .video-fullscreen-video-wrap {
-  flex: 1;
-  position: relative;
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 0;
   cursor: pointer;
+  overflow: hidden;
 }
 
 .video-fullscreen-video {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
+  object-position: center;
   display: block;
 }
 
@@ -3574,18 +3575,116 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0,0,0,0.3);
+  background: rgba(0,0,0,0.25);
   color: #fff;
   pointer-events: none;
 }
 
+/* Reels-style: right-side vertical action bar */
+.video-fullscreen-actions-right {
+  position: absolute;
+  right: 12px;
+  bottom: 120px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.video-fullscreen-action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+}
+
+.video-fullscreen-action-btn:hover {
+  color: rgba(255,255,255,0.95);
+}
+
+.video-fullscreen-action-btn.active {
+  color: #7c3aed;
+}
+
+.video-fullscreen-action-btn svg {
+  flex-shrink: 0;
+}
+
+/* Reels-style: bottom-left author + caption */
+.video-fullscreen-info {
+  position: absolute;
+  left: 12px;
+  right: 72px;
+  bottom: 48px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+
+.video-fullscreen-info-author {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.video-fullscreen-info-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 2px solid rgba(255,255,255,0.9);
+  background: linear-gradient(135deg, #7c3aed, #d946ef);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.video-fullscreen-info-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.video-fullscreen-info-username {
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.video-fullscreen-info-caption {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.35;
+  max-height: 3em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
 .video-fullscreen-progress-wrap {
   position: absolute;
-  bottom: 0;
   left: 0;
   right: 0;
+  bottom: 0;
   height: 3px;
-  background: rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.3);
   z-index: 2;
 }
 
@@ -3593,56 +3692,6 @@
   height: 100%;
   background: #fff;
   transition: width 0.15s linear;
-}
-
-.video-fullscreen-bottombar {
-  flex-shrink: 0;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 16px;
-  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0));
-  background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
-  color: #fff;
-}
-
-.video-fullscreen-description {
-  flex: 1;
-  min-width: 0;
-  font-size: 0.9375rem;
-  line-height: 1.4;
-  max-height: 4.5em;
-  overflow-y: auto;
-}
-
-.video-fullscreen-actions {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  flex-shrink: 0;
-}
-
-.video-fullscreen-action {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  background: none;
-  border: none;
-  color: #fff;
-  cursor: pointer;
-  font-size: 0.75rem;
-  padding: 4px;
-}
-
-.video-fullscreen-action:hover {
-  color: rgba(255,255,255,0.9);
-}
-
-.video-fullscreen-action.active {
-  color: #7c3aed;
 }
 
 /* Feed video post: no native controls, center play only */

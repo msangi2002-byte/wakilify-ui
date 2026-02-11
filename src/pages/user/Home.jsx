@@ -4,6 +4,7 @@ import { ImagePlus, Users, Video, MoreHorizontal, Plus, ThumbsUp, MessageCircle,
 import { UserProfileMenu } from '@/components/ui/UserProfileMenu';
 import { CommentItem } from '@/components/social/CommentItem';
 import { VideoFullscreenOverlay } from '@/components/social/VideoFullscreenOverlay';
+import { ReelCommentsDrawer, ReelShareMenu } from '@/pages/user/Reels';
 import { useAuthStore } from '@/store/auth.store';
 import { getFeed, getPublicFeed, getStories, likePost, unlikePost, savePost, unsavePost, sharePostToStory, getComments, addComment, deleteComment, createPost, likeComment, unlikeComment } from '@/lib/api/posts';
 import { followUser, unfollowUser } from '@/lib/api/friends';
@@ -633,8 +634,17 @@ export default function Home() {
   const [storiesLoading, setStoriesLoading] = useState(true);
   const [videoOverlayOpen, setVideoOverlayOpen] = useState(false);
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
+  const [videoCommentsPostId, setVideoCommentsPostId] = useState(null);
+  const [videoSharePost, setVideoSharePost] = useState(null);
 
   const videoPosts = posts.filter(isSingleVideoPost);
+
+  useEffect(() => {
+    if (!videoOverlayOpen) {
+      setVideoCommentsPostId(null);
+      setVideoSharePost(null);
+    }
+  }, [videoOverlayOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -801,28 +811,46 @@ export default function Home() {
             else await savePost(current.id);
           } catch (_) {}
         };
+        const handleOverlayCommentCount = (postId, newCount) => {
+          setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, commentsCount: newCount } : p)));
+        };
         return (
-          <VideoFullscreenOverlay
-            key={current.id}
-            isOpen={videoOverlayOpen}
-            onClose={() => setVideoOverlayOpen(false)}
-            videoUrl={videoUrl}
-            description={current.description}
-            author={current.author}
-            postId={current.id}
-            liked={current.liked}
-            likesCount={current.likesCount}
-            commentsCount={current.commentsCount}
-            saved={current.saved}
-            onLike={handleOverlayLike}
-            onComment={() => { setVideoOverlayOpen(false); }}
-            onShare={() => setVideoOverlayOpen(false)}
-            onSave={handleOverlaySave}
-            hasNext={currentVideoIndex < videoPosts.length - 1}
-            hasPrev={currentVideoIndex > 0}
-            onSwipeUp={() => setCurrentVideoIndex((i) => Math.min(i + 1, videoPosts.length - 1))}
-            onSwipeDown={() => setCurrentVideoIndex((i) => Math.max(0, i - 1))}
-          />
+          <>
+            <VideoFullscreenOverlay
+              key={current.id}
+              isOpen={videoOverlayOpen}
+              onClose={() => setVideoOverlayOpen(false)}
+              videoUrl={videoUrl}
+              description={current.description}
+              author={current.author}
+              postId={current.id}
+              liked={current.liked}
+              likesCount={current.likesCount}
+              commentsCount={current.commentsCount}
+              saved={current.saved}
+              onLike={handleOverlayLike}
+              onComment={() => setVideoCommentsPostId(current.id)}
+              onShare={() => setVideoSharePost(current)}
+              onSave={handleOverlaySave}
+              hasNext={currentVideoIndex < videoPosts.length - 1}
+              hasPrev={currentVideoIndex > 0}
+              onSwipeUp={() => setCurrentVideoIndex((i) => Math.min(i + 1, videoPosts.length - 1))}
+              onSwipeDown={() => setCurrentVideoIndex((i) => Math.max(0, i - 1))}
+            />
+            {videoCommentsPostId && (
+              <ReelCommentsDrawer
+                postId={videoCommentsPostId}
+                onClose={() => setVideoCommentsPostId(null)}
+                onCommentCountChange={handleOverlayCommentCount}
+              />
+            )}
+            {videoSharePost && (
+              <ReelShareMenu
+                item={videoSharePost}
+                onClose={() => setVideoSharePost(null)}
+              />
+            )}
+          </>
         );
       })()}
     </>

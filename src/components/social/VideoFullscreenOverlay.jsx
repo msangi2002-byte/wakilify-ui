@@ -125,6 +125,10 @@ export function VideoFullscreenOverlay({
     } catch (_) {}
   };
 
+  const formatCount = (n) => (n >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(n));
+  const authorName = author?.name ?? author?.username ?? 'User';
+  const authorPic = author?.profilePic ?? author?.avatar;
+
   if (!isOpen) return null;
   if (!videoUrl) return null;
 
@@ -157,38 +161,52 @@ export function VideoFullscreenOverlay({
         )}
       </div>
 
-      <div className="video-fullscreen-progress-wrap">
-        <div className="video-fullscreen-progress-bar" style={{ width: `${progress}%` }} />
+      {/* Reels-style: right-side vertical actions */}
+      <div className="video-fullscreen-actions-right">
+        <button
+          type="button"
+          className={`video-fullscreen-action-btn ${liked ? 'active' : ''}`}
+          onClick={(e) => { e.stopPropagation(); handleLike(); }}
+          aria-label={liked ? 'Unlike' : 'Like'}
+        >
+          <ThumbsUp size={32} />
+          <span>{formatCount(likesCount)}</span>
+        </button>
+        <button type="button" className="video-fullscreen-action-btn" onClick={(e) => { e.stopPropagation(); onComment?.(); }} aria-label="Comment">
+          <MessageCircle size={32} />
+          <span>{formatCount(commentsCount)}</span>
+        </button>
+        <button type="button" className="video-fullscreen-action-btn" onClick={(e) => { e.stopPropagation(); onShare?.(); }} aria-label="Share">
+          <Share2 size={32} />
+          <span>Share</span>
+        </button>
+        <button
+          type="button"
+          className={`video-fullscreen-action-btn ${saved ? 'active' : ''}`}
+          onClick={(e) => { e.stopPropagation(); handleSave(); }}
+          aria-label={saved ? 'Unsave' : 'Save'}
+        >
+          <Bookmark size={28} fill={saved ? 'currentColor' : 'none'} />
+        </button>
       </div>
 
-      <div className="video-fullscreen-bottombar">
-        <div className="video-fullscreen-description">{description || 'No description.'}</div>
-        <div className="video-fullscreen-actions">
-          <button
-            type="button"
-            className={`video-fullscreen-action ${liked ? 'active' : ''}`}
-            onClick={handleLike}
-            aria-label={liked ? 'Unlike' : 'Like'}
-          >
-            <ThumbsUp size={28} />
-            <span>{likesCount >= 1000 ? `${(likesCount / 1000).toFixed(1)}K` : likesCount}</span>
-          </button>
-          <button type="button" className="video-fullscreen-action" onClick={() => { try { onComment?.(); } catch (_) {} }} aria-label="Comment">
-            <MessageCircle size={28} />
-            <span>{commentsCount >= 1000 ? `${(commentsCount / 1000).toFixed(1)}K` : commentsCount}</span>
-          </button>
-          <button type="button" className="video-fullscreen-action" onClick={() => { try { onShare?.(); } catch (_) {} }} aria-label="Share">
-            <Share2 size={28} />
-          </button>
-          <button
-            type="button"
-            className={`video-fullscreen-action ${saved ? 'active' : ''}`}
-            onClick={handleSave}
-            aria-label={saved ? 'Unsave' : 'Save'}
-          >
-            <Bookmark size={28} fill={saved ? 'currentColor' : 'none'} />
-          </button>
+      {/* Reels-style: bottom-left author + caption */}
+      <div className="video-fullscreen-info">
+        <div className="video-fullscreen-info-author">
+          <div className="video-fullscreen-info-avatar">
+            {authorPic ? (
+              <img src={authorPic} alt="" />
+            ) : (
+              <span>{authorName.charAt(0).toUpperCase()}</span>
+            )}
+          </div>
+          <span className="video-fullscreen-info-username">{authorName}</span>
         </div>
+        {description && <p className="video-fullscreen-info-caption">{description}</p>}
+      </div>
+
+      <div className="video-fullscreen-progress-wrap">
+        <div className="video-fullscreen-progress-bar" style={{ width: `${progress}%` }} />
       </div>
     </div>
   );

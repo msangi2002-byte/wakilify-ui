@@ -55,8 +55,8 @@ function Avatar({ user, size = 40, className = '' }) {
 
 const SWIPE_THRESHOLD = 50;
 
-/** Comments drawer for a reel (post). Loads comments, add new, delete, like. */
-function ReelCommentsDrawer({ postId, onClose, onCommentCountChange }) {
+/** Comments drawer for a reel (post). Loads comments, add new, delete, like. Exported for use in Home video overlay. */
+export function ReelCommentsDrawer({ postId, onClose, onCommentCountChange }) {
   const { user: currentUser } = useAuthStore();
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -186,8 +186,8 @@ function ReelCommentsDrawer({ postId, onClose, onCommentCountChange }) {
   );
 }
 
-/** Share menu for a reel: Copy link, Share to story, Repost to feed */
-function ReelShareMenu({ item, onClose }) {
+/** Share menu for a reel: Copy link, Share to story, Repost to feed. Exported for use in Home video overlay. */
+export function ReelShareMenu({ item, onClose }) {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(null); // 'copied' | 'story' | 'repost'
 
