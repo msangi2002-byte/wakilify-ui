@@ -73,6 +73,24 @@ export async function getAgentBusinessRequests(params = {}) {
 }
 
 /**
+ * Approve/Verify a business activation manually
+ * POST /api/v1/agent/businesses/:id/approve
+ */
+export async function approveBusinessRequest(businessId) {
+  const { data } = await api.post(`/agent/businesses/${businessId}/approve`);
+  return data?.data ?? data;
+}
+
+/**
+ * Cancel/Reject a business activation (if business is still pending)
+ * DELETE /api/v1/agent/businesses/:id
+ */
+export async function cancelBusinessRequest(businessId) {
+  const { data } = await api.delete(`/agent/businesses/${businessId}`);
+  return data?.data ?? data;
+}
+
+/**
  * Get my commissions
  * GET /api/v1/agent/commissions?page=0&size=20
  */

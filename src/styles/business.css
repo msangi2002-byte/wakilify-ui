@@ -1,0 +1,539 @@
+/* Business Portal – Professional Theme (WAKILIFY UI/UX Spec)
+ * Primary Colors: #3b82f6 (primary-500), #2563eb (primary-600), #1d4ed8 (primary-700)
+ * Accent: #8b5cf6 (accent-500), #7c3aed (accent-600)
+ * Success: #22c55e, #16a34a
+ * Warning: #f59e0b
+ * Error: #ef4444
+ * Neutral: #f9fafb (gray-50), #f3f4f6 (gray-100), #6b7280 (gray-500), #111827 (gray-900)
+ */
+.business-portal {
+  height: 100vh;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f9fafb;
+  color: #111827;
+  overflow: hidden;
+}
+
+.business-topbar {
+  background: linear-gradient(90deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
+  height: 64px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.business-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.business-topbar-menu {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.business-topbar-menu:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.business-sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 199;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.business-topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.2rem;
+  text-decoration: none;
+}
+
+.business-topbar-brand:hover {
+  color: #fff;
+  opacity: 0.95;
+}
+
+.business-topbar-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.business-topbar-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.95);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: background 0.2s, color 0.2s;
+}
+
+.business-topbar-link:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.business-topbar-link.active {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.business-topbar-link-primary {
+  background: #8b5cf6;
+  color: #fff;
+  font-weight: 600;
+}
+
+.business-topbar-link-primary:hover {
+  background: #7c3aed;
+  color: #fff;
+}
+
+.business-topbar-back {
+  color: rgba(255, 255, 255, 0.95);
+  text-decoration: none;
+  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.business-topbar-back:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.business-layout-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.business-sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: #ffffff;
+  border-right: 1px solid #e5e7eb;
+  padding: 24px 0;
+  -webkit-overflow-scrolling: touch;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.04);
+}
+
+.business-sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  height: 100%;
+  padding: 0 12px;
+}
+
+.business-sidebar-divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 12px 0;
+}
+
+.business-sidebar-footer {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.business-sidebar-back-btn {
+  width: 100%;
+  justify-content: flex-start;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.business-sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  color: #6b7280;
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  border-left: 3px solid transparent;
+  border-radius: 8px;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.business-sidebar-link:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.business-sidebar-link.active {
+  background: #eff6ff;
+  color: #2563eb;
+  border-left-color: #3b82f6;
+  font-weight: 600;
+}
+
+.business-sidebar-link-primary {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  color: #fff;
+  font-weight: 600;
+  border-left-color: transparent;
+  margin-top: 8px;
+}
+
+.business-sidebar-link-primary:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+  color: #fff;
+}
+
+.business-main {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 32px;
+  background: #f9fafb;
+}
+
+/* Cards */
+.business-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 24px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.business-card-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 16px 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Stats */
+.business-stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.business-stat-value.primary {
+  color: #3b82f6;
+}
+
+.business-stat-value.success {
+  color: #22c55e;
+}
+
+.business-stat-value.warning {
+  color: #f59e0b;
+}
+
+.business-stat-value.error {
+  color: #ef4444;
+}
+
+.business-stat-label {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+/* Buttons */
+.business-btn-primary {
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.business-btn-primary:hover {
+  background: #2563eb;
+}
+
+.business-btn-primary:active {
+  transform: scale(0.98);
+}
+
+.business-btn-secondary {
+  background: #8b5cf6;
+  color: #fff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+
+.business-btn-secondary:hover {
+  background: #7c3aed;
+}
+
+.business-btn-ghost {
+  background: transparent;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.business-btn-ghost:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  color: #111827;
+}
+
+/* Grid */
+.business-grid {
+  display: grid;
+  gap: 24px;
+}
+
+.business-grid-2 {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.business-grid-3 {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+/* Empty / loading */
+.business-empty {
+  text-align: center;
+  padding: 48px 24px;
+  color: #6b7280;
+  font-size: 1rem;
+}
+
+.business-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  color: #6b7280;
+}
+
+/* Form */
+.business-input {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: #111827;
+  font-size: 0.95rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.business-input::placeholder {
+  color: #9ca3af;
+}
+
+.business-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.business-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+/* Table */
+.business-table-wrap {
+  overflow-x: auto;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.business-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.business-table th,
+.business-table td {
+  padding: 14px 20px;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.business-table th {
+  color: #6b7280;
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.business-table td {
+  color: #111827;
+}
+
+.business-table tr:last-child td {
+  border-bottom: none;
+}
+
+.business-table tr:hover {
+  background: #f9fafb;
+}
+
+.business-table .status-success {
+  color: #22c55e;
+  font-weight: 600;
+}
+
+.business-table .status-warning {
+  color: #f59e0b;
+  font-weight: 600;
+}
+
+.business-table .status-error {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.business-table .status-pending {
+  color: #6b7280;
+  font-weight: 600;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .business-topbar-menu {
+    display: flex;
+  }
+
+  .business-topbar-nav {
+    display: none;
+  }
+
+  .business-sidebar-backdrop {
+    display: block;
+  }
+
+  .business-sidebar-open .business-sidebar-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .business-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    max-width: 85vw;
+    z-index: 200;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+  }
+
+  .business-sidebar-open .business-sidebar {
+    transform: translateX(0);
+  }
+
+  .business-sidebar-nav {
+    padding-top: 16px;
+  }
+
+  .business-main {
+    padding: 20px 16px;
+  }
+
+  .business-grid-2,
+  .business-grid-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .business-card {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .business-main {
+    padding: 16px 12px;
+  }
+
+  .business-card {
+    padding: 16px;
+  }
+
+  .business-stat-value {
+    font-size: 1.75rem;
+  }
+}

@@ -1,288 +1,304 @@
 import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
-import { Building2 } from 'lucide-react';
-import { activateBusiness } from '@/lib/api/agent';
+import { Building2, CheckCircle2, Clock, RefreshCw, AlertCircle, XCircle, ShieldCheck } from 'lucide-react';
+import { getAgentBusinesses, approveBusinessRequest, cancelBusinessRequest } from '@/lib/api/agent';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import '@/styles/agent.css';
 
+function formatDate(iso) {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined, {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return iso;
+  }
+}
+
 export default function Activate() {
-  const location = useLocation();
-  const fromRequest = location.state?.fromRequest;
-  const [businessName, setBusinessName] = useState(fromRequest?.businessName ?? '');
-  const [ownerName, setOwnerName] = useState(fromRequest?.ownerName ?? '');
-  const [ownerPhone, setOwnerPhone] = useState(fromRequest?.ownerPhone ?? '');
-  const [ownerEmail, setOwnerEmail] = useState(fromRequest?.ownerEmail ?? '');
-  const [ownerPassword, setOwnerPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [category, setCategory] = useState(fromRequest?.category ?? '');
-  const [region, setRegion] = useState(fromRequest?.region ?? '');
-  const [district, setDistrict] = useState(fromRequest?.district ?? '');
-  const [paymentPhone, setPaymentPhone] = useState(fromRequest?.paymentPhone ?? '');
-  const [ward, setWard] = useState(fromRequest?.ward ?? '');
-  const [street, setStreet] = useState(fromRequest?.street ?? '');
-  const [description, setDescription] = useState(fromRequest?.description ?? '');
-  const [loading, setLoading] = useState(false);
+  const [businesses, setBusinesses] = useState({ content: [] });
+  const [loadingBusinesses, setLoadingBusinesses] = useState(true);
+  const [approvingId, setApprovingId] = useState(null);
+  const [cancellingId, setCancellingId] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    if (fromRequest) {
-      if (fromRequest.businessName) setBusinessName(fromRequest.businessName);
-      if (fromRequest.ownerName) setOwnerName(fromRequest.ownerName);
-      if (fromRequest.ownerPhone) setOwnerPhone(fromRequest.ownerPhone);
-      if (fromRequest.ownerEmail) setOwnerEmail(fromRequest.ownerEmail);
-      if (fromRequest.category) setCategory(fromRequest.category);
-      if (fromRequest.region) setRegion(fromRequest.region);
-      if (fromRequest.district) setDistrict(fromRequest.district);
-      if (fromRequest.paymentPhone) setPaymentPhone(fromRequest.paymentPhone);
-      if (fromRequest.ward) setWard(fromRequest.ward);
-      if (fromRequest.street) setStreet(fromRequest.street);
-      if (fromRequest.description) setDescription(fromRequest.description);
-    }
-  }, [fromRequest]);
+    loadBusinesses();
+  }, []);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const loadBusinesses = async () => {
+    setLoadingBusinesses(true);
     setError('');
-    setSuccess('');
-    if (!businessName.trim() || !ownerName.trim() || !ownerPhone.trim() || !category.trim() || !region.trim() || !district.trim() || !paymentPhone.trim()) {
-      setError('Business name, owner name, owner phone, category, region, district and payment phone are required.');
-      return;
-    }
-    if (!ownerPassword || ownerPassword.length < 6) {
-      setError('Owner password is required (min 6 characters) so they can log in after payment.');
-      return;
-    }
-    if (ownerPassword !== confirmPassword) {
-      setError('Password and confirm password do not match.');
-      return;
-    }
-    setLoading(true);
     try {
-      await activateBusiness({
-        businessName: businessName.trim(),
-        ownerName: ownerName.trim(),
-        ownerPhone: ownerPhone.trim(),
-        ownerEmail: ownerEmail.trim() || undefined,
-        ownerPassword,
-        category: category.trim(),
-        region: region.trim(),
-        district: district.trim(),
-        paymentPhone: paymentPhone.trim(),
-        ...(ward.trim() && { ward: ward.trim() }),
-        ...(street.trim() && { street: street.trim() }),
-        ...(description.trim() && { description: description.trim() }),
-      });
-      setSuccess('Business activation initiated. Give the owner their email/phone and password to log in after payment and access the business dashboard.');
-      setBusinessName('');
-      setOwnerName('');
-      setOwnerPhone('');
-      setOwnerEmail('');
-      setOwnerPassword('');
-      setConfirmPassword('');
-      setCategory('');
-      setRegion('');
-      setDistrict('');
-      setPaymentPhone('');
-      setWard('');
-      setStreet('');
-      setDescription('');
+      const data = await getAgentBusinesses({ page: 0, size: 50 });
+      setBusinesses(Array.isArray(data?.content) ? { content: data.content } : { content: [] });
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Activation failed'));
+      console.error('Failed to load businesses:', err);
+      setError(getApiErrorMessage(err, 'Failed to load business requests'));
+      setBusinesses({ content: [] });
     } finally {
-      setLoading(false);
+      setLoadingBusinesses(false);
     }
   };
 
+  const handleVerify = async (businessId) => {
+    if (!confirm('Are you sure you want to verify/approve this business activation? This will activate the business.')) {
+      return;
+    }
+    setApprovingId(businessId);
+    setError('');
+    setSuccess('');
+    try {
+      await approveBusinessRequest(businessId);
+      setSuccess('Business verified and approved successfully!');
+      await loadBusinesses();
+      setTimeout(() => setSuccess(''), 5000);
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Failed to verify business'));
+      setTimeout(() => setError(''), 5000);
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
+  const handleCancel = async (businessId) => {
+    const reason = prompt('Please provide a reason for cancelling this business activation:');
+    if (!reason || !reason.trim()) {
+      return;
+    }
+    if (!confirm('Are you sure you want to cancel this business activation? This action cannot be undone.')) {
+      return;
+    }
+    setCancellingId(businessId);
+    setError('');
+    setSuccess('');
+    try {
+      await cancelBusinessRequest(businessId);
+      setSuccess('Business activation cancelled successfully.');
+      await loadBusinesses();
+      setTimeout(() => setSuccess(''), 5000);
+    } catch (err) {
+      const errorMsg = getApiErrorMessage(err, 'Failed to cancel business activation');
+      setError(errorMsg + ' The cancel endpoint may not be available in the backend yet.');
+      setTimeout(() => setError(''), 8000);
+    } finally {
+      setCancellingId(null);
+    }
+  };
+
+  // Filter businesses that are pending (not paid or not approved)
+  const pendingBusinesses = businesses.content?.filter((b) => {
+    const status = b.status?.toUpperCase();
+    return status === 'PENDING' || 
+           status === 'PAYMENT_PENDING' || 
+           status === 'AWAITING_PAYMENT' ||
+           (status !== 'APPROVED' && status !== 'ACTIVE' && status !== 'COMPLETED' && status !== 'CANCELLED' && status !== 'REJECTED');
+  }) || [];
+
+  // Check if business can be cancelled (only pending businesses that haven't been paid)
+  const canCancelBusiness = (business) => {
+    const status = business.status?.toUpperCase();
+    const paymentStatus = business.paymentStatus?.toUpperCase();
+    return (status === 'PENDING' || status === 'PAYMENT_PENDING') && 
+           paymentStatus !== 'SUCCESS' && 
+           paymentStatus !== 'PAID' && 
+           paymentStatus !== 'COMPLETED';
+  };
+
   return (
-    <div className="agent-activate agent-activate--centered">
-      <div className="agent-activate-inner">
-        <h1 className="agent-activate-title">
+    <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+        <h1 className="agent-activate-title" style={{ margin: 0 }}>
           <Building2 size={28} />
           Activate Business
         </h1>
-        <p className="agent-activate-desc">
-          Review and activate a new business. The owner will complete payment to confirm activation; you will earn commission once payment is confirmed.
-        </p>
-        <div className="agent-card agent-activate-card">
-          <form onSubmit={handleSubmit} className="agent-activate-form">
-            <div className="agent-form-field">
-              <label className="agent-label" htmlFor="businessName">Business name *</label>
-              <input
-                id="businessName"
-                type="text"
-                className="agent-input"
-                placeholder="e.g. Mama Ntilie Food"
-                value={businessName}
-                onChange={(e) => setBusinessName(e.target.value)}
-                required
-              />
-            </div>
-            <div className="agent-form-field">
-              <label className="agent-label" htmlFor="ownerName">Owner name *</label>
-              <input
-                id="ownerName"
-                type="text"
-                className="agent-input"
-                placeholder="e.g. John Mwangi"
-                value={ownerName}
-                onChange={(e) => setOwnerName(e.target.value)}
-                required
-              />
-            </div>
-            <div className="agent-form-field">
-              <label className="agent-label" htmlFor="ownerPhone">Owner phone *</label>
-              <input
-                id="ownerPhone"
-                type="tel"
-                className="agent-input"
-                placeholder="+255787654321"
-                value={ownerPhone}
-                onChange={(e) => setOwnerPhone(e.target.value)}
-                required
-              />
-            </div>
-            <div className="agent-form-field">
-              <label className="agent-label" htmlFor="ownerEmail">Owner email (optional)</label>
-              <input
-                id="ownerEmail"
-                type="email"
-                className="agent-input"
-                placeholder="owner@example.com"
-                value={ownerEmail}
-                onChange={(e) => setOwnerEmail(e.target.value)}
-                autoComplete="off"
-              />
-              <span className="agent-stat-label">Owner can log in with phone or email after payment.</span>
-            </div>
-            <div className="agent-form-field">
-              <label className="agent-label" htmlFor="ownerPassword">Owner password *</label>
-              <input
-                id="ownerPassword"
-                type="password"
-                className="agent-input"
-                placeholder="Min 6 characters"
-                value={ownerPassword}
-                onChange={(e) => setOwnerPassword(e.target.value)}
-                minLength={6}
-                autoComplete="new-password"
-                required
-              />
-              <span className="agent-stat-label">They will use this to log in after payment and access the business dashboard.</span>
-            </div>
-            <div className="agent-form-field">
-              <label className="agent-label" htmlFor="confirmPassword">Confirm password *</label>
-              <input
-                id="confirmPassword"
-                type="password"
-                className="agent-input"
-                placeholder="Repeat password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                minLength={6}
-                autoComplete="new-password"
-                required
-              />
-            </div>
-            <div className="agent-form-field">
-              <label className="agent-label" htmlFor="category">Category *</label>
-              <input
-                id="category"
-                type="text"
-                className="agent-input"
-                placeholder="e.g. Food & Beverage"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                required
-              />
-            </div>
-            <div className="agent-form-field">
-              <label className="agent-label" htmlFor="region">Region *</label>
-              <input
-                id="region"
-                type="text"
-                className="agent-input"
-                placeholder="e.g. Dar es Salaam"
-                value={region}
-                onChange={(e) => setRegion(e.target.value)}
-                required
-              />
-            </div>
-            <div className="agent-form-field">
-              <label className="agent-label" htmlFor="district">District *</label>
-              <input
-                id="district"
-                type="text"
-                className="agent-input"
-                placeholder="e.g. Temeke"
-                value={district}
-                onChange={(e) => setDistrict(e.target.value)}
-                required
-              />
-            </div>
-            <div className="agent-form-field">
-              <label className="agent-label" htmlFor="paymentPhone">Payment phone *</label>
-              <input
-                id="paymentPhone"
-                type="tel"
-                className="agent-input"
-                placeholder="+255712345678 (for activation fee)"
-                value={paymentPhone}
-                onChange={(e) => setPaymentPhone(e.target.value)}
-                required
-              />
-              <span className="agent-stat-label">Owner will pay 10,000 TZS activation fee to this number.</span>
-            </div>
-            <div className="agent-form-field">
-              <label className="agent-label" htmlFor="ward">Ward (optional)</label>
-              <input
-                id="ward"
-                type="text"
-                className="agent-input"
-                placeholder="Ward"
-                value={ward}
-                onChange={(e) => setWard(e.target.value)}
-              />
-            </div>
-            <div className="agent-form-field">
-              <label className="agent-label" htmlFor="street">Street (optional)</label>
-              <input
-                id="street"
-                type="text"
-                className="agent-input"
-                placeholder="Street or area"
-                value={street}
-                onChange={(e) => setStreet(e.target.value)}
-              />
-            </div>
-            <div className="agent-form-field">
-              <label className="agent-label" htmlFor="description">Description (optional)</label>
-              <textarea
-                id="description"
-                className="agent-input"
-                placeholder="Business description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={3}
-                style={{ resize: 'vertical', minHeight: 60 }}
-              />
-            </div>
-            {error && (
-              <p className="agent-activate-message agent-activate-message--error" role="alert">{error}</p>
-            )}
-            {success && (
-              <p className="agent-activate-message agent-activate-message--success" role="status">{success}</p>
-            )}
-            <button
-              type="submit"
-              className="agent-btn-primary agent-activate-submit"
-              disabled={loading}
-            >
-              <Building2 size={20} />
-              {loading ? 'Submitting…' : 'Activate Business'}
-            </button>
-          </form>
+        <button
+          type="button"
+          className="agent-btn-ghost"
+          onClick={loadBusinesses}
+          disabled={loadingBusinesses}
+        >
+          <RefreshCw size={18} style={{ marginRight: '6px', animation: loadingBusinesses ? 'spin 1s linear infinite' : 'none' }} />
+          Refresh
+        </button>
+      </div>
+
+      {error && (
+        <div className="agent-card" style={{ marginBottom: '24px', background: 'rgba(240, 144, 104, 0.1)', borderColor: '#F09068' }}>
+          <p className="agent-activate-message agent-activate-message--error" role="alert" style={{ margin: 0 }}>
+            <AlertCircle size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+            {error}
+          </p>
         </div>
+      )}
+
+      {success && (
+        <div className="agent-card" style={{ marginBottom: '24px', background: 'rgba(56, 176, 104, 0.1)', borderColor: '#38B068' }}>
+          <p className="agent-activate-message agent-activate-message--success" role="status" style={{ margin: 0 }}>
+            <CheckCircle2 size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+            {success}
+          </p>
+        </div>
+      )}
+
+      {/* Pending Business Requests List */}
+      <div className="agent-card">
+        <div className="agent-card-title">
+          Pending Business Activations ({pendingBusinesses.length})
+        </div>
+        <p className="agent-stat-label" style={{ marginBottom: '20px', fontSize: '0.9rem' }}>
+          Review and verify or cancel business activation requests. You can verify businesses that are waiting for payment or have completed payment.
+        </p>
+
+        {loadingBusinesses ? (
+          <div className="agent-loading">Loading businesses...</div>
+        ) : pendingBusinesses.length === 0 ? (
+          <div className="agent-empty">No pending business activations.</div>
+        ) : (
+          <ul className="agent-requests-list">
+            {pendingBusinesses.map((business) => {
+              const status = business.status?.toUpperCase() || 'PENDING';
+              const isPending = status === 'PENDING' || status === 'PAYMENT_PENDING' || status === 'AWAITING_PAYMENT';
+              const isPaid = business.paymentStatus === 'SUCCESS' || business.paymentStatus === 'PAID' || business.paymentStatus === 'COMPLETED';
+              const canVerify = status !== 'APPROVED' && status !== 'ACTIVE' && status !== 'COMPLETED';
+              const canCancel = canCancelBusiness(business);
+
+              return (
+                <li key={business.id} className="agent-request-card">
+                  <div className="agent-request-header">
+                    <Building2 className="agent-request-icon" size={20} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="agent-request-name">{business.name || 'Unnamed Business'}</div>
+                      {business.ownerName && (
+                        <div className="agent-request-meta">Owner: {business.ownerName}</div>
+                      )}
+                      {business.ownerPhone && (
+                        <div className="agent-request-meta">Phone: {business.ownerPhone}</div>
+                      )}
+                    </div>
+                    <span
+                      className={`agent-request-status ${
+                        status === 'APPROVED' || status === 'ACTIVE'
+                          ? 'agent-request-status-approved'
+                          : isPaid
+                          ? 'agent-request-status-converted'
+                          : 'agent-request-status-pending'
+                      }`}
+                    >
+                      {status}
+                    </span>
+                  </div>
+
+                  <div className="agent-request-details">
+                    {business.category && (
+                      <div className="agent-request-row">
+                        <strong>Category:</strong> {business.category}
+                      </div>
+                    )}
+                    {business.region && (
+                      <div className="agent-request-row">
+                        <strong>Region:</strong> {business.region}
+                        {business.district && `, ${business.district}`}
+                      </div>
+                    )}
+                    {business.createdAt && (
+                      <div className="agent-request-row">
+                        <strong>Created:</strong> {formatDate(business.createdAt)}
+                      </div>
+                    )}
+                    {business.paymentStatus && (
+                      <div className="agent-request-row">
+                        <strong>Payment:</strong>{' '}
+                        <span
+                          className={
+                            business.paymentStatus === 'SUCCESS' || business.paymentStatus === 'PAID' || business.paymentStatus === 'COMPLETED'
+                              ? 'status-success'
+                              : business.paymentStatus === 'PENDING'
+                              ? 'status-pending'
+                              : 'status-error'
+                          }
+                        >
+                          {business.paymentStatus}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="agent-request-footer">
+                    <div className="agent-request-date">
+                      {isPending && !isPaid && (
+                        <span style={{ color: '#F09068' }}>
+                          <Clock size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
+                          Waiting for payment
+                        </span>
+                      )}
+                      {isPaid && (
+                        <span style={{ color: '#38B068' }}>
+                          <CheckCircle2 size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
+                          Payment confirmed
+                        </span>
+                      )}
+                      {!isPaid && !isPending && (
+                        <span style={{ color: '#6b7280' }}>
+                          <AlertCircle size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
+                          Awaiting activation
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                      {canVerify && (
+                        <button
+                          type="button"
+                          className="agent-btn-verify"
+                          onClick={() => handleVerify(business.id)}
+                          disabled={approvingId === business.id || cancellingId === business.id}
+                        >
+                          {approvingId === business.id ? (
+                            <>
+                              <RefreshCw size={18} style={{ animation: 'spin 1s linear infinite' }} />
+                              Verifying...
+                            </>
+                          ) : (
+                            <>
+                              <ShieldCheck size={18} />
+                              Verify
+                            </>
+                          )}
+                        </button>
+                      )}
+                      {canCancel && (
+                        <button
+                          type="button"
+                          className="agent-btn-cancel"
+                          onClick={() => handleCancel(business.id)}
+                          disabled={approvingId === business.id || cancellingId === business.id}
+                        >
+                          {cancellingId === business.id ? (
+                            <>
+                              <RefreshCw size={18} style={{ animation: 'spin 1s linear infinite' }} />
+                              Cancelling...
+                            </>
+                          ) : (
+                            <>
+                              <XCircle size={18} />
+                              Cancel
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
     </div>
   );
