@@ -43,11 +43,41 @@ export async function getBusinessProducts(params = {}) {
 }
 
 /**
+ * Get a single product by ID
+ * GET /api/v1/products/{id}
+ */
+export async function getProductById(productId) {
+  const { data } = await api.get(`/products/${productId}`);
+  return data?.data ?? data;
+}
+
+/**
  * Create a new product
  * POST /api/v1/business/products
+ * Accepts multipart/form-data with product data and optional images
+ * @param {Object} productData - Product fields (name, price, description, category, stockQuantity)
+ * @param {File[]} images - Optional array of image files
  */
-export async function createProduct(body) {
-  const { data } = await api.post('/business/products', body);
+export async function createProduct(productData, images = []) {
+  const formData = new FormData();
+  
+  // Add product data as JSON
+  formData.append('product', new Blob([JSON.stringify(productData)], { type: 'application/json' }));
+  
+  // Add images if provided
+  if (images && images.length > 0) {
+    images.forEach((image) => {
+      if (image instanceof File) {
+        formData.append('images', image);
+      }
+    });
+  }
+  
+  const { data } = await api.post('/business/products', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
   return data?.data ?? data;
 }
 

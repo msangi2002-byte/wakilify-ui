@@ -2314,6 +2314,10 @@
   to { transform: rotate(360deg); }
 }
 
+.icon-spin {
+  animation: spin 1s linear infinite;
+}
+
 /* Group post card (in groups feed) */
 .group-post {
   padding: 0;

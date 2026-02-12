@@ -13,6 +13,8 @@ import {
   User,
   LogOut,
   Sparkles,
+  Building2,
+  Package,
 } from 'lucide-react';
 import { ROLES } from '@/types/roles';
 import { useAuthStore } from '@/store/auth.store';
@@ -41,6 +43,7 @@ const leftNav = [
   { to: '/app/live', icon: Radio, label: 'Live' },
   { to: '/app/groups', icon: Users, label: 'Groups' },
   { to: '/app/shop', icon: ShoppingBag, label: 'Marketplace' },
+  { to: '/app/orders', icon: Package, label: 'My Orders' },
   { to: '/app/notifications', icon: Bell, label: 'Notifications' },
   { to: '/app/settings', icon: Settings, label: 'Settings' },
 ];
@@ -490,6 +493,14 @@ export default function UserLayout() {
                     <Link to="/agent" onClick={() => setMenuOpen(false)}>
                       <Sparkles size={20} />
                       Agent Dashboard
+                    </Link>
+                  </li>
+                )}
+                {String(user?.role ?? '').toLowerCase() === ROLES.BUSINESS && (
+                  <li>
+                    <Link to="/business" onClick={() => setMenuOpen(false)}>
+                      <Building2 size={20} />
+                      Business Dashboard
                     </Link>
                   </li>
                 )}

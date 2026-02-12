@@ -582,6 +582,28 @@ export default function Settings() {
         </SettingRow>
       </section>
 
+      {String(user?.role ?? '').toLowerCase() === ROLES.BUSINESS && (
+        <section className="user-app-card settings-section">
+          <h2 className="settings-section-title">
+            <Building2 size={20} />
+            Business Dashboard
+          </h2>
+          <p className="settings-row-desc" style={{ marginBottom: 12 }}>
+            Manage your business, products, orders, and analytics.
+          </p>
+          <div className="settings-section-actions">
+            <Link
+              to="/business"
+              className="settings-btn settings-btn-primary"
+              style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+            >
+              <Building2 size={20} />
+              Go to Business Dashboard
+            </Link>
+          </div>
+        </section>
+      )}
+
       {String(user?.role ?? '').toLowerCase() === ROLES.USER && (
         <section className="user-app-card settings-section">
           <h2 className="settings-section-title">

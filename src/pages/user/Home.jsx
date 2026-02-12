@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ImagePlus, Users, Video, MoreHorizontal, Plus, ThumbsUp, MessageCircle, Share2, Play, Sparkles } from 'lucide-react';
+import { ImagePlus, Users, Video, MoreHorizontal, Plus, ThumbsUp, MessageCircle, Share2, Play, Sparkles, ShoppingBag, Image as ImageIcon } from 'lucide-react';
 import { UserProfileMenu } from '@/components/ui/UserProfileMenu';
 import { CommentItem } from '@/components/social/CommentItem';
 import { VideoFullscreenOverlay } from '@/components/social/VideoFullscreenOverlay';
@@ -10,6 +10,7 @@ import { getFeed, getPublicFeed, getStories, likePost, unlikePost, savePost, uns
 import { followUser, unfollowUser } from '@/lib/api/friends';
 import { blockUser } from '@/lib/api/users';
 import { createReport } from '@/lib/api/reports';
+import { getTrendingProducts } from '@/lib/api/products';
 import { parseApiDate, formatPostTime, formatCommentTime } from '@/lib/utils/dateUtils';
 import { ROLES } from '@/types/roles';
 
@@ -648,6 +649,15 @@ function isSingleVideoPost(post) {
   return post?.media?.length === 1 && post.media[0]?.isVideo && getVideoUrl(post);
 }
 
+function formatCurrency(amount) {
+  if (!amount && amount !== 0) return 'TZS 0';
+  return new Intl.NumberFormat('en-TZ', {
+    style: 'currency',
+    currency: 'TZS',
+    minimumFractionDigits: 0,
+  }).format(amount);
+}
+
 export default function Home() {
   const { user } = useAuthStore();
   const [posts, setPosts] = useState([]);
@@ -655,6 +665,8 @@ export default function Home() {
   const [error, setError] = useState('');
   const [storyGroups, setStoryGroups] = useState([]);
   const [storiesLoading, setStoriesLoading] = useState(true);
+  const [products, setProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(true);
   const [videoOverlayOpen, setVideoOverlayOpen] = useState(false);
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [videoCommentsPostId, setVideoCommentsPostId] = useState(null);
@@ -703,6 +715,25 @@ export default function Home() {
     return () => { cancelled = true; };
   }, [user?.id]);
 
+  useEffect(() => {
+    let cancelled = false;
+    setProductsLoading(true);
+    getTrendingProducts({ page: 0, size: 6 })
+      .then((data) => {
+        if (!cancelled) {
+          const productList = Array.isArray(data?.content) ? data.content : (Array.isArray(data) ? data : []);
+          setProducts(productList);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setProducts([]);
+      })
+      .finally(() => {
+        if (!cancelled) setProductsLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <>
       {/* Stories */}
@@ -737,6 +768,79 @@ export default function Home() {
           })}
         </div>
       </div>
+
+      {/* Trending Products */}
+      {products.length > 0 && (
+        <div className="user-app-card" style={{ marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#050505' }}>
+              <ShoppingBag size={20} style={{ verticalAlign: 'middle', marginRight: 8, color: '#7c3aed' }} />
+              Trending Products
+            </h3>
+            <Link to="/app/shop" style={{ fontSize: '0.9375rem', color: '#7c3aed', fontWeight: 600, textDecoration: 'none' }}>
+              See All →
+            </Link>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12 }}>
+            {products.map((product) => {
+              const productImage = product.thumbnail || 
+                (product.images && product.images.length > 0 
+                  ? (product.images.find(img => img.isPrimary)?.url || product.images[0].url)
+                  : null);
+              return (
+                <Link
+                  key={product.id}
+                  to={`/app/shop/${product.id}`}
+                  style={{
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    display: 'block',
+                    borderRadius: 8,
+                    overflow: 'hidden',
+                    background: '#fff',
+                    border: '1px solid #e4e6eb',
+                    transition: 'transform 0.2s, box-shadow 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  <div style={{ width: '100%', aspectRatio: 1, background: '#f0f2f5', position: 'relative', overflow: 'hidden' }}>
+                    {productImage ? (
+                      <img 
+                        src={productImage} 
+                        alt={product.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <ImageIcon size={32} style={{ color: '#d1d5db' }} />
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ padding: 10 }}>
+                    <p style={{ margin: '0 0 4px', fontSize: '0.875rem', fontWeight: 600, color: '#050505', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.3 }}>
+                      {product.name}
+                    </p>
+                    <p style={{ margin: '0 0 4px', fontSize: '0.75rem', color: '#65676b' }}>
+                      {product.business?.name || 'Business'}
+                    </p>
+                    <p style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 700, color: '#7c3aed' }}>
+                      {formatCurrency(product.price)}
+                    </p>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* What's on your mind? */}
       <div className="user-app-card">
