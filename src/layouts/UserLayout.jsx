@@ -275,7 +275,7 @@ export default function UserLayout() {
       .then(([mutual, pymk]) => {
         const mutualList = Array.isArray(mutual) ? mutual : [];
         const pymkList = Array.isArray(pymk) ? pymk : [];
-        const mutualIds = new Set(mutualList.map((u) => u.id)));
+        const mutualIds = new Set(mutualList.map((u) => u.id));
         const rest = pymkList.filter((u) => !mutualIds.has(u.id));
         rest.sort((a, b) => {
           const aOnline = a.isOnline === true;
