@@ -1,165 +1,211 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Building2, User, Phone, MapPin } from 'lucide-react';
-import { getAgentBusinessRequests } from '@/lib/api/agent';
+import { useState } from 'react';
+import { Building2, UserPlus } from 'lucide-react';
+import { activateBusiness } from '@/lib/api/agent';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import '@/styles/agent.css';
 
-function formatDate(iso) {
-  if (!iso) return '—';
-  try {
-    return new Date(iso).toLocaleDateString(undefined, {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return iso;
-  }
-}
-
 export default function Requests() {
-  const [data, setData] = useState({ content: [], totalElements: 0 });
-  const [loading, setLoading] = useState(true);
+  const [businessName, setBusinessName] = useState('');
+  const [ownerName, setOwnerName] = useState('');
+  const [ownerPhone, setOwnerPhone] = useState('');
+  const [category, setCategory] = useState('');
+  const [region, setRegion] = useState('');
+  const [district, setDistrict] = useState('');
+  const [paymentPhone, setPaymentPhone] = useState('');
+  const [ward, setWard] = useState('');
+  const [street, setStreet] = useState('');
+  const [description, setDescription] = useState('');
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [page, setPage] = useState(0);
-  const size = 20;
+  const [success, setSuccess] = useState('');
 
-  useEffect(() => {
-    let cancelled = false;
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    if (!businessName.trim() || !ownerName.trim() || !ownerPhone.trim() || !category.trim() || !region.trim() || !district.trim() || !paymentPhone.trim()) {
+      setError('Business name, owner name, owner phone, category, region, district and payment phone are required.');
+      return;
+    }
     setLoading(true);
-    getAgentBusinessRequests({ page, size })
-      .then((res) => {
-        if (cancelled) return;
-        const content = Array.isArray(res?.content) ? res.content : [];
-        setData({
-          content,
-          totalElements: res?.totalElements ?? content.length,
-        });
-      })
-      .catch((err) => {
-        if (!cancelled) setError(getApiErrorMessage(err, 'Failed to load requests'));
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
+    try {
+      await activateBusiness({
+        businessName: businessName.trim(),
+        ownerName: ownerName.trim(),
+        ownerPhone: ownerPhone.trim(),
+        category: category.trim(),
+        region: region.trim(),
+        district: district.trim(),
+        paymentPhone: paymentPhone.trim(),
+        ...(ward.trim() && { ward: ward.trim() }),
+        ...(street.trim() && { street: street.trim() }),
+        ...(description.trim() && { description: description.trim() }),
       });
-    return () => { cancelled = true; };
-  }, [page]);
-
-  const list = data.content;
-  const totalPages = Math.ceil((data.totalElements || 0) / size);
+      setSuccess('Business activation initiated. Owner will pay 10,000 TZS to complete; you will earn commission after payment.');
+      setBusinessName('');
+      setOwnerName('');
+      setOwnerPhone('');
+      setCategory('');
+      setRegion('');
+      setDistrict('');
+      setPaymentPhone('');
+      setWard('');
+      setStreet('');
+      setDescription('');
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Activation failed'));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="agent-requests">
-      <h1 style={{ margin: '0 0 24px 0', fontSize: '1.5rem', fontWeight: 700 }}>
-        Business requests
-      </h1>
-      <p style={{ color: 'rgba(255,255,255,0.8)', marginBottom: 24 }}>
-        Users who selected you as their agent when requesting to become a business. Review and use Activate Business to proceed.
-      </p>
-      {error && (
-        <div className="agent-card" style={{ marginBottom: 20, borderColor: '#F09068' }}>
-          <p style={{ color: '#F09068', margin: 0 }}>{error}</p>
+    <div className="agent-requests agent-requests--centered">
+      <div className="agent-requests-inner">
+        <h1 className="agent-requests-title">
+          <UserPlus size={28} />
+          Add user (no account)
+        </h1>
+        <p className="agent-requests-desc">
+          Register a new business owner who does not have an account. Enter their details; they will pay the activation fee to complete. Users who already have an account use the app and pay via USSD.
+        </p>
+        <div className="agent-card agent-requests-card">
+          <form onSubmit={handleSubmit} className="agent-requests-form">
+            <div className="agent-form-field">
+              <label className="agent-label" htmlFor="businessName">Business name *</label>
+              <input
+                id="businessName"
+                type="text"
+                className="agent-input"
+                placeholder="e.g. Mama Ntilie Food"
+                value={businessName}
+                onChange={(e) => setBusinessName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="agent-form-field">
+              <label className="agent-label" htmlFor="ownerName">Owner name *</label>
+              <input
+                id="ownerName"
+                type="text"
+                className="agent-input"
+                placeholder="e.g. John Mwangi"
+                value={ownerName}
+                onChange={(e) => setOwnerName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="agent-form-field">
+              <label className="agent-label" htmlFor="ownerPhone">Owner phone *</label>
+              <input
+                id="ownerPhone"
+                type="tel"
+                className="agent-input"
+                placeholder="+255787654321"
+                value={ownerPhone}
+                onChange={(e) => setOwnerPhone(e.target.value)}
+                required
+              />
+            </div>
+            <div className="agent-form-field">
+              <label className="agent-label" htmlFor="category">Category *</label>
+              <input
+                id="category"
+                type="text"
+                className="agent-input"
+                placeholder="e.g. Food & Beverage"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                required
+              />
+            </div>
+            <div className="agent-form-field">
+              <label className="agent-label" htmlFor="region">Region *</label>
+              <input
+                id="region"
+                type="text"
+                className="agent-input"
+                placeholder="e.g. Dar es Salaam"
+                value={region}
+                onChange={(e) => setRegion(e.target.value)}
+                required
+              />
+            </div>
+            <div className="agent-form-field">
+              <label className="agent-label" htmlFor="district">District *</label>
+              <input
+                id="district"
+                type="text"
+                className="agent-input"
+                placeholder="e.g. Temeke"
+                value={district}
+                onChange={(e) => setDistrict(e.target.value)}
+                required
+              />
+            </div>
+            <div className="agent-form-field">
+              <label className="agent-label" htmlFor="paymentPhone">Payment phone *</label>
+              <input
+                id="paymentPhone"
+                type="tel"
+                className="agent-input"
+                placeholder="+255712345678 (for 10,000 TZS activation fee)"
+                value={paymentPhone}
+                onChange={(e) => setPaymentPhone(e.target.value)}
+                required
+              />
+              <span className="agent-stat-label">Owner will pay 10,000 TZS to this number to complete activation.</span>
+            </div>
+            <div className="agent-form-field">
+              <label className="agent-label" htmlFor="ward">Ward (optional)</label>
+              <input
+                id="ward"
+                type="text"
+                className="agent-input"
+                placeholder="Ward"
+                value={ward}
+                onChange={(e) => setWard(e.target.value)}
+              />
+            </div>
+            <div className="agent-form-field">
+              <label className="agent-label" htmlFor="street">Street (optional)</label>
+              <input
+                id="street"
+                type="text"
+                className="agent-input"
+                placeholder="Street or area"
+                value={street}
+                onChange={(e) => setStreet(e.target.value)}
+              />
+            </div>
+            <div className="agent-form-field">
+              <label className="agent-label" htmlFor="description">Description (optional)</label>
+              <textarea
+                id="description"
+                className="agent-input"
+                placeholder="Business description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                style={{ resize: 'vertical', minHeight: 60 }}
+              />
+            </div>
+            {error && (
+              <p className="agent-requests-message agent-requests-message--error" role="alert">{error}</p>
+            )}
+            {success && (
+              <p className="agent-requests-message agent-requests-message--success" role="status">{success}</p>
+            )}
+            <button
+              type="submit"
+              className="agent-btn-primary agent-requests-submit"
+              disabled={loading}
+            >
+              <Building2 size={20} />
+              {loading ? 'Submitting…' : 'Add user & initiate activation'}
+            </button>
+          </form>
         </div>
-      )}
-      <div className="agent-card">
-        {loading ? (
-          <div className="agent-loading">Loading…</div>
-        ) : list.length === 0 ? (
-          <p className="agent-empty">No business requests yet. Users who select you when they request to become a business will appear here.</p>
-        ) : (
-          <ul className="agent-requests-list">
-            {list.map((req) => (
-              <li key={req.id} className="agent-request-card">
-                <div className="agent-request-header">
-                  <Building2 size={20} className="agent-request-icon" />
-                  <span className="agent-request-name">{req.businessName || '—'}</span>
-                  <span className={`agent-request-status agent-request-status-${(req.status || '').toLowerCase()}`}>
-                    {req.status || 'PENDING'}
-                  </span>
-                </div>
-                <div className="agent-request-details">
-                  {req.userName && (
-                    <div className="agent-request-row">
-                      <User size={16} />
-                      <span>{req.userName}</span>
-                    </div>
-                  )}
-                  {(req.ownerPhone || req.userPhone) && (
-                    <div className="agent-request-row">
-                      <Phone size={16} />
-                      <span>{req.ownerPhone || req.userPhone}</span>
-                    </div>
-                  )}
-                  {req.region && (
-                    <div className="agent-request-row">
-                      <MapPin size={16} />
-                      <span>{[req.region, req.district, req.ward].filter(Boolean).join(', ') || req.region}</span>
-                    </div>
-                  )}
-                  {req.category && (
-                    <div className="agent-request-row">
-                      <span className="agent-request-meta">Category: {req.category}</span>
-                    </div>
-                  )}
-                  {req.description && (
-                    <p className="agent-request-desc">{req.description}</p>
-                  )}
-                </div>
-                <div className="agent-request-footer">
-                  <span className="agent-request-date">{formatDate(req.createdAt)}</span>
-                  {(req.status || '').toUpperCase() === 'PENDING' && (
-                    <Link
-                      to="/agent/activate"
-                      state={{
-                        fromRequest: {
-                          businessName: req.businessName,
-                          ownerName: req.userName,
-                          ownerPhone: req.ownerPhone || req.userPhone,
-                          category: req.category,
-                          region: req.region,
-                          district: req.district,
-                          ward: req.ward,
-                          street: req.street,
-                          description: req.description,
-                        },
-                      }}
-                      className="agent-btn-primary"
-                      style={{ padding: '6px 14px', fontSize: '0.85rem' }}
-                    >
-                      Activate business
-                    </Link>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-        {totalPages > 1 && (
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 16 }}>
-            <button
-              type="button"
-              className="agent-btn-ghost"
-              disabled={page === 0}
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-            >
-              Previous
-            </button>
-            <span style={{ alignSelf: 'center', color: 'rgba(255,255,255,0.8)' }}>
-              Page {page + 1} of {totalPages}
-            </span>
-            <button
-              type="button"
-              className="agent-btn-ghost"
-              disabled={page >= totalPages - 1}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Next
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

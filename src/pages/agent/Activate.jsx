@@ -78,171 +78,152 @@ export default function Activate() {
   };
 
   return (
-    <div className="agent-activate">
-      <h1 style={{ margin: '0 0 24px 0', fontSize: '1.5rem', fontWeight: 700 }}>
-        Activate Business
-      </h1>
-      <p style={{ color: 'rgba(255,255,255,0.8)', marginBottom: 24 }}>
-        Review and activate a new business. The owner will complete payment to confirm activation; you will earn commission once payment is confirmed.
-      </p>
-      <div className="agent-card" style={{ maxWidth: 480 }}>
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: 16 }}>
-            <label className="agent-label" htmlFor="businessName">
-              Business name *
-            </label>
-            <input
-              id="businessName"
-              type="text"
-              className="agent-input"
-              placeholder="e.g. Mama Ntilie Food"
-              value={businessName}
-              onChange={(e) => setBusinessName(e.target.value)}
-              required
-            />
-          </div>
-          <div style={{ marginBottom: 16 }}>
-            <label className="agent-label" htmlFor="ownerName">
-              Owner name *
-            </label>
-            <input
-              id="ownerName"
-              type="text"
-              className="agent-input"
-              placeholder="e.g. John Mwangi"
-              value={ownerName}
-              onChange={(e) => setOwnerName(e.target.value)}
-              required
-            />
-          </div>
-          <div style={{ marginBottom: 16 }}>
-            <label className="agent-label" htmlFor="ownerPhone">
-              Owner phone *
-            </label>
-            <input
-              id="ownerPhone"
-              type="tel"
-              className="agent-input"
-              placeholder="+255787654321"
-              value={ownerPhone}
-              onChange={(e) => setOwnerPhone(e.target.value)}
-              required
-            />
-          </div>
-          <div style={{ marginBottom: 16 }}>
-            <label className="agent-label" htmlFor="category">
-              Category *
-            </label>
-            <input
-              id="category"
-              type="text"
-              className="agent-input"
-              placeholder="e.g. Food & Beverage"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              required
-            />
-          </div>
-          <div style={{ marginBottom: 16 }}>
-            <label className="agent-label" htmlFor="region">
-              Region *
-            </label>
-            <input
-              id="region"
-              type="text"
-              className="agent-input"
-              placeholder="e.g. Dar es Salaam"
-              value={region}
-              onChange={(e) => setRegion(e.target.value)}
-              required
-            />
-          </div>
-          <div style={{ marginBottom: 16 }}>
-            <label className="agent-label" htmlFor="district">
-              District *
-            </label>
-            <input
-              id="district"
-              type="text"
-              className="agent-input"
-              placeholder="e.g. Temeke"
-              value={district}
-              onChange={(e) => setDistrict(e.target.value)}
-              required
-            />
-          </div>
-          <div style={{ marginBottom: 16 }}>
-            <label className="agent-label" htmlFor="paymentPhone">
-              Payment phone *
-            </label>
-            <input
-              id="paymentPhone"
-              type="tel"
-              className="agent-input"
-              placeholder="+255712345678 (for activation fee)"
-              value={paymentPhone}
-              onChange={(e) => setPaymentPhone(e.target.value)}
-              required
-            />
-            <span className="agent-stat-label" style={{ display: 'block', marginTop: 4, fontSize: 12 }}>
-              Owner will pay 10,000 TZS activation fee to this number.
-            </span>
-          </div>
-          <div style={{ marginBottom: 16 }}>
-            <label className="agent-label" htmlFor="ward">
-              Ward (optional)
-            </label>
-            <input
-              id="ward"
-              type="text"
-              className="agent-input"
-              placeholder="Ward"
-              value={ward}
-              onChange={(e) => setWard(e.target.value)}
-            />
-          </div>
-          <div style={{ marginBottom: 16 }}>
-            <label className="agent-label" htmlFor="street">
-              Street (optional)
-            </label>
-            <input
-              id="street"
-              type="text"
-              className="agent-input"
-              placeholder="Street or area"
-              value={street}
-              onChange={(e) => setStreet(e.target.value)}
-            />
-          </div>
-          <div style={{ marginBottom: 20 }}>
-            <label className="agent-label" htmlFor="description">
-              Description (optional)
-            </label>
-            <textarea
-              id="description"
-              className="agent-input"
-              placeholder="Business description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              style={{ resize: 'vertical', minHeight: 60 }}
-            />
-          </div>
-          {error && (
-            <p style={{ color: '#F09068', marginBottom: 12, fontSize: '0.9rem' }}>{error}</p>
-          )}
-          {success && (
-            <p style={{ color: '#38B068', marginBottom: 12, fontSize: '0.9rem' }}>{success}</p>
-          )}
-          <button
-            type="submit"
-            className="agent-btn-primary"
-            disabled={loading}
-          >
-            <Building2 size={20} />
-            {loading ? 'Submitting…' : 'Activate Business'}
-          </button>
-        </form>
+    <div className="agent-activate agent-activate--centered">
+      <div className="agent-activate-inner">
+        <h1 className="agent-activate-title">
+          <Building2 size={28} />
+          Activate Business
+        </h1>
+        <p className="agent-activate-desc">
+          Review and activate a new business. The owner will complete payment to confirm activation; you will earn commission once payment is confirmed.
+        </p>
+        <div className="agent-card agent-activate-card">
+          <form onSubmit={handleSubmit} className="agent-activate-form">
+            <div className="agent-form-field">
+              <label className="agent-label" htmlFor="businessName">Business name *</label>
+              <input
+                id="businessName"
+                type="text"
+                className="agent-input"
+                placeholder="e.g. Mama Ntilie Food"
+                value={businessName}
+                onChange={(e) => setBusinessName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="agent-form-field">
+              <label className="agent-label" htmlFor="ownerName">Owner name *</label>
+              <input
+                id="ownerName"
+                type="text"
+                className="agent-input"
+                placeholder="e.g. John Mwangi"
+                value={ownerName}
+                onChange={(e) => setOwnerName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="agent-form-field">
+              <label className="agent-label" htmlFor="ownerPhone">Owner phone *</label>
+              <input
+                id="ownerPhone"
+                type="tel"
+                className="agent-input"
+                placeholder="+255787654321"
+                value={ownerPhone}
+                onChange={(e) => setOwnerPhone(e.target.value)}
+                required
+              />
+            </div>
+            <div className="agent-form-field">
+              <label className="agent-label" htmlFor="category">Category *</label>
+              <input
+                id="category"
+                type="text"
+                className="agent-input"
+                placeholder="e.g. Food & Beverage"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                required
+              />
+            </div>
+            <div className="agent-form-field">
+              <label className="agent-label" htmlFor="region">Region *</label>
+              <input
+                id="region"
+                type="text"
+                className="agent-input"
+                placeholder="e.g. Dar es Salaam"
+                value={region}
+                onChange={(e) => setRegion(e.target.value)}
+                required
+              />
+            </div>
+            <div className="agent-form-field">
+              <label className="agent-label" htmlFor="district">District *</label>
+              <input
+                id="district"
+                type="text"
+                className="agent-input"
+                placeholder="e.g. Temeke"
+                value={district}
+                onChange={(e) => setDistrict(e.target.value)}
+                required
+              />
+            </div>
+            <div className="agent-form-field">
+              <label className="agent-label" htmlFor="paymentPhone">Payment phone *</label>
+              <input
+                id="paymentPhone"
+                type="tel"
+                className="agent-input"
+                placeholder="+255712345678 (for activation fee)"
+                value={paymentPhone}
+                onChange={(e) => setPaymentPhone(e.target.value)}
+                required
+              />
+              <span className="agent-stat-label">Owner will pay 10,000 TZS activation fee to this number.</span>
+            </div>
+            <div className="agent-form-field">
+              <label className="agent-label" htmlFor="ward">Ward (optional)</label>
+              <input
+                id="ward"
+                type="text"
+                className="agent-input"
+                placeholder="Ward"
+                value={ward}
+                onChange={(e) => setWard(e.target.value)}
+              />
+            </div>
+            <div className="agent-form-field">
+              <label className="agent-label" htmlFor="street">Street (optional)</label>
+              <input
+                id="street"
+                type="text"
+                className="agent-input"
+                placeholder="Street or area"
+                value={street}
+                onChange={(e) => setStreet(e.target.value)}
+              />
+            </div>
+            <div className="agent-form-field">
+              <label className="agent-label" htmlFor="description">Description (optional)</label>
+              <textarea
+                id="description"
+                className="agent-input"
+                placeholder="Business description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                style={{ resize: 'vertical', minHeight: 60 }}
+              />
+            </div>
+            {error && (
+              <p className="agent-activate-message agent-activate-message--error" role="alert">{error}</p>
+            )}
+            {success && (
+              <p className="agent-activate-message agent-activate-message--success" role="status">{success}</p>
+            )}
+            <button
+              type="submit"
+              className="agent-btn-primary agent-activate-submit"
+              disabled={loading}
+            >
+              <Building2 size={20} />
+              {loading ? 'Submitting…' : 'Activate Business'}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );
