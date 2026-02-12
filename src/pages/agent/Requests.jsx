@@ -8,6 +8,9 @@ export default function Requests() {
   const [businessName, setBusinessName] = useState('');
   const [ownerName, setOwnerName] = useState('');
   const [ownerPhone, setOwnerPhone] = useState('');
+  const [ownerEmail, setOwnerEmail] = useState('');
+  const [ownerPassword, setOwnerPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [category, setCategory] = useState('');
   const [region, setRegion] = useState('');
   const [district, setDistrict] = useState('');
@@ -27,12 +30,22 @@ export default function Requests() {
       setError('Business name, owner name, owner phone, category, region, district and payment phone are required.');
       return;
     }
+    if (!ownerPassword || ownerPassword.length < 6) {
+      setError('Owner password is required (min 6 characters) so they can log in after payment.');
+      return;
+    }
+    if (ownerPassword !== confirmPassword) {
+      setError('Password and confirm password do not match.');
+      return;
+    }
     setLoading(true);
     try {
       await activateBusiness({
         businessName: businessName.trim(),
         ownerName: ownerName.trim(),
         ownerPhone: ownerPhone.trim(),
+        ownerEmail: ownerEmail.trim() || undefined,
+        ownerPassword: ownerPassword,
         category: category.trim(),
         region: region.trim(),
         district: district.trim(),
@@ -41,10 +54,13 @@ export default function Requests() {
         ...(street.trim() && { street: street.trim() }),
         ...(description.trim() && { description: description.trim() }),
       });
-      setSuccess('Business activation initiated. Owner will pay 10,000 TZS to complete; you will earn commission after payment.');
+      setSuccess('Business activation initiated. Give the owner their email/phone and password so they can log in after payment, then go to the business dashboard.');
       setBusinessName('');
       setOwnerName('');
       setOwnerPhone('');
+      setOwnerEmail('');
+      setOwnerPassword('');
+      setConfirmPassword('');
       setCategory('');
       setRegion('');
       setDistrict('');
@@ -104,6 +120,48 @@ export default function Requests() {
                 placeholder="+255787654321"
                 value={ownerPhone}
                 onChange={(e) => setOwnerPhone(e.target.value)}
+                required
+              />
+            </div>
+            <div className="agent-form-field">
+              <label className="agent-label" htmlFor="ownerEmail">Owner email (optional)</label>
+              <input
+                id="ownerEmail"
+                type="email"
+                className="agent-input"
+                placeholder="owner@example.com"
+                value={ownerEmail}
+                onChange={(e) => setOwnerEmail(e.target.value)}
+                autoComplete="off"
+              />
+              <span className="agent-stat-label">Owner can log in with phone or email after payment.</span>
+            </div>
+            <div className="agent-form-field">
+              <label className="agent-label" htmlFor="ownerPassword">Owner password *</label>
+              <input
+                id="ownerPassword"
+                type="password"
+                className="agent-input"
+                placeholder="Min 6 characters"
+                value={ownerPassword}
+                onChange={(e) => setOwnerPassword(e.target.value)}
+                minLength={6}
+                autoComplete="new-password"
+                required
+              />
+              <span className="agent-stat-label">They will use this to log in after payment and access the business dashboard.</span>
+            </div>
+            <div className="agent-form-field">
+              <label className="agent-label" htmlFor="confirmPassword">Confirm password *</label>
+              <input
+                id="confirmPassword"
+                type="password"
+                className="agent-input"
+                placeholder="Repeat password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                minLength={6}
+                autoComplete="new-password"
                 required
               />
             </div>

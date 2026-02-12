@@ -77,35 +77,37 @@ export default function AgentLayout() {
         aria-hidden={!sidebarOpen}
         onClick={() => setSidebarOpen(false)}
       />
-      <aside className="agent-sidebar">
-        <nav className="agent-sidebar-nav">
-          {navItems.map(({ to, end, icon: Icon, label }) => (
-            <Link
-              key={to}
-              to={to}
-              end={end}
-              className={`agent-sidebar-link ${location.pathname === to || (!end && location.pathname.startsWith(to)) ? 'active' : ''}`}
-              onClick={() => setSidebarOpen(false)}
-            >
-              <Icon size={20} />
-              {label}
-            </Link>
-          ))}
-          <div className="agent-sidebar-footer">
-            <button
-              type="button"
-              className="agent-sidebar-link agent-sidebar-back-btn"
-              onClick={() => { setSidebarOpen(false); navigate('/app'); }}
-            >
-              <ArrowLeft size={20} />
-              Back to App
-            </button>
-          </div>
-        </nav>
-      </aside>
-      <main className="agent-main">
-        <Outlet />
-      </main>
+      <div className="agent-layout-body">
+        <aside className="agent-sidebar">
+          <nav className="agent-sidebar-nav">
+            {navItems.map(({ to, end, icon: Icon, label }) => (
+              <Link
+                key={to}
+                to={to}
+                end={end}
+                className={`agent-sidebar-link ${location.pathname === to || (!end && location.pathname.startsWith(to)) ? 'active' : ''}`}
+                onClick={() => setSidebarOpen(false)}
+              >
+                <Icon size={20} />
+                {label}
+              </Link>
+            ))}
+            <div className="agent-sidebar-footer">
+              <button
+                type="button"
+                className="agent-sidebar-link agent-sidebar-back-btn"
+                onClick={() => { setSidebarOpen(false); navigate('/app'); }}
+              >
+                <ArrowLeft size={20} />
+                Back to App
+              </button>
+            </div>
+          </nav>
+        </aside>
+        <main className="agent-main">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

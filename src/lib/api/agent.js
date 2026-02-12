@@ -44,9 +44,10 @@ export async function registerAgent(body) {
 }
 
 /**
- * Activate a business (agent only)
+ * Activate a business (agent only – for new users without an account)
  * POST /api/v1/agent/activate-business
- * Body: { businessName, ownerName, ownerPhone, category, region, district, paymentPhone, description?, ward?, street? }
+ * Body: { businessName, ownerName, ownerPhone, ownerEmail?, ownerPassword, category, region, district, paymentPhone, description?, ward?, street? }
+ * Owner uses email/phone + password to log in after payment and access business dashboard.
  */
 export async function activateBusiness(body) {
   const { data } = await api.post('/agent/activate-business', body);
