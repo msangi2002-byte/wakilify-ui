@@ -14,17 +14,13 @@ const baseURL = import.meta.env.VITE_API_URL || '/api/v1';
 export async function register(payload) {
   const body = {
     name: payload.name,
+    email: payload.email,
+    phone: payload.phone,
     password: payload.password,
     role: payload.role ?? 'USER',
   };
-  if (payload.email != null && payload.email !== '') body.email = payload.email;
-  if (payload.phone != null && payload.phone !== '') body.phone = payload.phone;
-  if (payload.currentCity != null && payload.currentCity !== '') body.currentCity = payload.currentCity;
-  if (payload.region != null && payload.region !== '') body.region = payload.region;
-  if (payload.country != null && payload.country !== '') body.country = payload.country;
   if (payload.dateOfBirth != null) body.dateOfBirth = payload.dateOfBirth;
-  if (payload.interests != null && payload.interests !== '') body.interests = payload.interests;
-  if (payload.referralCode != null && payload.referralCode !== '') body.referralCode = payload.referralCode;
+  if (payload.gender != null && payload.gender !== '') body.gender = payload.gender;
   const { data } = await api.post('/auth/register', body);
   return data;
 }

@@ -37,6 +37,15 @@ export async function getUser(userId) {
 }
 
 /**
+ * Mark onboarding as complete (Facebook-like post-login setup)
+ * PATCH /api/v1/users/me/onboarding-complete
+ */
+export async function completeOnboarding() {
+  const { data } = await api.patch('/users/me/onboarding-complete');
+  return data?.data ?? data;
+}
+
+/**
  * Update current user profile (auth required)
  * PUT /api/v1/users/me
  * Body: { name?, bio?, work?, education?, currentCity?, hometown?, relationshipStatus?, website? }

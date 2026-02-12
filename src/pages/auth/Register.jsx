@@ -37,11 +37,6 @@ export default function Register() {
     month: '',
     year: '',
     gender: 'female',
-    currentCity: '',
-    region: '',
-    country: 'Tanzania',
-    interests: '',
-    referralCode: '',
   });
 
   const update = (name, value) => {
@@ -60,8 +55,12 @@ export default function Register() {
       setError('Name is required.');
       return;
     }
-    if (!emailTrim && !phoneFormatted) {
-      setError('Email or phone is required.');
+    if (!emailTrim) {
+      setError('Email is required.');
+      return;
+    }
+    if (!phoneFormatted) {
+      setError('Namba ya simu is required.');
       return;
     }
     if (emailTrim && !isEmail(emailTrim)) {
@@ -81,25 +80,17 @@ export default function Register() {
       name,
       password: password.trim(),
       role: 'USER',
-      email: emailTrim || undefined,
-      phone: phoneFormatted || undefined,
-      currentCity: (form.currentCity || '').trim() || undefined,
-      region: (form.region || '').trim() || undefined,
-      country: (form.country || '').trim() || undefined,
-      dateOfBirth,
-      interests: (form.interests || '').trim() || undefined,
-      referralCode: (form.referralCode || '').trim() || undefined,
+      email: emailTrim,
+      phone: phoneFormatted,
+      dateOfBirth: dateOfBirth || undefined,
+      gender: (form.gender || '').trim() || undefined,
     };
     setLoading(true);
     try {
       const res = await registerApi(payload);
       const ok = res?.success === true;
       if (ok) {
-        if (payload.phone) {
-          navigate('/auth/otp', { state: { phone: payload.phone, from: 'register' } });
-        } else {
-          navigate('/auth/login', { state: { registered: true } });
-        }
+        navigate('/auth/otp', { state: { phone: payload.phone, from: 'register' } });
       } else {
         setError(res?.message || getApiErrorMessage({ response: { data: res } }, 'Registration failed. Please try again.'));
       }
@@ -113,7 +104,6 @@ export default function Register() {
   return (
     <div className="auth-form">
       <h2>Create an account</h2>
-      <p className="auth-form-hint">Taarifa za mji na mkoa zitasaidia kupata watu karibu na mapendekezo.</p>
       {error && <div className="auth-error" role="alert">{error}</div>}
       <form onSubmit={handleSubmit} noValidate>
         <div className="auth-field-row">
@@ -154,7 +144,7 @@ export default function Register() {
         </div>
 
         <div className="auth-field">
-          <label htmlFor="phone">Phone</label>
+          <label htmlFor="phone">Namba ya simu</label>
           <input
             id="phone"
             type="tel"
@@ -238,76 +228,6 @@ export default function Register() {
               Male
             </label>
           </div>
-        </div>
-
-        <div className="auth-field">
-          <label htmlFor="currentCity">City (Mji)</label>
-          <input
-            id="currentCity"
-            type="text"
-            placeholder="e.g. Dar es Salaam, Mwanza"
-            value={form.currentCity}
-            onChange={(e) => update('currentCity', e.target.value)}
-            autoComplete="address-level2"
-          />
-        </div>
-
-        <div className="auth-field">
-          <label htmlFor="region">Region (Mkoa)</label>
-          <select
-            id="region"
-            value={form.region}
-            onChange={(e) => update('region', e.target.value)}
-            aria-label="Region"
-          >
-            <option value="">Choose region</option>
-            <option value="Dar es Salaam">Dar es Salaam</option>
-            <option value="Mwanza">Mwanza</option>
-            <option value="Arusha">Arusha</option>
-            <option value="Dodoma">Dodoma</option>
-            <option value="Mbeya">Mbeya</option>
-            <option value="Tanga">Tanga</option>
-            <option value="Morogoro">Morogoro</option>
-            <option value="Moshi">Moshi</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-
-        <div className="auth-field">
-          <label htmlFor="country">Country (Taifa)</label>
-          <select
-            id="country"
-            value={form.country}
-            onChange={(e) => update('country', e.target.value)}
-            aria-label="Country"
-          >
-            <option value="Tanzania">Tanzania</option>
-            <option value="Kenya">Kenya</option>
-            <option value="Uganda">Uganda</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-
-        <div className="auth-field">
-          <label htmlFor="interests">Interests / Hobbies (vitaka)</label>
-          <input
-            id="interests"
-            type="text"
-            placeholder="e.g. Music, Sports, Tech"
-            value={form.interests}
-            onChange={(e) => update('interests', e.target.value)}
-          />
-        </div>
-
-        <div className="auth-field">
-          <label htmlFor="referralCode">Referral code (si lazima)</label>
-          <input
-            id="referralCode"
-            type="text"
-            placeholder="Agent referral code"
-            value={form.referralCode}
-            onChange={(e) => update('referralCode', e.target.value)}
-          />
         </div>
 
         <button type="submit" className="auth-btn-primary" disabled={loading}>

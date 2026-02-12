@@ -64,7 +64,9 @@ export default function Login() {
       const res = await loginApi({ emailOrPhone, password: form.password.trim() });
       const ok = res?.success === true && res?.data?.accessToken != null && res?.data?.user != null;
       if (ok) {
-        navigate('/app', { replace: true });
+        const user = res?.data?.user;
+        const needsOnboarding = user && user.onboardingCompleted === false;
+        navigate(needsOnboarding ? '/app/onboarding' : '/app', { replace: true });
       } else if (isNotVerifiedResponse(res)) {
         setError("Your account is not verified. Please verify your phone.");
         setNotVerifiedPhone(isPhoneLike(emailOrPhone) ? emailOrPhone : null);

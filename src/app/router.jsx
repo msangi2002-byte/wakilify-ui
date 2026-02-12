@@ -10,6 +10,7 @@ import AdminLayout from '@/layouts/AdminLayout';
 import { AuthGuard } from '@/app/guards/AuthGuard';
 import { RoleGuard } from '@/app/guards/RoleGuard';
 import { GuestOnly } from '@/app/guards/GuestOnly';
+import { OnboardingGuard } from '@/app/guards/OnboardingGuard';
 import { ROLES } from '@/types/roles';
 
 const Register = lazy(() => import('@/pages/auth/Register'));
@@ -41,6 +42,7 @@ const GroupCreate = lazy(() => import('@/pages/user/GroupCreate'));
 const UserSettings = lazy(() => import('@/pages/user/Settings'));
 const RegisterAgent = lazy(() => import('@/pages/user/RegisterAgent'));
 const Notifications = lazy(() => import('@/pages/user/Notifications'));
+const Onboarding = lazy(() => import('@/pages/user/Onboarding'));
 
 const BusinessDashboard = lazy(() => import('@/pages/business/Dashboard'));
 const BusinessProducts = lazy(() => import('@/pages/business/Products'));
@@ -94,11 +96,16 @@ const router = createBrowserRouter([
         path: 'app',
         element: (
           <AuthGuard>
-            <UserLayout />
+            <OnboardingGuard />
           </AuthGuard>
         ),
         children: [
-          { index: true, element: <Suspense fallback={<Fallback />}><Home /></Suspense> },
+          { path: 'onboarding', element: <Suspense fallback={<Fallback />}><Onboarding /></Suspense> },
+          {
+            path: '',
+            element: <UserLayout />,
+            children: [
+              { index: true, element: <Suspense fallback={<Fallback />}><Home /></Suspense> },
           { path: 'explore', element: <Suspense fallback={<Fallback />}><Explore /></Suspense> },
           { path: 'explore/hashtag/:tagName', element: <Suspense fallback={<Fallback />}><Explore /></Suspense> },
           { path: 'create', element: <Suspense fallback={<Fallback />}><Create /></Suspense> },
@@ -131,6 +138,8 @@ const router = createBrowserRouter([
           },
           { path: 'settings', element: <Suspense fallback={<Fallback />}><UserSettings /></Suspense> },
           { path: 'register-agent', element: <Suspense fallback={<Fallback />}><RegisterAgent /></Suspense> },
+            ],
+          },
         ],
       },
       {
