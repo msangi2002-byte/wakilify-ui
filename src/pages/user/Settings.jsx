@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useAuthStore, setAuth, getToken } from '@/store/auth.store';
+import { useAuthStore, setAuth, getToken, getRefreshToken } from '@/store/auth.store';
 import { useUIStore, setUI, subscribeUI } from '@/store/ui.store';
 import {
   uploadProfilePic,
@@ -12,8 +12,8 @@ import {
   unrestrictUser,
   getLoginActivity,
   createBusinessRequest,
+  getMe,
 } from '@/lib/api/users';
-import { searchAgents } from '@/lib/api/agent';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import { ROLES } from '@/types/roles';
 import {
@@ -105,46 +105,17 @@ export default function Settings() {
   const setMarketplace = (key, value) => setMarketplacePref((s) => ({ ...s, [key]: value }));
 
   const [businessRequestOpen, setBusinessRequestOpen] = useState(false);
-  const [businessRequestForm, setBusinessRequestForm] = useState({ businessName: '', ownerPhone: '', category: '', region: '', agentCode: '' });
+  const [businessRequestForm, setBusinessRequestForm] = useState({ businessName: '', ownerPhone: '', category: '', region: '' });
   const [businessRequestLoading, setBusinessRequestLoading] = useState(false);
   const [businessRequestError, setBusinessRequestError] = useState('');
   const [businessRequestSuccess, setBusinessRequestSuccess] = useState('');
-  const [agentSearchQuery, setAgentSearchQuery] = useState('');
-  const [agentSearchResults, setAgentSearchResults] = useState([]);
-  const [agentSearching, setAgentSearching] = useState(false);
 
-  useEffect(() => {
-    const q = agentSearchQuery?.trim();
-    if (!q || q.length < 2) {
-      setAgentSearchResults([]);
-      return undefined;
-    }
-    const t = setTimeout(async () => {
-      setAgentSearching(true);
-      try {
-        const res = await searchAgents(q, { page: 0, size: 10 });
-        setAgentSearchResults(Array.isArray(res?.content) ? res.content : []);
-      } catch {
-        setAgentSearchResults([]);
-      } finally {
-        setAgentSearching(false);
-      }
-    }, 300);
-    return () => clearTimeout(t);
-  }, [agentSearchQuery]);
-
-  const handleSelectAgent = (a) => {
-    const display = a.name ? `${a.name} (${a.agentCode || ''})` : (a.agentCode || a.email || '');
-    setBusinessRequestForm((f) => ({ ...f, agentCode: a.agentCode || '' }));
-    setAgentSearchQuery(display);
-    setAgentSearchResults([]);
-  };
   const handleSubmitBusinessRequest = async (e) => {
     e.preventDefault();
     setBusinessRequestError('');
     setBusinessRequestSuccess('');
-    if (!businessRequestForm.businessName?.trim() || !businessRequestForm.ownerPhone?.trim() || !businessRequestForm.agentCode?.trim()) {
-      setBusinessRequestError('Business name, owner phone and agent code are required.');
+    if (!businessRequestForm.businessName?.trim() || !businessRequestForm.ownerPhone?.trim()) {
+      setBusinessRequestError('Business name and your phone are required.');
       return;
     }
     setBusinessRequestLoading(true);
@@ -154,13 +125,13 @@ export default function Settings() {
         ownerPhone: businessRequestForm.ownerPhone.trim(),
         category: businessRequestForm.category?.trim() || undefined,
         region: businessRequestForm.region?.trim() || undefined,
-        agentCode: businessRequestForm.agentCode.trim(),
       });
-      setBusinessRequestSuccess('Request submitted. Your selected agent will contact you.');
-      setBusinessRequestForm({ businessName: '', ownerPhone: '', category: '', region: '', agentCode: '' });
-      setAgentSearchQuery('');
-      setAgentSearchResults([]);
-      setTimeout(() => { setBusinessRequestOpen(false); setBusinessRequestSuccess(''); }, 2000);
+      setBusinessRequestSuccess('USSD payment push sent to your phone. Complete the payment to activate your business.');
+      setBusinessRequestForm({ businessName: '', ownerPhone: '', category: '', region: '' });
+      getMe().then((me) => {
+        if (me) setAuth(me, getToken(), getRefreshToken());
+      }).catch(() => {});
+      setTimeout(() => { setBusinessRequestOpen(false); setBusinessRequestSuccess(''); }, 3000);
     } catch (err) {
       setBusinessRequestError(getApiErrorMessage(err, 'Failed to submit request'));
     } finally {
@@ -618,7 +589,7 @@ export default function Settings() {
             Become a business
           </h2>
           <p className="settings-row-desc" style={{ marginBottom: 12 }}>
-            Request to open a business on Wakilfy. Choose an agent who will guide you through activation and verification.
+            Request to open a business on Wakilfy. Pay via USSD when prompted to complete activation.
           </p>
           <div className="settings-section-actions">
             <button
@@ -893,7 +864,7 @@ export default function Settings() {
               <button
                 type="button"
                 className="settings-modal-close"
-                onClick={() => { setBusinessRequestOpen(false); setBusinessRequestError(''); setBusinessRequestSuccess(''); setAgentSearchQuery(''); setAgentSearchResults([]); }}
+                onClick={() => { setBusinessRequestOpen(false); setBusinessRequestError(''); setBusinessRequestSuccess(''); }}
                 aria-label="Close"
               >
                 <X size={22} />
@@ -938,62 +909,6 @@ export default function Settings() {
                   onChange={(e) => setBusinessRequestForm((f) => ({ ...f, region: e.target.value }))}
                 />
               </SettingRow>
-              <SettingRow label="Agent" description="Search by agent’s name or email; select from the list. Required.">
-                <div className="settings-agent-select-wrap">
-                  <div className="settings-agent-search-row">
-                    <input
-                      type="text"
-                      className="settings-input"
-                      placeholder="Search by agent name or email..."
-                      value={agentSearchQuery}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setAgentSearchQuery(v);
-                        if (businessRequestForm.agentCode) {
-                          setBusinessRequestForm((f) => ({ ...f, agentCode: '' }));
-                        }
-                      }}
-                      autoComplete="off"
-                      aria-describedby="agent-results-hint"
-                    />
-                    {agentSearching && (
-                      <span className="settings-agent-search-loading" aria-hidden>Searching…</span>
-                    )}
-                  </div>
-                  {agentSearchResults.length > 0 && (
-                    <ul
-                      id="agent-results-hint"
-                      className="settings-agent-results"
-                      role="listbox"
-                    >
-                      {agentSearchResults.map((a) => (
-                        <li key={a.id} role="option">
-                          <button
-                            type="button"
-                            className={`settings-agent-result-item ${businessRequestForm.agentCode === a.agentCode ? 'selected' : ''}`}
-                            onClick={() => handleSelectAgent(a)}
-                          >
-                            <span className="settings-agent-result-name">
-                              {a.name || 'Agent'}
-                              {(a.status || '').toUpperCase() === 'PENDING' && (
-                                <span className="settings-agent-result-pending"> (Pending approval)</span>
-                              )}
-                            </span>
-                            {(a.email || a.agentCode) && (
-                              <span className="settings-agent-result-code">
-                                {[a.email, a.agentCode].filter(Boolean).join(' · ')}
-                              </span>
-                            )}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  {agentSearchQuery.trim().length >= 2 && !agentSearching && agentSearchResults.length === 0 && (
-                    <p className="settings-agent-no-results">No agents found. Try another name or code.</p>
-                  )}
-                </div>
-              </SettingRow>
               {businessRequestError && (
                 <p className="settings-error" role="alert">{businessRequestError}</p>
               )}
@@ -1004,7 +919,7 @@ export default function Settings() {
                 <button
                   type="button"
                   className="settings-btn settings-btn-secondary"
-                  onClick={() => { setBusinessRequestOpen(false); setBusinessRequestError(''); setBusinessRequestSuccess(''); setAgentSearchQuery(''); setAgentSearchResults([]); }}
+                  onClick={() => { setBusinessRequestOpen(false); setBusinessRequestError(''); setBusinessRequestSuccess(''); }}
                 >
                   Cancel
                 </button>
