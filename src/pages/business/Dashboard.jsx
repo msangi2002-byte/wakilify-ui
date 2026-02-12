@@ -55,7 +55,11 @@ export default function Dashboard() {
     totalOrders: 0,
     pendingOrders: 0,
     totalRevenue: 0,
-    productsCount: 0,
+    totalProducts: 0,
+    activeProducts: 0,
+    completedOrders: 0,
+    todayRevenue: 0,
+    monthRevenue: 0,
   };
 
   return (
@@ -120,7 +124,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <div className="business-stat-label">Total Products</div>
-                <div className="business-stat-value" style={{ color: '#8b5cf6' }}>{stats.productsCount || 0}</div>
+                <div className="business-stat-value" style={{ color: '#8b5cf6' }}>{stats.totalProducts || 0}</div>
               </div>
             </div>
           </div>
