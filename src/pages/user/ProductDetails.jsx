@@ -185,7 +185,7 @@ export default function ProductDetails() {
   const maxQuantity = product.stockQuantity !== null && product.stockQuantity !== undefined ? product.stockQuantity : 999;
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px' }}>
+    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px' }} className="product-details-container">
       {/* Back button */}
       <button
         type="button"
@@ -207,7 +207,14 @@ export default function ProductDetails() {
         Back
       </button>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', marginBottom: '32px' }}>
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: '1fr',
+        gap: '24px',
+        marginBottom: '32px',
+      }}
+      className="product-details-grid"
+      >
         {/* Product Images */}
         <div>
           <div className="user-app-card" style={{ padding: 0, overflow: 'hidden', marginBottom: '16px' }}>
@@ -226,7 +233,7 @@ export default function ProductDetails() {
             </div>
           </div>
           {allImages.length > 1 && (
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', overflowX: 'auto', paddingBottom: '4px', WebkitOverflowScrolling: 'touch' }} className="product-thumbnails">
               {allImages.map((img, index) => (
                 <button
                   key={index}
@@ -241,6 +248,7 @@ export default function ProductDetails() {
                     overflow: 'hidden',
                     background: '#f0f2f5',
                     cursor: 'pointer',
+                    flexShrink: 0,
                   }}
                 >
                   <img
@@ -257,7 +265,7 @@ export default function ProductDetails() {
         {/* Product Info */}
         <div>
           <div className="user-app-card" style={{ marginBottom: '16px' }}>
-            <h1 style={{ margin: '0 0 8px', fontSize: '1.75rem', fontWeight: 700, color: '#050505' }}>
+            <h1 style={{ margin: '0 0 8px', fontSize: '1.75rem', fontWeight: 700, color: '#050505' }} className="product-title">
               {product.name}
             </h1>
             {product.category && (
@@ -265,7 +273,7 @@ export default function ProductDetails() {
                 {product.category}
               </span>
             )}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }} className="product-price">
               <span style={{ fontSize: '2rem', fontWeight: 700, color: '#7c3aed' }}>
                 {formatCurrency(product.price)}
               </span>
@@ -345,7 +353,7 @@ export default function ProductDetails() {
               {/* Quantity */}
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Quantity</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                   <button
                     type="button"
                     onClick={() => handleQuantityChange(-1)}
@@ -406,7 +414,7 @@ export default function ProductDetails() {
                   >
                     <Plus size={18} />
                   </button>
-                  <span style={{ color: '#65676b', fontSize: '0.875rem' }}>
+                  <span style={{ color: '#65676b', fontSize: '0.875rem', width: '100%' }}>
                     {formatCurrency(product.price)} each
                   </span>
                 </div>

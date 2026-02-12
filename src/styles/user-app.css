@@ -9584,3 +9584,60 @@
 .incoming-call-btn-accept:hover:not(:disabled) {
   background: #bbf7d0;
 }
+
+/* ========== Product Details Mobile Responsiveness ========== */
+@media (min-width: 769px) {
+  .product-details-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 32px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .product-details-grid {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+
+  .product-title {
+    font-size: 1.5rem !important;
+  }
+
+  .product-price span:first-child {
+    font-size: 1.75rem !important;
+  }
+
+  .product-thumbnails {
+    gap: 6px !important;
+  }
+
+  .product-thumbnails button {
+    width: 60px !important;
+    height: 60px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .product-details-container {
+    padding: 12px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .product-details-container {
+    padding: 8px !important;
+  }
+
+  .product-title {
+    font-size: 1.25rem !important;
+  }
+
+  .product-price span:first-child {
+    font-size: 1.5rem !important;
+  }
+
+  .product-thumbnails button {
+    width: 50px !important;
+    height: 50px !important;
+  }
+}
