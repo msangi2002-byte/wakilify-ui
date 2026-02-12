@@ -680,7 +680,7 @@ export default function Profile() {
             Edit Profile
           </Link>
         </div>
-      </header>
+      </div>
 
       {error && (
         <div className="profile-fb-error" role="alert">
