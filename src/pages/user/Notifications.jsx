@@ -4,12 +4,11 @@ import {
   Bell,
   MessageCircle,
   Heart,
-  ShoppingBag,
   UserPlus,
-  Settings,
   Check,
   Share2,
   UserCheck,
+  Users,
 } from 'lucide-react';
 import { getNotifications, markNotificationRead, markAllNotificationsRead } from '@/lib/api/notifications';
 import { formatPostTime } from '@/lib/utils/dateUtils';
@@ -21,36 +20,49 @@ const ICON_BY_TYPE = {
   FRIEND_REQUEST: UserPlus,
   FRIEND_ACCEPT: UserCheck,
   FOLLOW: UserPlus,
+  COMMUNITY_INVITE: Users,
   SYSTEM: Bell,
 };
 
 function linkForNotification(n) {
   if (n.type === 'FOLLOW' && n.actor?.id) return `/app/profile/${n.actor.id}`;
-  if (n.type === 'LIKE' || n.type === 'COMMENT') return n.entityId ? `/app` : '/app';
   if (n.type === 'FRIEND_REQUEST' || n.type === 'FRIEND_ACCEPT') return '/app/friends';
+  if (n.type === 'COMMUNITY_INVITE' && n.entityId) return `/app/groups/${n.entityId}`;
+  if ((n.type === 'LIKE' || n.type === 'COMMENT' || n.type === 'SHARE') && n.entityId) return `/app`;
   if (n.type === 'SYSTEM') return '/app';
   return '/app';
 }
 
+function NotificationAvatar({ actor, type }) {
+  const Icon = ICON_BY_TYPE[type] || Bell;
+  if (actor?.profilePic) {
+    return (
+      <span className="notif-item-avatar">
+        <img src={actor.profilePic} alt="" />
+      </span>
+    );
+  }
+  const initial = actor?.name ? actor.name.charAt(0).toUpperCase() : '?';
+  return (
+    <span className="notif-item-avatar notif-item-avatar-placeholder">
+      {initial}
+    </span>
+  );
+}
+
 function NotificationItem({ item, onMarkRead }) {
-  const Icon = ICON_BY_TYPE[item.type] || Bell;
   const link = linkForNotification(item);
+  const actorName = item.actor?.name || 'Someone';
+
   return (
     <Link
       to={link}
       className={`notif-item ${item.isRead ? 'read' : ''}`}
       onClick={() => onMarkRead(item.id)}
     >
-      <span className="notif-item-icon">
-        <Icon size={22} />
-      </span>
+      <NotificationAvatar actor={item.actor} type={item.type} />
       <div className="notif-item-body">
-        <span className="notif-item-title">
-          {item.type === 'FOLLOW' && item.actor?.name ? `${item.actor.name} started following you` : item.message}
-        </span>
-        {item.actor?.name && item.type !== 'FOLLOW' && (
-          <span className="notif-item-desc">{item.actor.name}</span>
-        )}
+        <span className="notif-item-message">{item.message}</span>
         <span className="notif-item-time">{formatPostTime(item.createdAt)}</span>
       </div>
       {!item.isRead && <span className="notif-item-dot" aria-hidden />}
@@ -102,7 +114,7 @@ export default function Notifications() {
         <p className="settings-subtitle">
           {unreadCount > 0
             ? `${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}`
-            : 'You’re all caught up'}
+            : "You're all caught up"}
         </p>
         <div className="notif-header-actions">
           <div className="notif-filter" role="group" aria-label="Filter">
@@ -135,7 +147,6 @@ export default function Notifications() {
             to="/app/settings"
             className="settings-btn settings-btn-secondary notif-settings-link"
           >
-            <Settings size={16} />
             Notification settings
           </Link>
         </div>

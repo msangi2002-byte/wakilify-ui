@@ -159,7 +159,11 @@ export default function GroupsLayout() {
                     className={`groups-list-item ${id === g.id ? 'active' : ''}`}
                   >
                     <div className="groups-list-avatar">
-                      <Users size={24} />
+                      {g.coverImage ? (
+                        <img src={g.coverImage} alt="" />
+                      ) : (
+                        <Users size={24} />
+                      )}
                     </div>
                     <div className="groups-list-info">
                       <span className="groups-list-name">{g.name}</span>
