@@ -11,11 +11,19 @@ import {
   Pencil,
   Camera,
   LayoutGrid,
+<<<<<<< Updated upstream
+=======
+  Repeat,
+  UserSquare,
+>>>>>>> Stashed changes
   Home,
   Users,
   UserPlus,
   Heart,
+<<<<<<< Updated upstream
   Sparkles,
+=======
+>>>>>>> Stashed changes
 } from 'lucide-react';
 import { ROLES } from '@/types/roles';
 import { useAuthStore, setAuth, getToken } from '@/store/auth.store';
@@ -487,6 +495,7 @@ export default function Profile() {
   const handleStr = displayProfile?.username ?? (displayProfile?.name ?? 'user').replace(/\s+/g, '').toLowerCase() || 'user';
   const postsCount = posts.length;
   const formatStat = (n) => (n >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(n));
+<<<<<<< Updated upstream
   const totalLikes = posts.reduce((sum, p) => sum + (p.likesCount ?? 0), 0);
 
   return (
@@ -641,6 +650,54 @@ export default function Profile() {
           <div className="profile-fb-stat-row">
             <span className="profile-fb-stat-label">Posts</span>
             <span className="profile-fb-stat-value">{formatStat(displayProfile?.postsCount ?? postsCount)}</span>
+=======
+
+  return (
+    <div className="profile-fb profile-fb-centered">
+      <input
+        type="file"
+        ref={avatarInputRef}
+        accept="image/*"
+        className="profile-fb-input-hidden"
+        aria-label="Upload profile picture"
+        onChange={handleAvatarChange}
+      />
+      {/* Centered header: avatar, @handle, bio, stats, CTA */}
+      <header className="profile-fb-header-centered">
+        <div className="profile-fb-avatar-wrap profile-fb-avatar-wrap-centered">
+          <Avatar user={displayProfile} size={140} className="profile-fb-avatar profile-fb-avatar-centered" />
+          <button
+            type="button"
+            className="profile-fb-avatar-edit profile-fb-avatar-edit-overlay"
+            onClick={() => avatarInputRef.current?.click()}
+            disabled={avatarUploading}
+            aria-label="Change profile picture"
+          >
+            {avatarUploading ? <span className="profile-fb-avatar-edit-text">…</span> : <Camera size={20} />}
+          </button>
+          <Link to="/app/messages" className="profile-fb-avatar-message" aria-label="Messages">
+            <MessageCircle size={20} fill="currentColor" />
+          </Link>
+        </div>
+        <h1 className="profile-fb-handle">@{handleStr}</h1>
+        {(displayProfile?.bio || displayProfile?.work) && (
+          <p className="profile-fb-bio profile-fb-bio-centered">
+            {displayProfile.bio || displayProfile.work || ''}
+          </p>
+        )}
+        <div className="profile-fb-stats" role="presentation">
+          <div className="profile-fb-stat">
+            <Home size={18} className="profile-fb-stat-icon" aria-hidden />
+            <span>Posts: {formatStat(postsCount)}</span>
+          </div>
+          <div className="profile-fb-stat">
+            <Users size={18} className="profile-fb-stat-icon" aria-hidden />
+            <span>Followers: {formatStat(displayProfile?.followersCount ?? 0)}</span>
+          </div>
+          <div className="profile-fb-stat">
+            <UserPlus size={18} className="profile-fb-stat-icon" aria-hidden />
+            <span>Following: {formatStat(displayProfile?.followingCount ?? 0)}</span>
+>>>>>>> Stashed changes
           </div>
           <div className="profile-fb-stat-row">
             <span className="profile-fb-stat-label">Total likes</span>
@@ -675,7 +732,13 @@ export default function Profile() {
             </p>
           )}
         </div>
-      </div>
+        <div className="profile-fb-actions profile-fb-actions-centered">
+          <Link to="/app/settings" className="profile-fb-btn profile-fb-btn-primary profile-fb-btn-cta">
+            <Pencil size={18} />
+            Edit Profile
+          </Link>
+        </div>
+      </header>
 
       {error && (
         <div className="profile-fb-error" role="alert">

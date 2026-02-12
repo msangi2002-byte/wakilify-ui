@@ -1,10 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+<<<<<<< Updated upstream
 import { ImagePlus, Users, Video, MoreHorizontal, Plus, ThumbsUp, MessageCircle, Share2, Play, Sparkles } from 'lucide-react';
 import { UserProfileMenu } from '@/components/ui/UserProfileMenu';
 import { CommentItem } from '@/components/social/CommentItem';
 import { VideoFullscreenOverlay } from '@/components/social/VideoFullscreenOverlay';
 import { ReelCommentsDrawer, ReelShareMenu } from '@/pages/user/Reels';
+=======
+import { ImagePlus, Users, Video, MoreHorizontal, Plus, ThumbsUp, MessageCircle, Share2, Heart } from 'lucide-react';
+>>>>>>> Stashed changes
 import { useAuthStore } from '@/store/auth.store';
 import { getFeed, getPublicFeed, getStories, likePost, unlikePost, savePost, unsavePost, sharePostToStory, getComments, addComment, deleteComment, createPost, likeComment, unlikeComment } from '@/lib/api/posts';
 import { followUser, unfollowUser } from '@/lib/api/friends';
@@ -183,6 +187,7 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], li
     }
   };
 
+<<<<<<< Updated upstream
   const handleSubmitReply = async (e, parentId) => {
     e.preventDefault();
     const content = replyText.trim();
@@ -192,6 +197,14 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], li
       await addComment(id, content, parentId);
       setReplyText('');
       setReplyingTo(null);
+=======
+  const handleEmojiClick = async (emoji) => {
+    if (!id || commentSubmitting) return;
+    setCommentSubmitting(true);
+    try {
+      await addComment(id, emoji);
+      setCommentText('');
+>>>>>>> Stashed changes
       setCommentsCount((c) => c + 1);
       await loadComments();
     } finally {
@@ -533,6 +546,7 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], li
             <p className="feed-post-comments-loading">Loading comments…</p>
           ) : (
             <ul className="feed-post-comments-list">
+<<<<<<< Updated upstream
               {comments.map((c) => (
                 <CommentItem
                   key={c.id}
@@ -549,8 +563,57 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], li
                   formatTime={formatCommentTime}
                 />
               ))}
+=======
+              {comments.map((c) => {
+                const commentAuthor = c.author ?? c.user ?? {};
+                const name = commentAuthor.name ?? commentAuthor.username ?? 'User';
+                const profilePic = commentAuthor.profilePic ?? commentAuthor.avatar ?? commentAuthor.image;
+                const isOwn = currentUser?.id && (commentAuthor.id === currentUser.id || c.userId === currentUser.id);
+                const likeCount = c.likesCount ?? c.likes_count ?? 0;
+                return (
+                  <li key={c.id} className="feed-post-comment-item">
+                    <Avatar user={{ name, profilePic }} size={36} className="feed-post-comment-avatar" />
+                    <div className="feed-post-comment-main">
+                      <div className="feed-post-comment-head">
+                        <div className="feed-post-comment-meta">
+                          <span className="feed-post-comment-author">{name}</span>
+                          <span className="feed-post-comment-time">{formatCommentTime(c.createdAt ?? c.created_at)}</span>
+                        </div>
+                        <button type="button" className="feed-post-comment-like" aria-label="Like comment" title="Like">
+                          <Heart size={16} />
+                          {likeCount > 0 && <span className="feed-post-comment-like-count">{likeCount}</span>}
+                        </button>
+                      </div>
+                      <p className="feed-post-comment-content">{c.content ?? c.text ?? ''}</p>
+                      <div className="feed-post-comment-actions">
+                        <button type="button" className="feed-post-comment-reply">Reply</button>
+                        {isOwn && (
+                          <button
+                            type="button"
+                            className="feed-post-comment-delete"
+                            onClick={() => handleDeleteComment(c.id)}
+                            aria-label="Delete comment"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+>>>>>>> Stashed changes
             </ul>
           )}
+          <div className="feed-post-comment-emoji-bar">
+            <button type="button" className="feed-post-comment-emoji" aria-label="Heart" onClick={() => handleEmojiClick('❤️')}>❤️</button>
+            <button type="button" className="feed-post-comment-emoji" aria-label="Clap" onClick={() => handleEmojiClick('🙌')}>🙌</button>
+            <button type="button" className="feed-post-comment-emoji" aria-label="Fire" onClick={() => handleEmojiClick('🔥')}>🔥</button>
+            <button type="button" className="feed-post-comment-emoji" aria-label="Sad" onClick={() => handleEmojiClick('😢')}>😢</button>
+            <button type="button" className="feed-post-comment-emoji" aria-label="Love" onClick={() => handleEmojiClick('🥰')}>🥰</button>
+            <button type="button" className="feed-post-comment-emoji" aria-label="Surprise" onClick={() => handleEmojiClick('😮')}>😮</button>
+            <button type="button" className="feed-post-comment-emoji" aria-label="Laugh" onClick={() => handleEmojiClick('😂')}>😂</button>
+          </div>
           <form onSubmit={handleSubmitComment} className="feed-post-comment-form">
             <Avatar user={currentUser} size={36} className="feed-post-comment-form-avatar" />
             <div className="feed-post-comment-form-wrap">
