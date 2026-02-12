@@ -24,6 +24,7 @@ import { searchUsers, getPeopleYouMayKnow, recordActivity } from '@/lib/api/user
 import { followUser, getMutualFollows } from '@/lib/api/friends';
 import { getActiveAds, recordImpression, recordClick } from '@/lib/api/ads';
 import { getAllCommunities } from '@/lib/api/communities';
+import { getUnreadCount as getNotificationUnreadCount } from '@/lib/api/notifications';
 import IncomingCallModal from '@/components/call/IncomingCallModal';
 import { APP_NAME, LOGO_PNG, LOGO_ICON } from '@/lib/constants/brand';
 import { clearAuth } from '@/store/auth.store';
@@ -106,6 +107,7 @@ export default function UserLayout() {
   const [mutualFollows, setMutualFollows] = useState([]);
   const [pymkLoading, setPymkLoading] = useState(false);
   const [followLoadingId, setFollowLoadingId] = useState(null);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const impressedAdIds = useRef(new Set());
   const menuRef = useRef(null);
   const searchRef = useRef(null);
@@ -121,6 +123,30 @@ export default function UserLayout() {
     }, 2 * 60 * 1000);
     return () => clearInterval(id);
   }, [user?.id]);
+
+  // Fetch unread notification count
+  const isNotificationsPage = location.pathname === '/app/notifications';
+  useEffect(() => {
+    if (!user?.id) {
+      setUnreadNotificationCount(0);
+      return;
+    }
+    
+    const fetchUnreadCount = async () => {
+      try {
+        const count = await getNotificationUnreadCount();
+        setUnreadNotificationCount(typeof count === 'number' ? count : (count?.count ?? 0));
+      } catch {
+        setUnreadNotificationCount(0);
+      }
+    };
+
+    fetchUnreadCount();
+    // Poll every 30 seconds for new notifications (or every 5 seconds if on notifications page)
+    const pollInterval = isNotificationsPage ? 5000 : 30000;
+    const interval = setInterval(fetchUnreadCount, pollInterval);
+    return () => clearInterval(interval);
+  }, [user?.id, isNotificationsPage]);
 
   const pollIncoming = useCallback(async () => {
     if (isOnCallPage) return;
@@ -521,7 +547,11 @@ export default function UserLayout() {
           </div>
           <Link to="/app/notifications" className="user-app-icon-btn" aria-label="Notifications">
             <Bell size={20} />
-            <span className="badge">1</span>
+            {unreadNotificationCount > 0 && (
+              <span className="badge">
+                {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+              </span>
+            )}
           </Link>
           <Link to="/app/settings" className="user-app-icon-btn" aria-label="Settings">
             <Settings size={20} />
