@@ -9617,15 +9617,33 @@
   }
 }
 
+@media (min-width: 769px) {
+  .product-details-container {
+    padding: 32px 24px !important;
+  }
+
+  .orders-container {
+    padding: 32px 24px !important;
+  }
+}
+
 @media (max-width: 768px) {
   .product-details-container {
-    padding: 12px !important;
+    padding: 16px 12px !important;
+  }
+
+  .orders-container {
+    padding: 16px 12px !important;
   }
 }
 
 @media (max-width: 480px) {
   .product-details-container {
-    padding: 8px !important;
+    padding: 12px 8px !important;
+  }
+
+  .orders-container {
+    padding: 12px 8px !important;
   }
 
   .product-title {

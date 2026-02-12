@@ -185,7 +185,7 @@ export default function ProductDetails() {
   const maxQuantity = product.stockQuantity !== null && product.stockQuantity !== undefined ? product.stockQuantity : 999;
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px' }} className="product-details-container">
+    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }} className="product-details-container">
       {/* Back button */}
       <button
         type="button"

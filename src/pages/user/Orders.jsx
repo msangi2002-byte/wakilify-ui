@@ -723,7 +723,7 @@ export default function Orders() {
   }
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px' }}>
+    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }} className="orders-container">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h1 style={{ margin: 0, marginBottom: '4px', fontSize: '1.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '12px' }}>
