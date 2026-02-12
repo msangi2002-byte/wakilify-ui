@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Users, LogOut, Loader2, Settings, X, ImagePlus, ArrowLeft, Pin, PinOff } from 'lucide-react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { Users, LogOut, Loader2, Settings, X, ImagePlus, ArrowLeft, Pin, PinOff, UserPlus, Search } from 'lucide-react';
 import { GroupPost } from '@/components/social/GroupPost';
-import { getCommunity, joinCommunity, leaveCommunity, updateCommunitySettings, pinPost, unpinPost } from '@/lib/api/communities';
+import { getCommunity, joinCommunity, leaveCommunity, updateCommunitySettings, pinPost, unpinPost, inviteUsers } from '@/lib/api/communities';
+import { searchUsers } from '@/lib/api/users';
 import { getPostsByCommunity, createPost, uploadChunked, CHUNK_THRESHOLD_BYTES } from '@/lib/api/posts';
 import { UploadProgressBar } from '@/components/ui/UploadProgressBar';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
@@ -45,6 +46,12 @@ export default function GroupDetail() {
   const [createSubmitting, setCreateSubmitting] = useState(false);
   const [createUploadProgress, setCreateUploadProgress] = useState(0);
   const [createError, setCreateError] = useState('');
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteSearchQuery, setInviteSearchQuery] = useState('');
+  const [inviteSearchResults, setInviteSearchResults] = useState([]);
+  const [inviteSelected, setInviteSelected] = useState([]);
+  const [inviteSubmitting, setInviteSubmitting] = useState(false);
+  const [inviteError, setInviteError] = useState('');
 
   useEffect(() => {
     if (!id) return;
@@ -116,6 +123,51 @@ export default function GroupDetail() {
     } finally {
       setSettingsSaving(false);
     }
+  };
+
+  useEffect(() => {
+    if (!inviteOpen || !inviteSearchQuery.trim()) {
+      setInviteSearchResults([]);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      searchUsers(inviteSearchQuery.trim(), { page: 0, size: 20 })
+        .then((res) => {
+          const content = res?.content ?? [];
+          if (!cancelled) setInviteSearchResults(Array.isArray(content) ? content : []);
+        })
+        .catch(() => { if (!cancelled) setInviteSearchResults([]); });
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [inviteOpen, inviteSearchQuery]);
+
+  const handleInviteUsers = async () => {
+    if (!id || inviteSelected.length === 0 || inviteSubmitting) return;
+    setInviteError('');
+    setInviteSubmitting(true);
+    try {
+      await inviteUsers(id, inviteSelected.map((u) => u.id));
+      setInviteOpen(false);
+      setInviteSelected([]);
+      setInviteSearchQuery('');
+      setInviteSearchResults([]);
+      const updated = await getCommunity(id);
+      setGroup(updated);
+    } catch (err) {
+      setInviteError(getApiErrorMessage(err, 'Failed to invite users'));
+    } finally {
+      setInviteSubmitting(false);
+    }
+  };
+
+  const toggleInviteUser = (u) => {
+    const isSelected = inviteSelected.some((s) => s.id === u.id);
+    if (isSelected) setInviteSelected((prev) => prev.filter((s) => s.id !== u.id));
+    else setInviteSelected((prev) => [...prev, u]);
   };
 
   const handlePinPost = async (postId, currentlyPinned) => {
@@ -236,15 +288,26 @@ export default function GroupDetail() {
           </div>
           <div className="group-detail-actions">
             {isAdmin && (
-              <button
-                type="button"
-                className="group-detail-btn group-detail-btn-settings"
-                onClick={() => setSettingsOpen(true)}
-                title="Group settings"
-              >
-                <Settings size={18} />
-                Settings
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="group-detail-btn group-detail-btn-join"
+                  onClick={() => setInviteOpen(true)}
+                  title="Invite members"
+                >
+                  <UserPlus size={18} />
+                  Invite members
+                </button>
+                <button
+                  type="button"
+                  className="group-detail-btn group-detail-btn-settings"
+                  onClick={() => setSettingsOpen(true)}
+                  title="Group settings"
+                >
+                  <Settings size={18} />
+                  Settings
+                </button>
+              </>
             )}
             {isMember ? (
               <button
@@ -278,6 +341,89 @@ export default function GroupDetail() {
           </div>
         </div>
       </div>
+
+      {inviteOpen && (
+        <div className="group-settings-overlay" onClick={() => !inviteSubmitting && setInviteOpen(false)}>
+          <div className="group-settings-modal group-invite-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="group-settings-header">
+              <h3>Invite members</h3>
+              <button type="button" className="group-settings-close" onClick={() => setInviteOpen(false)} aria-label="Close">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="group-invite-body">
+              <div className="group-invite-search">
+                <Search size={18} className="group-invite-search-icon" />
+                <input
+                  type="text"
+                  placeholder="Search users by name..."
+                  value={inviteSearchQuery}
+                  onChange={(e) => setInviteSearchQuery(e.target.value)}
+                  className="group-invite-search-input"
+                />
+              </div>
+              {inviteError && <p className="group-invite-error" role="alert">{inviteError}</p>}
+              <div className="group-invite-results">
+                {inviteSearchQuery.trim() ? (
+                  inviteSearchResults.length === 0 ? (
+                    <p className="group-invite-hint">No users found. Try a different search.</p>
+                  ) : (
+                    <ul className="group-invite-list">
+                      {inviteSearchResults.map((u) => {
+                        const isSelected = inviteSelected.some((s) => s.id === u.id);
+                        return (
+                          <li key={u.id}>
+                            <button
+                              type="button"
+                              className={`group-invite-item ${isSelected ? 'selected' : ''}`}
+                              onClick={() => toggleInviteUser(u)}
+                            >
+                              <div className="group-invite-avatar">
+                                {u.profilePic ? (
+                                  <img src={u.profilePic} alt="" />
+                                ) : (
+                                  <span>{(u.name || 'U').charAt(0).toUpperCase()}</span>
+                                )}
+                              </div>
+                              <span className="group-invite-name">{u.name ?? u.username ?? 'User'}</span>
+                              {isSelected ? (
+                                <span className="group-invite-check">✓</span>
+                              ) : (
+                                <span className="group-invite-add">+ Add</span>
+                              )}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )
+                ) : (
+                  <p className="group-invite-hint">Type to search for users to invite.</p>
+                )}
+              </div>
+              {inviteSelected.length > 0 && (
+                <p className="group-invite-selected">
+                  {inviteSelected.length} selected
+                </p>
+              )}
+            </div>
+            <div className="group-settings-footer">
+              <button type="button" className="settings-btn settings-btn-secondary" onClick={() => setInviteOpen(false)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="settings-btn settings-btn-primary"
+                onClick={handleInviteUsers}
+                disabled={inviteSubmitting || inviteSelected.length === 0}
+              >
+                {inviteSubmitting ? <Loader2 size={18} className="spin" /> : <UserPlus size={18} />}
+                Invite {inviteSelected.length > 0 ? `(${inviteSelected.length})` : ''}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {settingsOpen && (
         <div className="group-settings-overlay" onClick={() => !settingsSaving && setSettingsOpen(false)}>

@@ -117,3 +117,51 @@ export async function unpinPost(communityId, postId) {
   const { data } = await api.delete(`/communities/${communityId}/posts/${postId}/pin`);
   return data?.data ?? data;
 }
+
+// ==================== INVITES ====================
+
+/**
+ * Invite users to a community (admin/moderator only)
+ * POST /api/v1/communities/:id/invite
+ * Body: { userIds: string[] }
+ */
+export async function inviteUsers(communityId, userIds) {
+  const { data } = await api.post(`/communities/${communityId}/invite`, {
+    userIds: Array.isArray(userIds) ? userIds.map(String) : [String(userIds)],
+  });
+  return data?.data ?? data;
+}
+
+/**
+ * Get my pending group invites
+ * GET /api/v1/communities/invites/me?page=0&size=20
+ */
+export async function getMyInvites(params = {}) {
+  const { data } = await api.get('/communities/invites/me', {
+    params: { page: 0, size: 50, ...params },
+  });
+  const res = data?.data ?? data;
+  return {
+    content: res?.content ?? [],
+    totalElements: res?.totalElements ?? 0,
+    totalPages: res?.totalPages ?? 1,
+  };
+}
+
+/**
+ * Accept a group invite
+ * POST /api/v1/communities/invites/:inviteId/accept
+ */
+export async function acceptInvite(inviteId) {
+  const { data } = await api.post(`/communities/invites/${inviteId}/accept`);
+  return data?.data ?? data;
+}
+
+/**
+ * Decline a group invite
+ * POST /api/v1/communities/invites/:inviteId/decline
+ */
+export async function declineInvite(inviteId) {
+  const { data } = await api.post(`/communities/invites/${inviteId}/decline`);
+  return data?.data ?? data;
+}

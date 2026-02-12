@@ -11,6 +11,14 @@ export async function createBusinessRequest(body) {
 }
 
 /**
+ * Record activity/heartbeat (updates lastSeen for online status)
+ * POST /api/v1/users/me/activity
+ */
+export async function recordActivity() {
+  await api.post('/users/me/activity');
+}
+
+/**
  * Get current user profile (auth required)
  * GET /api/v1/users/me
  */

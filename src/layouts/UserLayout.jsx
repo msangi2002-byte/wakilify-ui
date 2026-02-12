@@ -18,7 +18,9 @@ import { ROLES } from '@/types/roles';
 import { useAuthStore } from '@/store/auth.store';
 import { logout as logoutApi } from '@/lib/api/auth';
 import { getIncomingCalls, answerCall, rejectCall } from '@/lib/api/calls';
-import { searchUsers } from '@/lib/api/users';
+import { searchUsers, getPeopleYouMayKnow, recordActivity } from '@/lib/api/users';
+import { followUser, getMutualFollows } from '@/lib/api/friends';
+import { getActiveAds, recordImpression, recordClick } from '@/lib/api/ads';
 import { getAllCommunities } from '@/lib/api/communities';
 import IncomingCallModal from '@/components/call/IncomingCallModal';
 import { APP_NAME, LOGO_PNG, LOGO_ICON } from '@/lib/constants/brand';
@@ -26,6 +28,12 @@ import { clearAuth } from '@/store/auth.store';
 import '@/styles/user-app.css';
 
 const POLL_INTERVAL_MS = 2500;
+
+const SAMPLE_SPONSORED = [
+  { id: 'sample-1', title: 'Discover Wakilify Shop', description: 'Find products from local sellers.', imageUrl: 'https://picsum.photos/seed/ads1/240/240', targetUrl: '/app/shop' },
+  { id: 'sample-2', title: 'Join Live Streams', description: 'Watch and connect with creators.', imageUrl: 'https://picsum.photos/seed/ads2/240/240', targetUrl: '/app/live' },
+  { id: 'sample-3', title: 'Create Your Group', description: 'Connect with people who share your interests.', imageUrl: 'https://picsum.photos/seed/ads3/240/240', targetUrl: '/app/groups' },
+];
 
 const leftNav = [
   { to: '/app/profile', icon: User, label: 'Profile' },
@@ -35,11 +43,6 @@ const leftNav = [
   { to: '/app/shop', icon: ShoppingBag, label: 'Marketplace' },
   { to: '/app/notifications', icon: Bell, label: 'Notifications' },
   { to: '/app/settings', icon: Settings, label: 'Settings' },
-];
-
-const sponsored = [
-  { title: 'Dummy Ads', desc: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.' },
-  { title: 'Dummy Ads', desc: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.' },
 ];
 
 function BrandLogo({ size = 40, className = '' }) {
@@ -56,16 +59,6 @@ function BrandLogo({ size = 40, className = '' }) {
     />
   );
 }
-
-const contacts = [
-  'Kold Manes',
-  'Karean Soar',
-  'Rusty Friends',
-  'Juritttun Frar',
-  'Kobu Natrun',
-  'Emy Smith',
-  'Kack Hardan',
-];
 
 function Avatar({ user, size = 40, className = '' }) {
   const src = user?.profilePic;
@@ -104,11 +97,27 @@ export default function UserLayout() {
   const [searchResults, setSearchResults] = useState({ people: [], groups: [] });
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [sponsoredAds, setSponsoredAds] = useState([]);
+  const [sponsoredLoading, setSponsoredLoading] = useState(false);
+  const [peopleYouMayKnow, setPeopleYouMayKnow] = useState([]);
+  const [mutualFollows, setMutualFollows] = useState([]);
+  const [pymkLoading, setPymkLoading] = useState(false);
+  const [followLoadingId, setFollowLoadingId] = useState(null);
+  const impressedAdIds = useRef(new Set());
   const menuRef = useRef(null);
   const searchRef = useRef(null);
 
   const isHome = location.pathname === '/app' || location.pathname === '/app/';
   const isOnCallPage = location.pathname.startsWith('/app/call');
+
+  useEffect(() => {
+    if (!user?.id) return;
+    recordActivity().catch(() => {});
+    const id = setInterval(() => {
+      recordActivity().catch(() => {});
+    }, 2 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [user?.id]);
 
   const pollIncoming = useCallback(async () => {
     if (isOnCallPage) return;
@@ -239,6 +248,97 @@ export default function UserLayout() {
     }, 300);
     return () => clearTimeout(t);
   }, [searchQuery]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setSponsoredLoading(true);
+    getActiveAds({ type: 'FEED', limit: 5 })
+      .then((list) => {
+        if (!cancelled) setSponsoredAds(Array.isArray(list) ? list : []);
+      })
+      .catch(() => {
+        if (!cancelled) setSponsoredAds([]);
+      })
+      .finally(() => {
+        if (!cancelled) setSponsoredLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setPymkLoading(true);
+    Promise.all([
+      getMutualFollows({ page: 0, size: 20 }),
+      getPeopleYouMayKnow({ page: 0, size: 15 }).then((res) => res?.content ?? []),
+    ])
+      .then(([mutual, pymk]) => {
+        const mutualList = Array.isArray(mutual) ? mutual : [];
+        const pymkList = Array.isArray(pymk) ? pymk : [];
+        const mutualIds = new Set(mutualList.map((u) => u.id)));
+        const rest = pymkList.filter((u) => !mutualIds.has(u.id));
+        rest.sort((a, b) => {
+          const aOnline = a.isOnline === true;
+          const bOnline = b.isOnline === true;
+          if (aOnline !== bOnline) return aOnline ? -1 : 1;
+          const aSeen = a.lastSeen ? new Date(a.lastSeen).getTime() : 0;
+          const bSeen = b.lastSeen ? new Date(b.lastSeen).getTime() : 0;
+          return bSeen - aSeen;
+        });
+        if (!cancelled) {
+          setMutualFollows(
+            mutualList.sort((a, b) => {
+              const aOnline = a.isOnline === true;
+              const bOnline = b.isOnline === true;
+              if (aOnline !== bOnline) return aOnline ? -1 : 1;
+              const aSeen = a.lastSeen ? new Date(a.lastSeen).getTime() : 0;
+              const bSeen = b.lastSeen ? new Date(b.lastSeen).getTime() : 0;
+              return bSeen - aSeen;
+            })
+          );
+          setPeopleYouMayKnow(rest);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setMutualFollows([]);
+          setPeopleYouMayKnow([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setPymkLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleAdClick = (ad) => {
+    if (!ad) return;
+    if (ad.id && !String(ad.id).startsWith('sample-')) recordClick(ad.id).catch(() => {});
+    if (ad.targetUrl) {
+      if (ad.targetUrl.startsWith('/')) navigate(ad.targetUrl);
+      else window.open(ad.targetUrl, '_blank', 'noopener');
+    }
+  };
+
+  const handleFollowContact = async (u) => {
+    const id = u?.id;
+    if (!id || followLoadingId) return;
+    setFollowLoadingId(id);
+    try {
+      await followUser(id);
+      setPeopleYouMayKnow((prev) => prev.filter((p) => p.id !== id));
+    } catch (_) {
+      // keep in list
+    } finally {
+      setFollowLoadingId(null);
+    }
+  };
+
+  const recordAdImpression = (adId) => {
+    if (!adId || impressedAdIds.current.has(adId)) return;
+    impressedAdIds.current.add(adId);
+    recordImpression(adId).catch(() => {});
+  };
 
   const handleLogout = async () => {
     setMenuOpen(false);
@@ -476,29 +576,78 @@ export default function UserLayout() {
           <div className="user-app-right-section">
             <div className="user-app-right-section-header">
               <h3>Sponsored</h3>
-              <button type="button" aria-label="More">⋯</button>
             </div>
-            {sponsored.map((ad, i) => (
-              <a key={i} href="#sponsored" className="user-app-sponsored-card">
-                <div className="thumb" />
-                <div>
-                  <div className="title">{ad.title}</div>
-                  <div className="desc">{ad.desc}</div>
-                </div>
-              </a>
-            ))}
+            {sponsoredLoading ? (
+              <div className="user-app-right-loading">Loading…</div>
+            ) : (
+              (sponsoredAds.length === 0 ? SAMPLE_SPONSORED : sponsoredAds).map((ad) => (
+                <button
+                  key={ad.id}
+                  type="button"
+                  className="user-app-sponsored-card"
+                  onClick={() => handleAdClick(ad)}
+                  ref={(el) => el && !String(ad.id).startsWith('sample-') && recordAdImpression(ad.id)}
+                >
+                  <div className="thumb">
+                    {ad.imageUrl ? (
+                      <img src={ad.imageUrl} alt="" />
+                    ) : (
+                      <div style={{ background: 'var(--surface)', width: '100%', height: '100%' }} />
+                    )}
+                  </div>
+                  <div>
+                    <span className="user-app-sponsored-label">Sponsored</span>
+                    <div className="title">{ad.title}</div>
+                    <div className="desc">{ad.description || ''}</div>
+                  </div>
+                </button>
+              ))
+            )}
           </div>
           <div className="user-app-right-section">
             <div className="user-app-right-section-header">
-              <h3>Contacts</h3>
-              <button type="button" aria-label="More">⋯</button>
+              <h3>People you may know</h3>
+              <Link to="/app/friends" className="user-app-right-see-all">See all</Link>
             </div>
-            {contacts.map((name) => (
-              <Link key={name} to="/app" className="user-app-contact">
-                <Avatar user={{ name }} size={36} />
-                <span className="name">{name}</span>
-              </Link>
-            ))}
+            {pymkLoading ? (
+              <div className="user-app-right-loading">Loading…</div>
+            ) : mutualFollows.length === 0 && peopleYouMayKnow.length === 0 ? (
+              <div className="user-app-right-empty">No suggestions</div>
+            ) : (
+              <>
+                {mutualFollows.map((u) => (
+                  <div key={u.id} className="user-app-contact-row">
+                    <Link to={`/app/profile/${u.id}`} className="user-app-contact">
+                      <span className="user-app-avatar-wrap">
+                        <Avatar user={u} size={36} />
+                        {u.isOnline && <span className="user-app-online-dot" aria-label="Online" />}
+                      </span>
+                      <span className="name">{u.name ?? u.username ?? 'User'}</span>
+                    </Link>
+                    <span className="user-app-follow-badge">Friends</span>
+                  </div>
+                ))}
+                {peopleYouMayKnow.map((u) => (
+                  <div key={u.id} className="user-app-contact-row">
+                    <Link to={`/app/profile/${u.id}`} className="user-app-contact">
+                      <span className="user-app-avatar-wrap">
+                        <Avatar user={u} size={36} />
+                        {u.isOnline && <span className="user-app-online-dot" aria-label="Online" />}
+                      </span>
+                      <span className="name">{u.name ?? u.username ?? 'User'}</span>
+                    </Link>
+                    <button
+                      type="button"
+                      className="user-app-follow-btn"
+                      onClick={(e) => { e.preventDefault(); handleFollowContact(u); }}
+                      disabled={followLoadingId === u.id}
+                    >
+                      {followLoadingId === u.id ? '…' : 'Follow'}
+                    </button>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         </aside>
       </div>
