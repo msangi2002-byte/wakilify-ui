@@ -25,6 +25,7 @@ export default function Messages() {
   const mediaRecorderRef = useRef(null);
   const recordingIntervalRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const messageRefs = useRef({});
   const pendingVoiceActionRef = useRef('send');
 
   const loadConversations = useCallback(async () => {
@@ -318,9 +319,42 @@ export default function Messages() {
                 <p className="messages-empty-inline">No messages yet. Say hi!</p>
               ) : (
                 messages.map((msg) => (
-                  <div key={msg.id} className={`messages-bubble ${msg.isMe ? 'from-me' : ''}`}>
+                  <div 
+                    key={msg.id} 
+                    id={`message-${msg.id}`}
+                    ref={(el) => {
+                      if (el) messageRefs.current[msg.id] = el;
+                    }}
+                    className={`messages-bubble ${msg.isMe ? 'from-me' : ''}`}
+                  >
                     {msg.replyTo && (
-                      <div className="messages-reply-preview">
+                      <div 
+                        className="messages-reply-preview"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (msg.replyTo?.id) {
+                            const targetId = msg.replyTo.id;
+                            const targetMessage = messageRefs.current[targetId] || document.getElementById(`message-${targetId}`);
+                            if (targetMessage) {
+                              targetMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                              // Highlight the target message briefly
+                              const originalBg = targetMessage.style.backgroundColor;
+                              targetMessage.style.transition = 'background-color 0.3s';
+                              targetMessage.style.backgroundColor = targetMessage.classList.contains('from-me') 
+                                ? 'rgba(255, 255, 255, 0.2)' 
+                                : 'rgba(124, 58, 237, 0.15)';
+                              setTimeout(() => {
+                                targetMessage.style.backgroundColor = originalBg;
+                                setTimeout(() => {
+                                  targetMessage.style.transition = '';
+                                }, 300);
+                              }, 1500);
+                            }
+                          }
+                        }}
+                        style={{ cursor: 'pointer' }}
+                        title="Click to jump to original message"
+                      >
                         <span className="messages-reply-name">{msg.replyTo.senderName}</span>
                         <span className="messages-reply-text">{msg.replyTo.content || '📎 Media'}</span>
                       </div>

@@ -17,6 +17,7 @@ function formatCurrency(amount) {
 function ProductCard({ product, onDelete }) {
   const [deleting, setDeleting] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
   const navigate = useNavigate();
 
   const handleDelete = async (e) => {
@@ -44,14 +45,32 @@ function ProductCard({ product, onDelete }) {
 
   // Get product image (thumbnail, primary image, or first image)
   const getProductImage = () => {
+    // Helper to ensure URL is absolute
+    const normalizeUrl = (url) => {
+      if (!url) return null;
+      // If already absolute URL (starts with http:// or https://), return as is
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        return url;
+      }
+      // If relative URL, prepend storage base URL
+      // Default storage URL from backend is https://storage.wakilfy.com
+      const storageBaseUrl = 'https://storage.wakilfy.com';
+      // Remove leading slash if present to avoid double slashes
+      const cleanPath = url.startsWith('/') ? url.substring(1) : url;
+      return `${storageBaseUrl}/${cleanPath}`;
+    };
+
     // Use thumbnail if available (set from first image)
     if (product.thumbnail) {
-      return product.thumbnail;
+      return normalizeUrl(product.thumbnail);
     }
-    if (!product.images || product.images.length === 0) return null;
+    if (!product.images || product.images.length === 0) {
+      return null;
+    }
     // Find primary image first, otherwise use first image
     const primaryImage = product.images.find(img => img.isPrimary);
-    return primaryImage ? primaryImage.url : product.images[0].url;
+    const imageUrl = primaryImage ? primaryImage.url : product.images[0].url;
+    return normalizeUrl(imageUrl);
   };
   const productImage = getProductImage();
 
@@ -63,15 +82,29 @@ function ProductCard({ product, onDelete }) {
             src={productImage} 
             alt={product.name} 
             className="business-product-image"
-            onError={() => {
-              console.error('Failed to load product image:', productImage);
+            onError={(e) => {
+              console.error('Failed to load product image:', productImage, 'Product:', product.name);
+              console.error('Image error details:', e);
               setImageError(true);
             }}
+            onLoad={() => {
+              setImageLoading(false);
+              // Reset error state if image loads successfully after an error
+              if (imageError) {
+                setImageError(false);
+              }
+            }}
+            onLoadStart={() => setImageLoading(true)}
             loading="lazy"
           />
         ) : (
           <div className="business-product-image-placeholder">
             <ImageIcon size={32} />
+            {!productImage && (
+              <span style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '4px' }}>
+                No image
+              </span>
+            )}
           </div>
         )}
         {product.isActive === false && (

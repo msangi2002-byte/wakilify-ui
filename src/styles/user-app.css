@@ -6870,8 +6870,8 @@
 .messages-bubble {
   position: relative;
   max-width: 75%;
-  padding: 10px 14px;
-  border-radius: 18px;
+  padding: 6px 10px;
+  border-radius: 12px;
   align-self: flex-start;
   background: #fff;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
@@ -6885,15 +6885,15 @@
 
 .messages-bubble-text {
   display: block;
-  font-size: 0.9375rem;
-  line-height: 1.4;
+  font-size: 0.8125rem;
+  line-height: 1.35;
 }
 
 .messages-bubble-time {
   display: block;
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   opacity: 0.8;
-  margin-top: 4px;
+  margin-top: 3px;
 }
 
 .messages-chat-input-wrap {
@@ -7059,17 +7059,32 @@
 
 .messages-reply-preview {
   display: block;
-  padding: 6px 10px;
-  margin: -4px -10px 6px -10px;
-  background: rgba(0, 0, 0, 0.1);
-  border-left: 3px solid #7c3aed;
+  padding: 4px 8px;
+  margin: -2px -8px 4px -8px;
+  background: rgba(0, 0, 0, 0.08);
+  border-left: 2px solid #7c3aed;
   border-radius: 4px;
-  font-size: 0.8rem;
+  font-size: 0.6875rem;
+  transition: background-color 0.2s;
+}
+.messages-reply-preview:hover {
+  background: rgba(0, 0, 0, 0.12);
+}
+.messages-bubble.from-me .messages-reply-preview {
+  background: rgba(255, 255, 255, 0.15);
+  border-left-color: rgba(255, 255, 255, 0.6);
+}
+.messages-bubble.from-me .messages-reply-preview:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 .messages-reply-name {
   display: block;
   font-weight: 600;
   color: #7c3aed;
+  font-size: 0.6875rem;
+}
+.messages-bubble.from-me .messages-reply-name {
+  color: rgba(255, 255, 255, 0.95);
 }
 .messages-reply-text {
   display: block;
@@ -7077,7 +7092,9 @@
   overflow: hidden;
   text-overflow: ellipsis;
   color: inherit;
-  opacity: 0.9;
+  opacity: 0.85;
+  font-size: 0.625rem;
+  margin-top: 1px;
 }
 .messages-bubble-reply-btn {
   position: absolute;

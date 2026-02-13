@@ -134,7 +134,7 @@ export default function Dashboard() {
           <div className="agent-stat-value gold">
             {dashboard?.currentBalance != null ? `TZS ${formatAmount(dashboard.currentBalance)}` : '—'}
           </div>
-          <div className="agent-stat-label">Available balance</div>
+          <div className="agent-stat-label">Current wallet balance</div>
         </div>
         <div className="agent-card">
           <div className="agent-stat-value gold">
