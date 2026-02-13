@@ -20,12 +20,12 @@ function formatNumber(num) {
 
 function StatCard({ icon: Icon, label, value, subValue, trend, color = '#3b82f6', bgColor = '#eff6ff' }) {
   return (
-    <div className="business-card">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Icon size={24} style={{ color }} />
-          </div>
+    <div className="business-card" style={{ padding: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Icon size={20} style={{ color }} />
+            </div>
           <div>
             <div className="business-stat-label">{label}</div>
             <div className="business-stat-value" style={{ color }}>{value}</div>
@@ -33,10 +33,10 @@ function StatCard({ icon: Icon, label, value, subValue, trend, color = '#3b82f6'
         </div>
       </div>
       {subValue && (
-        <div style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '8px' }}>{subValue}</div>
+        <div style={{ fontSize: '0.8125rem', color: '#6b7280', marginTop: '6px' }}>{subValue}</div>
       )}
       {trend && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px', fontSize: '0.875rem', color: trend > 0 ? '#22c55e' : trend < 0 ? '#ef4444' : '#6b7280' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px', fontSize: '0.8125rem', color: trend > 0 ? '#22c55e' : trend < 0 ? '#ef4444' : '#6b7280' }}>
           {trend > 0 ? <ArrowUp size={14} /> : trend < 0 ? <ArrowDown size={14} /> : null}
           <span>{Math.abs(trend)}% from last period</span>
         </div>
@@ -143,14 +143,14 @@ export default function Stats() {
     .slice(0, 5);
 
   return (
-    <div className="business-main" style={{ padding: '24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
+    <div className="business-main" style={{ padding: '16px', maxWidth: '1000px', margin: '0 auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 className="business-dashboard-title" style={{ margin: 0, marginBottom: '4px' }}>
-            <TrendingUp size={28} />
+          <h1 className="business-dashboard-title" style={{ margin: 0, marginBottom: '4px', fontSize: '1.5rem' }}>
+            <TrendingUp size={24} />
             Analytics & Statistics
           </h1>
-          <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: 0 }}>
+          <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0 }}>
             Detailed insights into your business performance
           </p>
         </div>
@@ -170,7 +170,7 @@ export default function Stats() {
       </div>
 
       {/* Revenue Overview */}
-      <div className="business-grid business-grid-3" style={{ marginBottom: '32px' }}>
+      <div className="business-grid business-grid-3" style={{ marginBottom: '20px' }}>
         <StatCard
           icon={DollarSign}
           label="Total Revenue"
@@ -198,7 +198,7 @@ export default function Stats() {
       </div>
 
       {/* Orders Overview */}
-      <div className="business-grid business-grid-4" style={{ marginBottom: '32px' }}>
+      <div className="business-grid business-grid-4" style={{ marginBottom: '20px' }}>
         <StatCard
           icon={ShoppingBag}
           label="Total Orders"
@@ -234,7 +234,7 @@ export default function Stats() {
       </div>
 
       {/* Products & Performance */}
-      <div className="business-grid business-grid-3" style={{ marginBottom: '32px' }}>
+      <div className="business-grid business-grid-3" style={{ marginBottom: '20px' }}>
         <StatCard
           icon={Package}
           label="Total Products"
@@ -266,15 +266,15 @@ export default function Stats() {
       </div>
 
       {/* Order Status Breakdown */}
-      <div className="business-card" style={{ marginBottom: '32px' }}>
-        <h2 className="business-card-title">Order Status Breakdown</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px', marginTop: '16px' }}>
+      <div className="business-card" style={{ marginBottom: '20px', padding: '16px' }}>
+        <h2 className="business-card-title" style={{ fontSize: '1rem', marginBottom: '12px' }}>Order Status Breakdown</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '12px', marginTop: '12px' }}>
           {Object.entries(orderStatusCounts).map(([status, count]) => (
-            <div key={status} style={{ padding: '16px', background: '#f9fafb', borderRadius: '8px' }}>
-              <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '8px', textTransform: 'capitalize' }}>
+            <div key={status} style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px' }}>
+              <div style={{ fontSize: '0.8125rem', color: '#6b7280', marginBottom: '6px', textTransform: 'capitalize' }}>
                 {status}
               </div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827' }}>
+              <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827' }}>
                 {formatNumber(count)}
               </div>
             </div>
@@ -284,43 +284,43 @@ export default function Stats() {
 
       {/* Top Products */}
       {topProducts.length > 0 && (
-        <div className="business-card" style={{ marginBottom: '32px' }}>
-          <h2 className="business-card-title">Top Selling Products</h2>
-          <div style={{ marginTop: '16px' }}>
+        <div className="business-card" style={{ marginBottom: '20px', padding: '16px' }}>
+          <h2 className="business-card-title" style={{ fontSize: '1rem', marginBottom: '12px' }}>Top Selling Products</h2>
+          <div style={{ marginTop: '12px' }}>
             {topProducts.map((item, index) => (
               <div
                 key={item.product.id}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '16px',
-                  padding: '16px',
+                  gap: '12px',
+                  padding: '12px',
                   background: index % 2 === 0 ? '#f9fafb' : 'transparent',
                   borderRadius: '8px',
-                  marginBottom: '8px',
+                  marginBottom: '6px',
                 }}
               >
-                <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#e4e6eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#6b7280' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '6px', background: '#e4e6eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#6b7280', fontSize: '0.875rem' }}>
                   {index + 1}
                 </div>
                 {item.product.thumbnail && (
                   <img
                     src={item.product.thumbnail}
                     alt={item.product.name}
-                    style={{ width: '50px', height: '50px', borderRadius: '8px', objectFit: 'cover' }}
+                    style={{ width: '40px', height: '40px', borderRadius: '6px', objectFit: 'cover' }}
                   />
                 )}
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600, marginBottom: '4px' }}>{item.product.name}</div>
-                  <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                  <div style={{ fontWeight: 600, marginBottom: '2px', fontSize: '0.9375rem' }}>{item.product.name}</div>
+                  <div style={{ fontSize: '0.8125rem', color: '#6b7280' }}>
                     {formatCurrency(item.product.price || 0)}
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontWeight: 700, fontSize: '1.125rem', color: '#3b82f6' }}>
+                  <div style={{ fontWeight: 700, fontSize: '1rem', color: '#3b82f6' }}>
                     {formatNumber(item.count)}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>units sold</div>
+                  <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>units</div>
                 </div>
               </div>
             ))}
@@ -329,25 +329,25 @@ export default function Stats() {
       )}
 
       {/* Recent Activity Summary */}
-      <div className="business-card">
-        <h2 className="business-card-title">Performance Summary</h2>
-        <div style={{ marginTop: '16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-          <div style={{ padding: '16px', background: '#f9fafb', borderRadius: '8px' }}>
-            <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '8px' }}>Order Completion Rate</div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827' }}>
+      <div className="business-card" style={{ padding: '16px' }}>
+        <h2 className="business-card-title" style={{ fontSize: '1rem', marginBottom: '12px' }}>Performance Summary</h2>
+        <div style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px' }}>
+          <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px' }}>
+            <div style={{ fontSize: '0.8125rem', color: '#6b7280', marginBottom: '6px' }}>Order Completion Rate</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827' }}>
               {stats.totalOrders > 0 ? Math.round((completedOrders / stats.totalOrders) * 100) : 0}%
             </div>
           </div>
-          <div style={{ padding: '16px', background: '#f9fafb', borderRadius: '8px' }}>
-            <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '8px' }}>Active Products Rate</div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827' }}>
+          <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px' }}>
+            <div style={{ fontSize: '0.8125rem', color: '#6b7280', marginBottom: '6px' }}>Active Products Rate</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827' }}>
               {totalProducts > 0 ? Math.round((activeProducts / totalProducts) * 100) : 0}%
             </div>
           </div>
           {stats.totalViews > 0 && (
-            <div style={{ padding: '16px', background: '#f9fafb', borderRadius: '8px' }}>
-              <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '8px' }}>Conversion Rate</div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827' }}>
+            <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px' }}>
+              <div style={{ fontSize: '0.8125rem', color: '#6b7280', marginBottom: '6px' }}>Conversion Rate</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827' }}>
                 {conversionRate.toFixed(1)}%
               </div>
             </div>

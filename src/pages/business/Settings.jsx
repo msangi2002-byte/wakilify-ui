@@ -99,13 +99,13 @@ export default function Settings() {
   }
 
   return (
-    <div className="business-main" style={{ padding: '24px' }}>
-      <div style={{ marginBottom: '32px' }}>
-        <h1 className="business-dashboard-title" style={{ margin: 0, marginBottom: '4px' }}>
-          <Building2 size={28} />
+    <div className="business-main" style={{ padding: '16px', maxWidth: '800px', margin: '0 auto' }}>
+      <div style={{ marginBottom: '20px' }}>
+        <h1 className="business-dashboard-title" style={{ margin: 0, marginBottom: '4px', fontSize: '1.5rem' }}>
+          <Building2 size={24} />
           Business Settings
         </h1>
-        <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: 0 }}>
+        <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0 }}>
           Manage your business profile and information
         </p>
       </div>
@@ -130,10 +130,10 @@ export default function Settings() {
 
       <form onSubmit={handleSubmit}>
         {/* Business Information */}
-        <div className="business-card" style={{ marginBottom: '24px' }}>
+        <div className="business-card" style={{ marginBottom: '16px' }}>
           <h2 className="business-card-title">Business Information</h2>
           
-          <div className="agent-form-field" style={{ marginBottom: '20px' }}>
+          <div className="agent-form-field" style={{ marginBottom: '16px' }}>
             <label className="agent-label" htmlFor="name">
               Business Name <span style={{ color: '#ef4444' }}>*</span>
             </label>
@@ -148,7 +148,7 @@ export default function Settings() {
             />
           </div>
 
-          <div className="agent-form-field" style={{ marginBottom: '20px' }}>
+          <div className="agent-form-field" style={{ marginBottom: '16px' }}>
             <label className="agent-label" htmlFor="description">
               Description
             </label>
@@ -163,7 +163,7 @@ export default function Settings() {
             />
           </div>
 
-          <div className="agent-form-field" style={{ marginBottom: '20px' }}>
+          <div className="agent-form-field" style={{ marginBottom: '16px' }}>
             <label className="agent-label" htmlFor="category">
               Category
             </label>
@@ -179,10 +179,10 @@ export default function Settings() {
         </div>
 
         {/* Contact Information */}
-        <div className="business-card" style={{ marginBottom: '24px' }}>
+        <div className="business-card" style={{ marginBottom: '16px' }}>
           <h2 className="business-card-title">Contact Information</h2>
           
-          <div className="agent-form-field" style={{ marginBottom: '20px' }}>
+          <div className="agent-form-field" style={{ marginBottom: '16px' }}>
             <label className="agent-label" htmlFor="phone">
               <Phone size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }} />
               Phone Number
@@ -197,7 +197,7 @@ export default function Settings() {
             />
           </div>
 
-          <div className="agent-form-field" style={{ marginBottom: '20px' }}>
+          <div className="agent-form-field" style={{ marginBottom: '16px' }}>
             <label className="agent-label" htmlFor="email">
               <Mail size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }} />
               Email Address
@@ -212,7 +212,7 @@ export default function Settings() {
             />
           </div>
 
-          <div className="agent-form-field" style={{ marginBottom: '20px' }}>
+          <div className="agent-form-field" style={{ marginBottom: '16px' }}>
             <label className="agent-label" htmlFor="website">
               <Globe size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }} />
               Website
@@ -229,13 +229,13 @@ export default function Settings() {
         </div>
 
         {/* Location Information */}
-        <div className="business-card" style={{ marginBottom: '24px' }}>
+        <div className="business-card" style={{ marginBottom: '16px' }}>
           <h2 className="business-card-title">
             <MapPin size={20} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '8px' }} />
             Location
           </h2>
           
-          <div className="agent-form-field" style={{ marginBottom: '20px' }}>
+          <div className="agent-form-field" style={{ marginBottom: '16px' }}>
             <label className="agent-label" htmlFor="region">
               Region
             </label>
@@ -249,7 +249,7 @@ export default function Settings() {
             />
           </div>
 
-          <div className="agent-form-field" style={{ marginBottom: '20px' }}>
+          <div className="agent-form-field" style={{ marginBottom: '16px' }}>
             <label className="agent-label" htmlFor="district">
               District
             </label>
@@ -263,7 +263,7 @@ export default function Settings() {
             />
           </div>
 
-          <div className="agent-form-field" style={{ marginBottom: '20px' }}>
+          <div className="agent-form-field" style={{ marginBottom: '16px' }}>
             <label className="agent-label" htmlFor="ward">
               Ward (optional)
             </label>
@@ -277,7 +277,7 @@ export default function Settings() {
             />
           </div>
 
-          <div className="agent-form-field" style={{ marginBottom: '20px' }}>
+          <div className="agent-form-field" style={{ marginBottom: '16px' }}>
             <label className="agent-label" htmlFor="street">
               Street/Area (optional)
             </label>
@@ -294,7 +294,7 @@ export default function Settings() {
 
         {/* Business Status Info */}
         {business && (
-          <div className="business-card" style={{ marginBottom: '24px' }}>
+          <div className="business-card" style={{ marginBottom: '16px' }}>
             <h2 className="business-card-title">Business Status</h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
               <div>
