@@ -166,9 +166,21 @@
   color: #65676b;
 }
 
+.user-app-search-icon-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
 .user-app-search-icon {
   color: #65676b;
   flex-shrink: 0;
+  display: block;
+  width: 20px;
+  height: 20px;
 }
 
 /* Global search dropdown (people + groups) */
@@ -304,7 +316,13 @@
 .user-app-header-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+}
+
+.user-app-header-right .user-app-dropdown {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .user-app-avatar {
@@ -479,64 +497,67 @@
   position: relative;
 }
 
+/* Create Story card - Image 2 style: bg image + large plus at bottom */
 .user-app-story-card.create {
-  background: #fff;
-  border: 2px solid #e4e6eb;
+  background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
+  border: none;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 16px 8px;
-  min-height: 160px;
+  justify-content: flex-end;
+  padding: 0;
+  min-height: 200px;
+  height: 200px;
 }
 
-.user-app-story-card.create .avatar-wrap {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  overflow: hidden;
-  margin-bottom: 8px;
-  position: relative;
-}
-
-.user-app-story-card.create .avatar-wrap img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.user-app-story-card.create .plus-icon {
+.user-app-story-card.create .story-create-bg {
   position: absolute;
-  bottom: -4px;
-  right: -4px;
-  width: 24px;
-  height: 24px;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  border-radius: 8px;
+}
+
+.user-app-story-card.create .story-create-plus {
+  position: relative;
+  z-index: 2;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  background: #7c3aed;
+  background: #1877f2;
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid #fff;
+  border: 3px solid #fff;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
 .user-app-story-card.create .label {
+  position: relative;
+  z-index: 2;
   font-size: 0.8125rem;
   font-weight: 600;
   color: #050505;
+  margin-bottom: 12px;
+  text-shadow: 0 0 2px rgba(255,255,255,0.8);
 }
 
 .user-app-story-card:not(.create) {
   position: relative;
   height: 200px;
-  padding: 8px;
+  padding: 0;
   display: flex;
   flex-direction: column;
+  align-items: center;
 }
 
 .user-app-story-card:not(.create) .story-bg {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent 60%, rgba(0,0,0,0.6) 100%);
+  background: linear-gradient(180deg, transparent 50%, rgba(0,0,0,0.6) 100%);
   border-radius: 8px;
 }
 
@@ -547,32 +568,54 @@
 }
 
 .user-app-story-card:not(.create) .story-ring-inner {
-  position: relative;
-  z-index: 1;
-  margin-bottom: auto;
-  padding-top: 8px;
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
 }
 
 .user-app-story-card:not(.create) .story-avatar {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  border: 3px solid #7c3aed;
+  border: 3px solid #1877f2;
   object-fit: cover;
+  display: block;
 }
 
 .user-app-story-card:not(.create) .story-name {
   position: absolute;
-  bottom: 12px;
-  left: 12px;
-  right: 12px;
-  font-size: 0.8125rem;
+  bottom: 10px;
+  left: 8px;
+  right: 8px;
+  font-size: 0.75rem;
   font-weight: 600;
   color: #fff;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  text-align: center;
+  z-index: 2;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.6);
 }
 
-/* Composer */
+/* Composer - mobile style: one row = avatar | input | icons */
+.user-app-composer-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+}
+
+.user-app-composer-row .user-app-composer {
+  flex: 1;
+  min-width: 0;
+  border-bottom: none;
+  padding: 0;
+}
+
+.user-app-composer-row .user-app-composer:hover {
+  background: transparent;
+}
+
 .user-app-composer {
   display: flex;
   align-items: center;
@@ -613,6 +656,44 @@
 .user-app-composer-placeholder {
   color: #65676b;
 }
+
+.user-app-composer-name {
+  font-size: inherit;
+  font-weight: 500;
+}
+
+/* Inline icons on the right (mobile-style) */
+.user-app-composer-actions-inline {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.user-app-composer-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: 50%;
+  color: #65676b;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  text-decoration: none;
+}
+
+.user-app-composer-icon:hover {
+  background: #f0f2f5;
+}
+
+.user-app-composer-icon.video { color: #e41e3f; }
+.user-app-composer-icon.post { color: #31a24c; }
+.user-app-composer-icon.reel { color: #e41e3f; }
+.user-app-composer-icon.more { color: #65676b; }
 
 .user-app-composer-actions {
   display: flex;
@@ -659,6 +740,14 @@
     font-size: 0.875rem;
   }
   .user-app-composer-btn.trade { min-width: 5.5rem; }
+  .user-app-composer-icon {
+    width: 36px;
+    height: 36px;
+  }
+  .user-app-composer-icon svg {
+    width: 20px;
+    height: 20px;
+  }
 }
 
 /* Feed post */
@@ -4627,7 +4716,7 @@
     bottom: 0;
     left: 0;
     right: 0;
-    height: 56px;
+    height: 52px;
     padding-bottom: env(safe-area-inset-bottom, 0);
     background: #fff;
     border-top: 1px solid #e4e6eb;
@@ -4642,8 +4731,8 @@
     align-items: center;
     justify-content: center;
     gap: 2px;
-    padding: 6px 4px;
-    min-height: 44px;
+    padding: 4px 2px;
+    min-height: 40px;
     color: #65676b;
     text-decoration: none;
     font-size: 0.625rem;
@@ -4657,7 +4746,8 @@
   }
 
   .user-app-body {
-    padding-bottom: calc(56px + env(safe-area-inset-bottom, 0) + 24px);
+    padding-top: calc(56px + env(safe-area-inset-top, 0));
+    padding-bottom: calc(52px + env(safe-area-inset-bottom, 0) + 20px);
   }
 
   .user-app-nav {
@@ -4665,12 +4755,110 @@
   }
 
   .user-app-header {
-    padding-left: 12px;
-    padding-right: 12px;
+    height: 56px;
+    min-height: 56px;
+    padding-top: calc(env(safe-area-inset-top, 0) + 8px);
+    padding-left: 10px;
+    padding-right: 10px;
+    box-sizing: border-box;
   }
 
-  .user-app-header-right .user-app-icon-btn:last-child {
+  .user-app-header .user-app-header-left,
+  .user-app-header .user-app-header-right {
+    align-items: center;
+  }
+
+  .user-app-main {
+    padding-top: 10px;
+  }
+
+  .user-app-header-right .user-app-icon-btn:last-child.user-app-header-settings {
     display: none;
+  }
+
+  .user-app-icon-btn,
+  .user-app-menu-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .user-app-icon-btn svg,
+  .user-app-menu-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .user-app-avatar {
+    width: 36px;
+    height: 36px;
+  }
+
+  .user-app-header .user-app-avatar > div {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .user-app-search {
+    padding: 6px 10px 6px 12px;
+    max-width: none;
+    margin-left: 6px;
+  }
+
+  .user-app-search-icon-wrap {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    min-height: 20px;
+  }
+
+  .user-app-search-icon {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    min-height: 20px;
+    color: #65676b;
+  }
+
+  .user-app-search input {
+    font-size: 0.875rem;
+  }
+
+  .user-app-logo img {
+    width: 32px;
+    height: 32px;
+  }
+
+  /* Composer row - compact on mobile */
+  .user-app-composer-row {
+    padding: 8px 12px;
+    gap: 6px;
+  }
+
+  .user-app-composer-row .user-app-composer-avatar {
+    width: 36px;
+    height: 36px;
+  }
+
+  .user-app-composer-row .user-app-composer-input,
+  .user-app-composer-row .user-app-composer-placeholder {
+    padding: 8px 12px;
+    font-size: 0.875rem;
+    border-radius: 18px;
+  }
+
+  .user-app-composer-row .user-app-composer-name {
+    font-size: 0.8125rem;
+    font-weight: 500;
+  }
+
+  .user-app-composer-actions-inline .user-app-composer-icon {
+    width: 34px;
+    height: 34px;
+  }
+
+  .user-app-composer-actions-inline .user-app-composer-icon svg {
+    width: 20px;
+    height: 20px;
   }
 }
 

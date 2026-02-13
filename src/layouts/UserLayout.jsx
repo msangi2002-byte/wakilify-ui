@@ -15,6 +15,7 @@ import {
   Sparkles,
   Building2,
   Package,
+  LayoutGrid,
 } from 'lucide-react';
 import { ROLES } from '@/types/roles';
 import { useAuthStore } from '@/store/auth.store';
@@ -400,7 +401,9 @@ export default function UserLayout() {
               onFocus={() => setSearchOpen(true)}
               role="search"
             >
-              <Search size={20} className="user-app-search-icon" />
+              <span className="user-app-search-icon-wrap" aria-hidden="true">
+                <Search size={20} className="user-app-search-icon" strokeWidth={2} />
+              </span>
               <input
                 type="text"
                 placeholder="Search people or groups"
@@ -496,7 +499,28 @@ export default function UserLayout() {
         </nav>
 
         <div className="user-app-header-right">
+          <Link to="/app/messages" className="user-app-icon-btn" aria-label="Messages">
+            <MessageCircle size={20} />
+          </Link>
           <div className="user-app-dropdown" ref={menuRef}>
+            <button
+              type="button"
+              onClick={() => setMenuOpen((o) => !o)}
+              className="user-app-icon-btn user-app-menu-btn"
+              aria-expanded={menuOpen}
+              aria-haspopup="true"
+              aria-label="Menu"
+            >
+              <LayoutGrid size={20} />
+            </button>
+            <Link to="/app/notifications" className="user-app-icon-btn" aria-label="Notifications">
+              <Bell size={20} />
+              {unreadNotificationCount > 0 && (
+                <span className="badge">
+                  {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                </span>
+              )}
+            </Link>
             <button
               type="button"
               onClick={() => setMenuOpen((o) => !o)}
@@ -504,6 +528,7 @@ export default function UserLayout() {
               style={{ padding: 0, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               aria-expanded={menuOpen}
               aria-haspopup="true"
+              aria-label="Profile menu"
             >
               <Avatar user={user} size={40} />
             </button>
@@ -546,15 +571,7 @@ export default function UserLayout() {
               </ul>
             )}
           </div>
-          <Link to="/app/notifications" className="user-app-icon-btn" aria-label="Notifications">
-            <Bell size={20} />
-            {unreadNotificationCount > 0 && (
-              <span className="badge">
-                {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
-              </span>
-            )}
-          </Link>
-          <Link to="/app/settings" className="user-app-icon-btn" aria-label="Settings">
+          <Link to="/app/settings" className="user-app-icon-btn user-app-header-settings" aria-label="Settings">
             <Settings size={20} />
           </Link>
         </div>

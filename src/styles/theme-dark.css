@@ -94,6 +94,21 @@
 [data-theme="dark"] .user-app-composer-btn.trade { color: #60a5fa; }
 [data-theme="dark"] .user-app-composer-btn.video { color: #f87171; }
 
+/* Composer row (mobile style) - dark */
+[data-theme="dark"] .user-app-composer-row .user-app-composer-input {
+  background: #3a3b3c;
+}
+[data-theme="dark"] .user-app-composer-icon {
+  color: #b0b3b8;
+}
+[data-theme="dark"] .user-app-composer-icon:hover {
+  background: #3a3b3c;
+}
+[data-theme="dark"] .user-app-composer-icon.video,
+[data-theme="dark"] .user-app-composer-icon.reel { color: #f87171; }
+[data-theme="dark"] .user-app-composer-icon.post { color: #34d399; }
+[data-theme="dark"] .user-app-composer-icon.more { color: #b0b3b8; }
+
 [data-theme="dark"] .user-app-stories-header h3 {
   color: #fff;
 }
@@ -102,13 +117,9 @@
   color: #a78bfa;
 }
 
-[data-theme="dark"] .user-app-story-card.create {
-  background: #242526;
-  border-color: #3e4042;
-}
-
 [data-theme="dark"] .user-app-story-card.create .label {
-  color: #fff;
+  color: #e4e6eb;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
 
 [data-theme="dark"] .user-app-discover-card {

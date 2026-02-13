@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ImagePlus, Users, Video, MoreHorizontal, Plus, ThumbsUp, Heart, MessageCircle, Share2, Play, Sparkles, Globe, Lock } from 'lucide-react';
+import { ImagePlus, Users, Video, MoreHorizontal, Plus, ThumbsUp, Heart, MessageCircle, Share2, Play, Sparkles, Globe, Lock, Film } from 'lucide-react';
 import { UserProfileMenu } from '@/components/ui/UserProfileMenu';
 import { CommentItem } from '@/components/social/CommentItem';
 import { VideoFullscreenOverlay } from '@/components/social/VideoFullscreenOverlay';
@@ -794,26 +794,29 @@ export default function Home() {
   /* Facebook-style order: Composer first, then Stories, then Feed */
   return (
     <>
-      {/* 1. What's on your mind? (Composer) - like Facebook */}
-      <div className="user-app-card">
+      {/* 1. What's on your mind? (Composer) - mobile style: avatar | input | icons in one row */}
+      <div className="user-app-card user-app-composer-row">
         <Link to="/app/create" className="user-app-composer">
           <Avatar user={user} size={40} className="user-app-composer-avatar" />
-          <span className="user-app-composer-input user-app-composer-placeholder">What's on your mind?</span>
+          <span className="user-app-composer-input user-app-composer-placeholder">
+            What's on your mind{user?.name ? (
+              <>, <span className="user-app-composer-name">{user.name}</span>?</>
+            ) : (
+              '?'
+            )}
+          </span>
         </Link>
-        <div className="user-app-composer-actions">
-          <Link to="/app/create" className="user-app-composer-btn post">
-            <ImagePlus size={24} />
-            Post
+        <div className="user-app-composer-actions-inline">
+          <Link to="/app/create" className="user-app-composer-icon video" title="Live / Video" aria-label="Video">
+            <Video size={22} />
           </Link>
-          <Link to="/app/friends" className="user-app-composer-btn trade" title="Find people">
-            <Users size={24} />
-            Find People
+          <Link to="/app/create" className="user-app-composer-icon post" title="Photo" aria-label="Photo">
+            <ImagePlus size={22} />
           </Link>
-          <Link to="/app/create" className="user-app-composer-btn video">
-            <Video size={24} />
-            Video
+          <Link to="/app/create" className="user-app-composer-icon reel" title="Reel" aria-label="Reel">
+            <Film size={22} />
           </Link>
-          <button type="button" className="user-app-post-options" aria-label="More options">
+          <button type="button" className="user-app-composer-icon more" aria-label="More options">
             <MoreHorizontal size={20} />
           </button>
         </div>
@@ -827,12 +830,13 @@ export default function Home() {
         </div>
         <div className="user-app-stories-row">
           <Link to="/app/stories/create" className="user-app-story-card create">
-            <div className="avatar-wrap">
-              <Avatar user={user} size={56} />
-              <span className="plus-icon">
-                <Plus size={14} strokeWidth={3} />
-              </span>
-            </div>
+            <div
+              className="story-create-bg"
+              style={user?.profilePic ? { backgroundImage: `url(${user.profilePic})` } : undefined}
+            />
+            <span className="story-create-plus">
+              <Plus size={24} strokeWidth={3} />
+            </span>
             <span className="label">Create Story</span>
           </Link>
           {!storiesLoading && storyGroups.map((group) => {
@@ -843,7 +847,7 @@ export default function Home() {
                 {thumb && <div className="story-bg story-bg-img" style={{ backgroundImage: `url(${thumb})` }} />}
                 {!thumb && <div className="story-bg" />}
                 <div className="story-ring-inner">
-                  <Avatar user={group.author} size={40} className="story-avatar" />
+                  <Avatar user={group.author} size={36} className="story-avatar" />
                 </div>
                 <span className="story-name">{group.author?.name ?? 'User'}</span>
               </Link>
