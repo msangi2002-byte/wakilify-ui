@@ -109,6 +109,32 @@
 [data-theme="dark"] .user-app-composer-icon.post { color: #34d399; }
 [data-theme="dark"] .user-app-composer-icon.more { color: #b0b3b8; }
 
+/* Mobile search overlay - dark */
+[data-theme="dark"] .user-app-search-overlay-mobile-panel {
+  background: #242526;
+}
+[data-theme="dark"] .user-app-search-overlay-input-wrap {
+  background: #3a3b3c;
+}
+[data-theme="dark"] .user-app-search-overlay-input {
+  color: #e4e6eb;
+}
+[data-theme="dark"] .user-app-search-overlay-input::placeholder {
+  color: #b0b3b8;
+}
+[data-theme="dark"] .user-app-search-overlay-icon {
+  color: #b0b3b8;
+}
+[data-theme="dark"] .user-app-search-overlay-close {
+  color: #b0b3b8;
+}
+[data-theme="dark"] .user-app-search-overlay-close:hover {
+  background: #3a3b3c;
+}
+[data-theme="dark"] .user-app-search-overlay-header {
+  border-bottom-color: #3e4042;
+}
+
 [data-theme="dark"] .user-app-stories-header h3 {
   color: #fff;
 }

@@ -183,6 +183,14 @@
   height: 20px;
 }
 
+/* Mobile search overlay - hidden on desktop */
+.user-app-search-overlay-mobile {
+  display: none;
+}
+.user-app-search-overlay-mobile-panel {
+  display: none;
+}
+
 /* Global search dropdown (people + groups) */
 .global-search-dropdown {
   position: absolute;
@@ -4821,6 +4829,93 @@
 
   .user-app-search input {
     font-size: 0.875rem;
+  }
+
+  /* Mobile: search = icon only, overlay when tapped */
+  .user-app-search-input {
+    display: none;
+  }
+  .user-app-search {
+    padding: 8px;
+    min-width: 40px;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .global-search-dropdown {
+    display: none;
+  }
+  .user-app-search-overlay-mobile {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+  }
+  .user-app-search-overlay-mobile-panel {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    max-height: 85vh;
+    background: #fff;
+    z-index: 1001;
+    border-radius: 0 0 12px 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    padding-top: env(safe-area-inset-top, 0);
+  }
+  .user-app-search-overlay-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e4e6eb;
+  }
+  .user-app-search-overlay-input-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #f0f2f5;
+    border-radius: 20px;
+    padding: 10px 16px;
+  }
+  .user-app-search-overlay-icon {
+    color: #65676b;
+    flex-shrink: 0;
+  }
+  .user-app-search-overlay-input {
+    flex: 1;
+    border: none;
+    background: none;
+    outline: none;
+    font-size: 1rem;
+    color: #050505;
+  }
+  .user-app-search-overlay-input::placeholder {
+    color: #65676b;
+  }
+  .user-app-search-overlay-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: none;
+    border-radius: 50%;
+    color: #65676b;
+    cursor: pointer;
+  }
+  .user-app-search-overlay-close:hover {
+    background: #f0f2f5;
+  }
+  .user-app-search-overlay-results {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 60vh;
+    padding: 8px 0;
   }
 
   .user-app-logo img {

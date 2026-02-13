@@ -16,6 +16,7 @@ import {
   Building2,
   Package,
   LayoutGrid,
+  X,
 } from 'lucide-react';
 import { ROLES } from '@/types/roles';
 import { useAuthStore } from '@/store/auth.store';
@@ -411,8 +412,91 @@ export default function UserLayout() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => setSearchOpen(true)}
+                className="user-app-search-input"
               />
             </div>
+            {searchOpen && (
+              <>
+                <div className="user-app-search-overlay-mobile" onClick={() => setSearchOpen(false)} aria-hidden />
+                <div className="user-app-search-overlay-mobile-panel" onClick={(e) => e.stopPropagation()}>
+                  <div className="user-app-search-overlay-header">
+                    <div className="user-app-search-overlay-input-wrap">
+                      <Search size={20} className="user-app-search-overlay-icon" />
+                      <input
+                        type="text"
+                        placeholder="Search people or groups"
+                        aria-label="Search"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="user-app-search-overlay-input"
+                        autoFocus
+                      />
+                    </div>
+                    <button type="button" className="user-app-search-overlay-close" onClick={() => setSearchOpen(false)} aria-label="Close">
+                      <X size={22} />
+                    </button>
+                  </div>
+                  <div className="user-app-search-overlay-results">
+                    {searchLoading ? (
+                      <div className="global-search-loading">Searching…</div>
+                    ) : !searchQuery.trim() ? (
+                      <div className="global-search-hint">Type to search for people or groups</div>
+                    ) : (
+                      <>
+                        {searchResults.people.length > 0 && (
+                          <div className="global-search-section">
+                            <div className="global-search-section-title">People</div>
+                            <ul className="global-search-list">
+                              {searchResults.people.map((u) => (
+                                <li key={u.id}>
+                                  <Link
+                                    to={`/app/profile/${u.id}`}
+                                    className="global-search-item"
+                                    onClick={() => { setSearchOpen(false); setSearchQuery(''); }}
+                                  >
+                                    <Avatar user={u} size={36} className="global-search-avatar" />
+                                    <span className="global-search-item-name">{u.name ?? u.username ?? 'User'}</span>
+                                  </Link>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {searchResults.groups.length > 0 && (
+                          <div className="global-search-section">
+                            <div className="global-search-section-title">Groups</div>
+                            <ul className="global-search-list">
+                              {searchResults.groups.map((g) => (
+                                <li key={g.id}>
+                                  <Link
+                                    to={`/app/groups/${g.id}`}
+                                    className="global-search-item"
+                                    onClick={() => { setSearchOpen(false); setSearchQuery(''); }}
+                                  >
+                                    <div className="global-search-group-icon">
+                                      <Users size={20} />
+                                    </div>
+                                    <span className="global-search-item-name">{g.name ?? 'Group'}</span>
+                                    {(g.membersCount ?? g.members_count) != null && (
+                                      <span className="global-search-item-meta">
+                                        {(g.membersCount ?? g.members_count).toLocaleString()} members
+                                      </span>
+                                    )}
+                                  </Link>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {!searchLoading && searchQuery.trim() && searchResults.people.length === 0 && searchResults.groups.length === 0 && (
+                          <div className="global-search-empty">No people or groups found</div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
             {searchOpen && (
               <div className="global-search-dropdown">
                 {searchLoading ? (
@@ -499,9 +583,6 @@ export default function UserLayout() {
         </nav>
 
         <div className="user-app-header-right">
-          <Link to="/app/messages" className="user-app-icon-btn" aria-label="Messages">
-            <MessageCircle size={20} />
-          </Link>
           <div className="user-app-dropdown" ref={menuRef}>
             <button
               type="button"
