@@ -5,7 +5,7 @@ const defaultSize = 20;
 
 /**
  * Get current user notifications (auth required)
- * GET /api/v1/notifications?page=0&size=20
+ * GET /api/v1/notifications?page=0&size=20&type=LIKE
  * Returns { content: NotificationResponse[], page, size, totalElements, totalPages, last, first }
  */
 export async function getNotifications(params = {}) {

@@ -6,45 +6,93 @@
   overflow-x: hidden;
 }
 
-/* Desktop: fixed height so left/center/right each scroll independently */
+/* Desktop: scroll kubwa NJE (ukurasa), scroll ndogo NDANI (Sponsored tu) kama Facebook */
 @media (min-width: 901px) {
+  /* Scroll kubwa = ya ukurasa, ika NJE (pembe ya kulia ya browser) */
+  html {
+    scrollbar-width: auto;
+    scrollbar-color: rgba(0, 0, 0, 0.35) rgba(0, 0, 0, 0.06);
+  }
+
+  html::-webkit-scrollbar {
+    width: 14px;
+  }
+
+  html::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.06);
+  }
+
+  html::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 7px;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+  }
+
+  html::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.5);
+    background-clip: padding-box;
+  }
+
   .user-app {
-    height: 100vh;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
   }
 
   .user-app-body {
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
     display: grid;
     grid-template-columns: 1fr minmax(0, 680px) 1fr;
-    gap: 16px;
-    padding: 16px;
-    padding-top: calc(56px + env(safe-area-inset-top, 0) + 16px);
+    gap: 24px;
+    padding: 20px;
+    padding-top: calc(56px + env(safe-area-inset-top, 0) + 20px);
     max-width: 1280px;
     margin: 0 auto;
     width: 100%;
-    align-items: stretch;
+    align-items: start;
   }
 
-  .user-app-body .user-app-sidebar,
-  .user-app-body .user-app-main {
-    overflow-y: auto;
-    min-height: 0;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .user-app-body .user-app-sidebar {
-    position: static;
-    top: auto;
-    height: auto;
-  }
-
+  /* Feed: hauna scroll yake – inascroll na ukurasa (scroll kubwa nje) */
   .user-app-body .user-app-main {
     padding-bottom: 24px;
+    overflow: visible;
+    min-height: 0;
+  }
+
+  /* Sidebar kushoto: inaenda na ukurasa */
+  .user-app-body .user-app-sidebar:first-child {
+    position: sticky;
+    top: calc(56px + env(safe-area-inset-top, 0) + 20px);
+    overflow: visible;
+  }
+
+  /* Sidebar kulia (Sponsored): scroll NDANI tu, scrollbar ndogo */
+  .user-app-body .user-app-sidebar:last-child {
+    position: sticky;
+    top: calc(56px + env(safe-area-inset-top, 0) + 20px);
+    max-height: calc(100vh - 56px - env(safe-area-inset-top, 0) - 40px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.25) transparent;
+  }
+
+  .user-app-body .user-app-sidebar:last-child::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .user-app-body .user-app-sidebar:last-child::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .user-app-body .user-app-sidebar:last-child::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 3px;
+  }
+
+  .user-app-body .user-app-sidebar:last-child::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.4);
   }
 }
 
@@ -308,8 +356,8 @@
 .user-app-body {
   display: grid;
   grid-template-columns: 1fr minmax(0, 680px) 1fr;
-  gap: 16px;
-  padding: 56px 16px 24px;
+  gap: 24px;
+  padding: 56px 20px 24px;
   padding-top: calc(56px + env(safe-area-inset-top, 0));
   max-width: 1280px;
   margin: 0 auto;
@@ -361,10 +409,24 @@
 
 .user-app-card {
   background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
   margin-bottom: 16px;
   overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Nafasi kati ya Stories na Feed (smooth kama Facebook) */
+.user-app-main .user-app-card:nth-child(2) {
+  margin-bottom: 20px;
+}
+
+/* Kila post feed: same frame (width + spacing) kama Facebook */
+.user-app-main .user-app-card {
+  width: 100%;
+  max-width: 100%;
 }
 
 /* Stories */
@@ -575,6 +637,8 @@
   cursor: pointer;
   transition: background 0.15s;
   text-decoration: none;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .user-app-composer-btn:hover {
@@ -582,8 +646,20 @@
 }
 
 .user-app-composer-btn.post { color: #31a24c; }
-.user-app-composer-btn.trade { color: #4078D0; }
+.user-app-composer-btn.trade { color: #4078D0; min-width: 6.5rem; }
 .user-app-composer-btn.video { color: #e41e3f; }
+
+@media (max-width: 380px) {
+  .user-app-composer-actions {
+    gap: 2px;
+    padding: 8px 8px 12px;
+  }
+  .user-app-composer-btn {
+    padding: 8px 6px;
+    font-size: 0.875rem;
+  }
+  .user-app-composer-btn.trade { min-width: 5.5rem; }
+}
 
 /* Feed post */
 .user-app-post-header {
@@ -639,17 +715,22 @@
   color: #050505;
 }
 
-/* Feed post – profile, name, description, time → media → like, comment, share */
+/* Feed post – same frame/size kwa kila post kama Facebook (width + height consistent) */
 .feed-post {
+  width: 100%;
+  max-width: 100%;
   padding: 0;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .feed-post-header {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 12px 16px;
+  padding: 16px;
+  min-height: 52px;
+  box-sizing: border-box;
 }
 
 .feed-post-avatar,
@@ -671,7 +752,7 @@
 
 .feed-post-name {
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 700;
   color: #050505;
 }
 
@@ -705,10 +786,36 @@
 }
 
 .feed-post-time {
+  display: inline;
+  font-size: 0.75rem;
+  color: #65676b;
+  margin-top: 2px;
+}
+
+.feed-post-visibility {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+  vertical-align: middle;
+  color: #65676b;
+}
+
+.feed-post-meta-extra {
   display: block;
   font-size: 0.8125rem;
   color: #65676b;
   margin-top: 2px;
+}
+
+.feed-post-feeling {
+  font-style: italic;
+}
+
+.feed-post-tagged {
+  display: block;
+  font-size: 0.8125rem;
+  color: #65676b;
+  margin-top: 1px;
 }
 
 .feed-post-options {
@@ -730,6 +837,7 @@
 .feed-post-description {
   padding: 0 16px 12px;
   font-size: 0.9375rem;
+  font-weight: 400;
   color: #050505;
   line-height: 1.4;
 }
@@ -751,11 +859,33 @@
 
 .feed-post-body {
   line-height: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Media: full-width, no inner radius (kama Facebook – picha zifikie mwisho wa kadi) */
+.feed-post-body img,
+.feed-post-body .feed-post-video {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  display: block;
+  max-height: 500px;
+  object-fit: cover;
+  box-sizing: border-box;
+  border-radius: 0;
+}
+
+.feed-post-body .feed-post-video {
+  max-height: 500px;
+  background: #000;
 }
 
 .feed-post-media-placeholder {
   width: 100%;
   height: 320px;
+  max-height: 500px;
   background: linear-gradient(135deg, #1e1b4b 0%, #4c1d95 50%, #831843 100%);
   display: flex;
   align-items: center;
@@ -771,22 +901,11 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
-.feed-post-body img,
-.feed-post-body .feed-post-video {
-  width: 100%;
-  display: block;
-  max-height: 500px;
-  object-fit: cover;
-}
-
-.feed-post-body .feed-post-video {
-  max-height: 560px;
-  background: #000;
-}
-
 .feed-post-engagement {
-  padding: 8px 16px 12px;
+  padding: 12px 16px 12px;
   border-top: 1px solid #e4e6eb;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .feed-post-counts {
@@ -822,14 +941,72 @@
   color: #050505;
 }
 
+/* Action bar: mstari mmoja safi, nafasi ya kutosha (kama Facebook) */
 .feed-post-actions {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-evenly;
+  gap: 8px;
+}
+
+.feed-post-reaction-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+}
+
+.feed-post-reaction-picker {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
+  background: #fff;
+  border-radius: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+}
+
+.feed-post-reaction-picker-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.15s;
+}
+
+.feed-post-reaction-picker-btn:hover {
+  background: #f0f2f5;
+  transform: scale(1.15);
+}
+
+.feed-post-reaction-picker-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.feed-post-reaction-emoji {
+  font-size: 1.25rem;
+  line-height: 1;
 }
 
 .feed-post-share-wrap {
   position: relative;
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  min-width: 0;
 }
 
 .feed-post-share-menu {
@@ -961,12 +1138,13 @@
   margin-top: 16px;
 }
 
+/* Line-style icons: kijivu by default, purple wakati active */
 .feed-post-action {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: 6px;
+  padding: 8px 16px;
   font-size: 0.9375rem;
   font-weight: 500;
   color: #65676b;
@@ -975,6 +1153,14 @@
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
+  flex: 1;
+  min-width: 0;
+}
+
+.feed-post-action svg {
+  flex-shrink: 0;
+  stroke: currentColor;
+  fill: none;
 }
 
 .feed-post-action:hover {
@@ -2853,6 +3039,13 @@
   font-size: 1rem;
 }
 
+.reels-slide-video-wrap {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+  z-index: 0;
+}
+
 .reels-slide-video {
   position: absolute;
   inset: 0;
@@ -2860,6 +3053,78 @@
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+.reels-heart-burst {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  color: #fff;
+  pointer-events: none;
+  z-index: 2;
+  animation: reels-heart-burst 0.7s ease-out forwards;
+}
+
+.reels-heart-burst svg {
+  filter: drop-shadow(0 0 20px rgba(236, 72, 153, 0.6));
+}
+
+@keyframes reels-heart-burst {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.3);
+  }
+  25% {
+    transform: translate(-50%, -50%) scale(1.15);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.4);
+  }
+}
+
+.reels-swipe-hint {
+  position: absolute;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 16px;
+  background: rgba(0,0,0,0.5);
+  border-radius: 20px;
+  color: rgba(255,255,255,0.9);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  pointer-events: none;
+  z-index: 1;
+  animation: reels-swipe-hint-fade 4s ease-out forwards;
+}
+
+@keyframes reels-swipe-hint-fade {
+  0%, 60% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.reels-mute-btn {
+  position: absolute;
+  bottom: 140px;
+  left: 12px;
+  z-index: 3;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.reels-mute-btn:hover {
+  background: rgba(0,0,0,0.7);
 }
 
 .reels-slide-video::-webkit-media-controls {
@@ -3508,27 +3773,43 @@
   cursor: not-allowed;
 }
 
-/* Back button in player view */
-.reels-player-back {
+/* Player view: top bar with back to list */
+.reels-player-header {
   position: absolute;
-  top: 16px;
-  left: 16px;
+  top: 0;
+  left: 0;
+  right: 0;
   z-index: 10;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
+  pointer-events: none;
+  padding: 12px 16px;
+  padding-top: max(12px, env(safe-area-inset-top));
+}
+
+.reels-player-header .reels-player-back {
+  pointer-events: auto;
+}
+
+.reels-player-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 14px;
+  border-radius: 9999px;
   border: none;
   background: rgba(0, 0, 0, 0.5);
   color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  font-size: 1rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.2s, transform 0.15s;
 }
 
 .reels-player-back:hover {
   background: rgba(0, 0, 0, 0.7);
+}
+
+.reels-player-back:active {
+  transform: scale(0.98);
 }
 
 /* Reels comments drawer */
@@ -3720,6 +4001,75 @@
 
 .reels-share-action:disabled {
   opacity: 0.8;
+}
+
+.reels-insights-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.reels-insights-panel {
+  background: #fff;
+  border-radius: 16px;
+  max-width: 320px;
+  width: 100%;
+  padding: 20px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+}
+
+.reels-insights-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.reels-insights-header h3 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #111;
+}
+
+.reels-insights-header button {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: #666;
+}
+
+.reels-insights-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.reels-insights-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+  font-size: 0.9375rem;
+}
+
+.reels-insights-list li:last-child { border-bottom: none; }
+
+.reels-insights-list span { color: #65676b; }
+.reels-insights-list strong { color: #111; }
+
+.reels-insights-loading {
+  margin: 0;
+  padding: 16px 0;
+  color: #65676b;
+  text-align: center;
 }
 
 /* Legacy list layout (if used elsewhere) */
@@ -3959,9 +4309,11 @@
 /* Feed video post: no native controls, center play only */
 .feed-post-video-wrap {
   position: relative;
+  width: 100%;
+  max-width: 100%;
   background: #000;
   cursor: pointer;
-  max-height: 560px;
+  max-height: 500px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3973,7 +4325,7 @@
   height: 100%;
   object-fit: contain;
   display: block;
-  max-height: 560px;
+  max-height: 500px;
 }
 
 .feed-post-video-wrap .feed-post-video::-webkit-media-controls {

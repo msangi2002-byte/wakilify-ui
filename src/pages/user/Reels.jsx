@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ThumbsUp, MessageCircle, Share2, MoreHorizontal, Plus, Play, X, Bookmark, Radio } from 'lucide-react';
-import { getReels, likePost, unlikePost, savePost, unsavePost, getComments, addComment, deleteComment, likeComment, unlikeComment, sharePostToStory, createPost } from '@/lib/api/posts';
+import { ThumbsUp, MessageCircle, Share2, MoreHorizontal, Plus, Play, X, Bookmark, Radio, ChevronLeft, BarChart2, Volume2, VolumeX, Heart } from 'lucide-react';
+import { getReels, recordReelView, getPostInsights, likePost, unlikePost, savePost, unsavePost, getComments, addComment, deleteComment, likeComment, unlikeComment, sharePostToStory, createPost } from '@/lib/api/posts';
 import { followUser, unfollowUser } from '@/lib/api/friends';
 import { formatPostTime, formatCommentTime } from '@/lib/utils/dateUtils';
 import { CommentItem } from '@/components/social/CommentItem';
@@ -548,6 +548,7 @@ function ReelCard({ item, index, onPlay, onLikeChange, onSaveChange, onCommentCo
 function ReelSlide({ item, isActive, onLikeChange, onSaveChange, onCommentClick, onShareClick, onFollowChange, onNext, onPrev }) {
   const { user: currentUser } = useAuthStore();
   const videoRef = useRef(null);
+  const watchTimeRef = useRef({ currentTime: 0, duration: 0 });
   const [liked, setLiked] = useState(!!item.liked);
   const [likesCount, setLikesCount] = useState(item.likes ?? 0);
   const [saved, setSaved] = useState(!!item.saved);
@@ -556,27 +557,70 @@ function ReelSlide({ item, isActive, onLikeChange, onSaveChange, onCommentClick,
   const [followLoading, setFollowLoading] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [muted, setMuted] = useState(true);
+  const [showHeart, setShowHeart] = useState(false);
+  const [showSwipeHint, setShowSwipeHint] = useState(true);
+  const lastTapRef = useRef(0);
   const touchStartY = useRef(0);
+  const [insightsOpen, setInsightsOpen] = useState(false);
+  const [insights, setInsights] = useState(null);
+  const [insightsLoading, setInsightsLoading] = useState(false);
   const isSelf = currentUser?.id && item.author?.id && currentUser.id === item.author.id;
+
+  useEffect(() => {
+    const t = setTimeout(() => setShowSwipeHint(false), 4000);
+    return () => clearTimeout(t);
+  }, []);
+
+  const openInsights = async () => {
+    if (!item?.id || insightsLoading) return;
+    setInsightsOpen(true);
+    setInsightsLoading(true);
+    try {
+      const data = await getPostInsights(item.id);
+      setInsights(data);
+    } catch {
+      setInsights(null);
+    } finally {
+      setInsightsLoading(false);
+    }
+  };
 
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
+    v.muted = muted;
     if (isActive) {
       v.play().then(() => setPlaying(true)).catch(() => {});
     } else {
       v.pause();
       setPlaying(false);
     }
-  }, [isActive]);
+  }, [isActive, muted]);
 
   useEffect(() => {
     if (!isActive || !videoRef.current) return;
     const v = videoRef.current;
-    const onTimeUpdate = () => setProgress(v.duration ? (v.currentTime / v.duration) * 100 : 0);
+    const onTimeUpdate = () => {
+      const ct = v.currentTime ?? 0;
+      const dur = v.duration ?? 0;
+      watchTimeRef.current = { currentTime: ct, duration: dur };
+      setProgress(dur > 0 ? (ct / dur) * 100 : 0);
+    };
     v.addEventListener('timeupdate', onTimeUpdate);
     return () => v.removeEventListener('timeupdate', onTimeUpdate);
   }, [isActive]);
+
+  // Record reel view for algorithm (watch time + completion) when user leaves this reel
+  useEffect(() => {
+    if (!item?.id || !isActive) return;
+    return () => {
+      const { currentTime, duration } = watchTimeRef.current;
+      const watchTimeSeconds = Math.round(currentTime);
+      const completed = duration > 0 && currentTime / duration >= 0.9;
+      recordReelView(item.id, { watchTimeSeconds, completed }).catch(() => {});
+    };
+  }, [item?.id, isActive]);
 
   const handleLike = async () => {
     if (!item.id) return;
@@ -638,6 +682,7 @@ function ReelSlide({ item, isActive, onLikeChange, onSaveChange, onCommentClick,
   };
 
   const handleWheel = (e) => {
+    setShowSwipeHint(false);
     if (e.deltaY < -SWIPE_THRESHOLD) onNext?.();
     else if (e.deltaY > SWIPE_THRESHOLD) onPrev?.();
   };
@@ -645,8 +690,23 @@ function ReelSlide({ item, isActive, onLikeChange, onSaveChange, onCommentClick,
   const handleTouchStart = (e) => { touchStartY.current = e.touches[0].clientY; };
   const handleTouchEnd = (e) => {
     const dy = touchStartY.current - e.changedTouches[0].clientY;
+    if (Math.abs(dy) > SWIPE_THRESHOLD) setShowSwipeHint(false);
     if (dy > SWIPE_THRESHOLD) onNext?.();
     else if (dy < -SWIPE_THRESHOLD) onPrev?.();
+  };
+
+  const handleVideoAreaClick = (e) => {
+    const now = Date.now();
+    if (now - lastTapRef.current < 350) {
+      e.preventDefault();
+      lastTapRef.current = 0;
+      setShowHeart(true);
+      setTimeout(() => setShowHeart(false), 800);
+      if (!liked) handleLike();
+    } else {
+      lastTapRef.current = now;
+      handlePlayPause();
+    }
   };
 
   const formatCount = (n) => (n >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(n));
@@ -667,20 +727,47 @@ function ReelSlide({ item, isActive, onLikeChange, onSaveChange, onCommentClick,
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      <video
-        ref={videoRef}
-        src={item.videoUrl}
-        className="reels-slide-video"
-        loop
-        playsInline
-        muted={false}
-        onClick={handlePlayPause}
-      />
+      <div
+        className="reels-slide-video-wrap"
+        onClick={handleVideoAreaClick}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleVideoAreaClick(e); } }}
+        aria-label="Tap to play/pause, double-tap to like"
+      >
+        <video
+          ref={videoRef}
+          src={item.videoUrl}
+          className="reels-slide-video"
+          loop
+          playsInline
+          muted={muted}
+        />
+        {showHeart && (
+          <div className="reels-heart-burst" aria-hidden>
+            <Heart size={100} fill="currentColor" stroke="none" />
+          </div>
+        )}
+        {showSwipeHint && (
+          <div className="reels-swipe-hint" aria-hidden>
+            <span>Swipe up / down</span>
+          </div>
+        )}
+      </div>
       {!playing && (
-        <button type="button" className="reels-slide-play-btn" onClick={handlePlayPause} aria-label="Play">
+        <button type="button" className="reels-slide-play-btn" onClick={handleVideoAreaClick} aria-label="Play">
           <Play size={72} fill="currentColor" />
         </button>
       )}
+
+      <button
+        type="button"
+        className="reels-mute-btn"
+        onClick={(e) => { e.stopPropagation(); setMuted((m) => !m); }}
+        aria-label={muted ? 'Unmute' : 'Mute'}
+      >
+        {muted ? <VolumeX size={24} /> : <Volume2 size={24} />}
+      </button>
 
       <div className="reels-fab-row">
         <Link to="/app/create?type=reel" className="reels-fab" aria-label="Post reel">
@@ -705,10 +792,41 @@ function ReelSlide({ item, isActive, onLikeChange, onSaveChange, onCommentClick,
           <Share2 size={32} />
           <span>{formatCount(item.shares ?? 0)}</span>
         </button>
+        {isSelf && (
+          <button type="button" className="reels-action" onClick={openInsights} aria-label="Insights" title="View insights">
+            <BarChart2 size={28} />
+            <span>Insights</span>
+          </button>
+        )}
         <button type="button" className="reels-action reels-action-more" aria-label="More">
           <MoreHorizontal size={28} />
         </button>
       </div>
+
+      {insightsOpen && (
+        <div className="reels-insights-overlay" onClick={() => setInsightsOpen(false)} role="dialog" aria-label="Insights">
+          <div className="reels-insights-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="reels-insights-header">
+              <h3>Reel insights</h3>
+              <button type="button" onClick={() => setInsightsOpen(false)} aria-label="Close"><X size={20} /></button>
+            </div>
+            {insightsLoading ? (
+              <p className="reels-insights-loading">Loading…</p>
+            ) : insights ? (
+              <ul className="reels-insights-list">
+                <li><span>Views</span><strong>{insights.viewsCount ?? 0}</strong></li>
+                <li><span>Avg watch time</span><strong>{Math.round(insights.avgWatchTimeSeconds ?? 0)}s</strong></li>
+                <li><span>Completion rate</span><strong>{Math.round((insights.completionRate ?? 0) * 100)}%</strong></li>
+                <li><span>Likes</span><strong>{insights.likesCount ?? 0}</strong></li>
+                <li><span>Comments</span><strong>{insights.commentsCount ?? 0}</strong></li>
+                <li><span>Shares</span><strong>{insights.sharesCount ?? 0}</strong></li>
+              </ul>
+            ) : (
+              <p className="reels-insights-loading">Could not load insights.</p>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="reels-info">
         <div className="reels-info-author">
@@ -914,12 +1032,23 @@ export default function Reels() {
     );
   }
 
-  // Player view: reel video with top/bottom nav visible on mobile (no close/prev/next buttons)
+  // Player view: full-screen reel with swipe, back to list
   const current = items[currentIndex];
 
   return (
     <>
     <div className="reels-page reels-page-feed">
+      <header className="reels-player-header">
+        <button
+          type="button"
+          className="reels-player-back"
+          onClick={() => setViewMode('list')}
+          aria-label="Back to reels list"
+        >
+          <ChevronLeft size={24} />
+          <span>Reels</span>
+        </button>
+      </header>
       <ReelSlide
         key={current.id}
         item={current}

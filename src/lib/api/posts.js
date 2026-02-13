@@ -63,6 +63,27 @@ export async function getReels(params = {}) {
 }
 
 /**
+ * Record reel view for algorithm: watch time + completion (retention scoring).
+ * POST /api/v1/posts/:postId/reel-view
+ * Body: { watchTimeSeconds: number, completed: boolean }
+ */
+export async function recordReelView(postId, payload) {
+  await api.post(`/posts/${postId}/reel-view`, {
+    watchTimeSeconds: payload.watchTimeSeconds ?? 0,
+    completed: payload.completed ?? false,
+  });
+}
+
+/**
+ * Get post/reel insights (author only). For reels: views, avgWatchTimeSeconds, completionRate, likes, comments, shares.
+ * GET /api/v1/posts/:postId/insights
+ */
+export async function getPostInsights(postId) {
+  const { data } = await api.get(`/posts/${postId}/insights`);
+  return data?.data ?? data;
+}
+
+/**
  * 4b. Active stories (24h) from self + following
  * GET /api/v1/posts/stories
  * Returns list of PostResponse (postType STORY). Group by author on the client.
@@ -106,7 +127,7 @@ export async function getPostById(postId) {
 }
 
 /**
- * Like a post (auth required)
+ * Like a post (auth required) – backward compat, same as reactToPost(postId, 'LIKE')
  * POST /api/v1/posts/:postId/like
  */
 export async function likePost(postId) {
@@ -115,11 +136,23 @@ export async function likePost(postId) {
 }
 
 /**
- * Unlike a post (auth required)
- * DELETE /api/v1/posts/:postId/like
+ * React to a post with a specific type (auth required)
+ * POST /api/v1/posts/:postId/react?type=LIKE|LOVE|HAHA|WOW|SAD|ANGRY
+ * Returns { reactionsCount }.
+ */
+export async function reactToPost(postId, type = 'LIKE') {
+  const { data } = await api.post(`/posts/${postId}/react`, null, {
+    params: { type: String(type).toUpperCase() },
+  });
+  return data?.data ?? data;
+}
+
+/**
+ * Remove reaction from a post (auth required)
+ * DELETE /api/v1/posts/:postId/react (same as /like on backend)
  */
 export async function unlikePost(postId) {
-  const { data } = await api.delete(`/posts/${postId}/like`);
+  const { data } = await api.delete(`/posts/${postId}/react`);
   return data?.data ?? data;
 }
 

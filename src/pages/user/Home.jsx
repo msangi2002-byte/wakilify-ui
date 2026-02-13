@@ -1,18 +1,27 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ImagePlus, Users, Video, MoreHorizontal, Plus, ThumbsUp, MessageCircle, Share2, Play, Sparkles, ShoppingBag, Image as ImageIcon } from 'lucide-react';
+import { ImagePlus, Users, Video, MoreHorizontal, Plus, ThumbsUp, Heart, MessageCircle, Share2, Play, Sparkles, Globe, Lock } from 'lucide-react';
 import { UserProfileMenu } from '@/components/ui/UserProfileMenu';
 import { CommentItem } from '@/components/social/CommentItem';
 import { VideoFullscreenOverlay } from '@/components/social/VideoFullscreenOverlay';
 import { ReelCommentsDrawer, ReelShareMenu } from '@/pages/user/Reels';
 import { useAuthStore } from '@/store/auth.store';
-import { getFeed, getPublicFeed, getStories, likePost, unlikePost, savePost, unsavePost, sharePostToStory, getComments, addComment, deleteComment, createPost, likeComment, unlikeComment } from '@/lib/api/posts';
+import { getFeed, getPublicFeed, getStories, likePost, reactToPost, unlikePost, savePost, unsavePost, sharePostToStory, getComments, addComment, deleteComment, createPost, likeComment, unlikeComment } from '@/lib/api/posts';
 import { followUser, unfollowUser } from '@/lib/api/friends';
 import { blockUser } from '@/lib/api/users';
 import { createReport } from '@/lib/api/reports';
-import { getTrendingProducts } from '@/lib/api/products';
 import { parseApiDate, formatPostTime, formatCommentTime } from '@/lib/utils/dateUtils';
 import { ROLES } from '@/types/roles';
+
+/** Reaction types for posts (must match backend ReactionType). Label + icon/emoji for picker. */
+const REACTIONS = [
+  { type: 'LIKE', label: 'Like', Icon: ThumbsUp },
+  { type: 'LOVE', label: 'Love', Icon: Heart },
+  { type: 'HAHA', label: 'Haha', emoji: '😂' },
+  { type: 'WOW', label: 'Wow', emoji: '😮' },
+  { type: 'SAD', label: 'Sad', emoji: '😢' },
+  { type: 'ANGRY', label: 'Angry', emoji: '😠' },
+];
 
 function groupStoriesByAuthor(stories, currentUserId) {
   const map = new Map();
@@ -73,12 +82,15 @@ function Avatar({ user, size = 40, className = '' }) {
   );
 }
 
-function FeedPost({ id, author, time, description, media = [], hashtags = [], liked: initialLiked = false, likesCount: initialLikesCount = 0, commentsCount: initialCommentsCount = 0, sharesCount = 0, saved: initialSaved = false, authorIsFollowed: initialAuthorIsFollowed = false, onFollowChange, onSaveChange, videoIndex, onOpenVideo }) {
+function FeedPost({ id, author, time, description, media = [], hashtags = [], visibility, location, feelingActivity, taggedUsers = [], topReactors = [], liked: initialLiked = false, userReaction: initialUserReaction = null, likesCount: initialLikesCount = 0, commentsCount: initialCommentsCount = 0, sharesCount = 0, saved: initialSaved = false, authorIsFollowed: initialAuthorIsFollowed = false, onFollowChange, onSaveChange, videoIndex, onOpenVideo }) {
   const { user: currentUser } = useAuthStore();
   const isSelf = currentUser?.id && author?.id && currentUser.id === author.id;
-  const [liked, setLiked] = useState(!!initialLiked);
+  const resolvedInitialReaction = initialUserReaction || (initialLiked ? 'LIKE' : null);
+  const [userReaction, setUserReaction] = useState(resolvedInitialReaction);
   const [likesCount, setLikesCount] = useState(initialLikesCount);
-  const [likeLoading, setLikeLoading] = useState(false);
+  const [reactionLoading, setReactionLoading] = useState(false);
+  const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
+  const reactionPickerRef = useRef(null);
   const [saved, setSaved] = useState(!!initialSaved);
   const [saveLoading, setSaveLoading] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
@@ -133,20 +145,28 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], li
     return () => observer.disconnect();
   }, [hasSingleVideo, videoUrl]);
 
-  const handleLikeClick = async () => {
-    if (!id || likeLoading) return;
-    const nextLiked = !liked;
-    setLiked(nextLiked);
-    setLikesCount((c) => (nextLiked ? c + 1 : Math.max(0, c - 1)));
-    setLikeLoading(true);
+  const handleReact = async (type) => {
+    if (!id || reactionLoading) return;
+    const isRemoving = userReaction === type;
+    const nextReaction = isRemoving ? null : type;
+    const countDelta = isRemoving ? -1 : (userReaction ? 0 : 1);
+    setUserReaction(nextReaction);
+    setLikesCount((c) => Math.max(0, c + countDelta));
+    setReactionPickerOpen(false);
+    setReactionLoading(true);
     try {
-      if (nextLiked) await likePost(id);
-      else await unlikePost(id);
+      if (isRemoving) {
+        const res = await unlikePost(id);
+        if (res?.reactionsCount != null) setLikesCount(res.reactionsCount);
+      } else {
+        const res = await reactToPost(id, type);
+        if (res?.reactionsCount != null) setLikesCount(res.reactionsCount);
+      }
     } catch {
-      setLiked(!nextLiked);
-      setLikesCount((c) => (nextLiked ? c - 1 : c + 1));
+      setUserReaction(userReaction);
+      setLikesCount((c) => Math.max(0, c - countDelta));
     } finally {
-      setLikeLoading(false);
+      setReactionLoading(false);
     }
   };
 
@@ -343,6 +363,25 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], li
             )}
           </div>
           <span className="feed-post-time">{time}</span>
+          {visibility && (
+            <span className="feed-post-visibility" title={visibility === 'PUBLIC' ? 'Public' : visibility === 'FRIENDS' ? 'Friends' : visibility} aria-hidden>
+              {visibility === 'PUBLIC' ? <Globe size={12} /> : visibility === 'FRIENDS' ? <Lock size={12} /> : <Globe size={12} />}
+            </span>
+          )}
+          {(location || feelingActivity) && (
+            <span className="feed-post-meta-extra">
+              {location && <span className="feed-post-location">{location}</span>}
+              {location && feelingActivity && ' · '}
+              {feelingActivity && <span className="feed-post-feeling">{feelingActivity}</span>}
+            </span>
+          )}
+          {Array.isArray(taggedUsers) && taggedUsers.length > 0 && (
+            <span className="feed-post-tagged">
+              {' with '}
+              {taggedUsers.slice(0, 2).map((u) => u?.name).filter(Boolean).join(', ')}
+              {taggedUsers.length > 2 && ` and ${taggedUsers.length - 2} others`}
+            </span>
+          )}
         </div>
         <div className="feed-post-options-wrap">
           <button
@@ -355,6 +394,14 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], li
           </button>
           {optionsOpen && (
             <div className="feed-post-options-menu">
+              <button
+                type="button"
+                className="feed-post-option-item"
+                onClick={() => { handleSaveClick(); setOptionsOpen(false); }}
+                disabled={saveLoading}
+              >
+                {saved ? 'Unsave post' : 'Save post'}
+              </button>
               {!isSelf && author?.id && (
                 <button type="button" className="feed-post-option-item feed-post-option-danger" onClick={handleBlockUser}>
                   Block user
@@ -467,11 +514,11 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], li
           description={description}
           author={author}
           postId={id}
-          liked={liked}
+          liked={!!userReaction}
           likesCount={likesCount}
           commentsCount={commentsCount}
           saved={saved}
-          onLike={handleLikeClick}
+          onLike={() => handleReact('LIKE')}
           onComment={() => { setVideoFullscreenOpen(false); handleCommentClick(); }}
           onShare={() => { setVideoFullscreenOpen(false); setShareOpen(true); }}
           onSave={handleSaveClick}
@@ -481,8 +528,22 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], li
         <div className="feed-post-counts">
           {likesCount > 0 && (
             <span className="feed-post-likes-count">
-              <ThumbsUp size={16} fill="currentColor" />
-              {likesCount >= 1000 ? `${(likesCount / 1000).toFixed(1)}K` : likesCount}
+              {(() => {
+                const r = REACTIONS.find((x) => x.type === userReaction);
+                if (r?.Icon) return <r.Icon size={16} fill="currentColor" />;
+                if (r?.emoji) return <span className="feed-post-reaction-emoji" aria-hidden>{r.emoji}</span>;
+                return <ThumbsUp size={16} fill="currentColor" />;
+              })()}
+              {Array.isArray(topReactors) && topReactors.length > 0
+                ? (() => {
+                    const names = topReactors.slice(0, 2).map((u) => u?.name).filter(Boolean);
+                    const rest = likesCount - names.length;
+                    if (names.length === 1 && rest > 0) return `${names[0]} and ${rest} other${rest === 1 ? '' : 's'}`;
+                    if (names.length === 2 && rest > 0) return `${names[0]} and ${names[1]} and ${rest} others`;
+                    if (names.length === 2) return `${names[0]} and ${names[1]}`;
+                    return names[0] || likesCount;
+                  })()
+                : (likesCount >= 1000 ? `${(likesCount / 1000).toFixed(1)}K` : likesCount)}
             </span>
           )}
           <span className="feed-post-comments-share">
@@ -493,21 +554,48 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], li
           </span>
         </div>
         <div className="feed-post-actions">
-          <button
-            type="button"
-            className={`feed-post-action ${liked ? 'active' : ''}`}
-            onClick={handleLikeClick}
-            disabled={likeLoading}
-          >
-            <ThumbsUp size={20} />
-            Like
-          </button>
+          <div className="feed-post-reaction-wrap" ref={reactionPickerRef}>
+            {reactionPickerOpen && (
+              <div className="feed-post-reaction-picker" role="toolbar">
+                {REACTIONS.map((r) => (
+                  <button
+                    key={r.type}
+                    type="button"
+                    className="feed-post-reaction-picker-btn"
+                    title={r.label}
+                    onClick={() => handleReact(r.type)}
+                    disabled={reactionLoading}
+                  >
+                    {r.Icon ? <r.Icon size={22} /> : <span className="feed-post-reaction-emoji">{r.emoji}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+            <button
+              type="button"
+              className={`feed-post-action ${userReaction ? 'active' : ''}`}
+              onClick={() => (userReaction ? handleReact(userReaction) : handleReact('LIKE'))}
+              onMouseEnter={() => setReactionPickerOpen(true)}
+              onMouseLeave={() => setReactionPickerOpen(false)}
+              disabled={reactionLoading}
+              aria-expanded={reactionPickerOpen}
+              aria-haspopup="true"
+            >
+              {(() => {
+                const r = REACTIONS.find((x) => x.type === userReaction);
+                if (r?.Icon) return <r.Icon size={18} />;
+                if (r?.emoji) return <span className="feed-post-reaction-emoji" aria-hidden>{r.emoji}</span>;
+                return <ThumbsUp size={18} />;
+              })()}
+              {REACTIONS.find((x) => x.type === userReaction)?.label ?? 'Like'}
+            </button>
+          </div>
           <button
             type="button"
             className={`feed-post-action ${showComments ? 'active' : ''}`}
             onClick={handleCommentClick}
           >
-            <MessageCircle size={20} />
+            <MessageCircle size={18} />
             Comment
           </button>
           <div className="feed-post-share-wrap">
@@ -517,7 +605,7 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], li
               onClick={() => setShareOpen((o) => !o)}
               disabled={shareLoading}
             >
-              <Share2 size={20} />
+              <Share2 size={18} />
               Share
             </button>
             {shareOpen && (
@@ -527,18 +615,6 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], li
               </div>
             )}
           </div>
-          <button
-            type="button"
-            className={`feed-post-action ${saved ? 'active' : ''}`}
-            onClick={handleSaveClick}
-            disabled={saveLoading}
-            title={saved ? 'Saved' : 'Save'}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill={saved ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
-              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-            </svg>
-            Save
-          </button>
         </div>
       </div>
       {showComments && (
@@ -623,6 +699,11 @@ function normalizePost(post) {
         })
         .filter(Boolean)
     : [];
+  const userReaction = post.userReaction ? String(post.userReaction).toUpperCase() : null;
+  const tagged = post.taggedUsers ?? [];
+  const taggedUsers = Array.isArray(tagged) ? tagged.map((u) => (typeof u === 'object' && u !== null ? { id: u.id, name: u.name ?? u.username, profilePic: u.profilePic } : null)).filter(Boolean) : [];
+  const topR = post.topReactors ?? [];
+  const topReactors = Array.isArray(topR) ? topR.map((u) => (typeof u === 'object' && u !== null ? { id: u.id, name: u.name ?? u.username, profilePic: u.profilePic } : null)).filter(Boolean) : [];
   return {
     id: post.id,
     author: { id: author.id, name, profilePic },
@@ -630,7 +711,13 @@ function normalizePost(post) {
     description: post.caption ?? post.content ?? post.description ?? '',
     media: mediaItems,
     hashtags: post.hashtags ?? [],
-    liked: !!post.userReaction,
+    visibility: post.visibility ? String(post.visibility).toUpperCase() : null,
+    location: post.location ? String(post.location).trim() : null,
+    feelingActivity: post.feelingActivity ? String(post.feelingActivity).trim() : null,
+    taggedUsers,
+    topReactors,
+    liked: !!userReaction,
+    userReaction: userReaction && /^(LIKE|LOVE|HAHA|WOW|SAD|ANGRY)$/.test(userReaction) ? userReaction : null,
     likesCount: post.reactionsCount ?? post.likesCount ?? post.likes_count ?? post.likeCount ?? 0,
     commentsCount: post.commentsCount ?? post.comments_count ?? post.commentCount ?? 0,
     sharesCount: post.sharesCount ?? post.shares_count ?? 0,
@@ -649,15 +736,6 @@ function isSingleVideoPost(post) {
   return post?.media?.length === 1 && post.media[0]?.isVideo && getVideoUrl(post);
 }
 
-function formatCurrency(amount) {
-  if (!amount && amount !== 0) return 'TZS 0';
-  return new Intl.NumberFormat('en-TZ', {
-    style: 'currency',
-    currency: 'TZS',
-    minimumFractionDigits: 0,
-  }).format(amount);
-}
-
 export default function Home() {
   const { user } = useAuthStore();
   const [posts, setPosts] = useState([]);
@@ -665,8 +743,6 @@ export default function Home() {
   const [error, setError] = useState('');
   const [storyGroups, setStoryGroups] = useState([]);
   const [storiesLoading, setStoriesLoading] = useState(true);
-  const [products, setProducts] = useState([]);
-  const [productsLoading, setProductsLoading] = useState(true);
   const [videoOverlayOpen, setVideoOverlayOpen] = useState(false);
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [videoCommentsPostId, setVideoCommentsPostId] = useState(null);
@@ -715,28 +791,35 @@ export default function Home() {
     return () => { cancelled = true; };
   }, [user?.id]);
 
-  useEffect(() => {
-    let cancelled = false;
-    setProductsLoading(true);
-    getTrendingProducts({ page: 0, size: 6 })
-      .then((data) => {
-        if (!cancelled) {
-          const productList = Array.isArray(data?.content) ? data.content : (Array.isArray(data) ? data : []);
-          setProducts(productList);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setProducts([]);
-      })
-      .finally(() => {
-        if (!cancelled) setProductsLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, []);
-
+  /* Facebook-style order: Composer first, then Stories, then Feed */
   return (
     <>
-      {/* Stories */}
+      {/* 1. What's on your mind? (Composer) - like Facebook */}
+      <div className="user-app-card">
+        <Link to="/app/create" className="user-app-composer">
+          <Avatar user={user} size={40} className="user-app-composer-avatar" />
+          <span className="user-app-composer-input user-app-composer-placeholder">What's on your mind?</span>
+        </Link>
+        <div className="user-app-composer-actions">
+          <Link to="/app/create" className="user-app-composer-btn post">
+            <ImagePlus size={24} />
+            Post
+          </Link>
+          <Link to="/app/friends" className="user-app-composer-btn trade" title="Find people">
+            <Users size={24} />
+            Find People
+          </Link>
+          <Link to="/app/create" className="user-app-composer-btn video">
+            <Video size={24} />
+            Video
+          </Link>
+          <button type="button" className="user-app-post-options" aria-label="More options">
+            <MoreHorizontal size={20} />
+          </button>
+        </div>
+      </div>
+
+      {/* 2. Stories carousel - below composer like Facebook */}
       <div className="user-app-card">
         <div className="user-app-stories-header">
           <h3>Stories</h3>
@@ -769,104 +852,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Trending Products */}
-      {products.length > 0 && (
-        <div className="user-app-card" style={{ marginBottom: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: '#050505' }}>
-              <ShoppingBag size={20} style={{ verticalAlign: 'middle', marginRight: 8, color: '#7c3aed' }} />
-              Trending Products
-            </h3>
-            <Link to="/app/shop" style={{ fontSize: '0.9375rem', color: '#7c3aed', fontWeight: 600, textDecoration: 'none' }}>
-              See All →
-            </Link>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12 }}>
-            {products.map((product) => {
-              const productImage = product.thumbnail || 
-                (product.images && product.images.length > 0 
-                  ? (product.images.find(img => img.isPrimary)?.url || product.images[0].url)
-                  : null);
-              return (
-                <Link
-                  key={product.id}
-                  to={`/app/shop/${product.id}`}
-                  style={{
-                    textDecoration: 'none',
-                    color: 'inherit',
-                    display: 'block',
-                    borderRadius: 8,
-                    overflow: 'hidden',
-                    background: '#fff',
-                    border: '1px solid #e4e6eb',
-                    transition: 'transform 0.2s, box-shadow 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
-                >
-                  <div style={{ width: '100%', aspectRatio: 1, background: '#f0f2f5', position: 'relative', overflow: 'hidden' }}>
-                    {productImage ? (
-                      <img 
-                        src={productImage} 
-                        alt={product.name}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <ImageIcon size={32} style={{ color: '#d1d5db' }} />
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ padding: 10 }}>
-                    <p style={{ margin: '0 0 4px', fontSize: '0.875rem', fontWeight: 600, color: '#050505', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.3 }}>
-                      {product.name}
-                    </p>
-                    <p style={{ margin: '0 0 4px', fontSize: '0.75rem', color: '#65676b' }}>
-                      {product.business?.name || 'Business'}
-                    </p>
-                    <p style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 700, color: '#7c3aed' }}>
-                      {formatCurrency(product.price)}
-                    </p>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* What's on your mind? */}
-      <div className="user-app-card">
-        <Link to="/app/create" className="user-app-composer">
-          <Avatar user={user} size={40} className="user-app-composer-avatar" />
-          <span className="user-app-composer-input user-app-composer-placeholder">What's on your mind?</span>
-        </Link>
-        <div className="user-app-composer-actions">
-          <Link to="/app/create" className="user-app-composer-btn post">
-            <ImagePlus size={24} />
-            Post
-          </Link>
-          <Link to="/app/friends" className="user-app-composer-btn trade" title="Find people">
-            <Users size={24} />
-            Find People
-          </Link>
-          <button type="button" className="user-app-composer-btn video">
-            <Video size={24} />
-            Video
-          </button>
-          <button type="button" className="user-app-post-options" aria-label="More options">
-            <MoreHorizontal size={20} />
-          </button>
-        </div>
-      </div>
-
       {/* Feed posts */}
       {error && (
         <div className="user-app-card" style={{ padding: 16, color: '#b91c1c' }}>
@@ -886,7 +871,8 @@ export default function Home() {
           </Link>
         </div>
       )}
-      {user?.id && !loading && (
+      {/* Discover card: once above feed when there are posts (no duplicate in empty state) */}
+      {user?.id && !loading && posts.length > 0 && (
         <div className="user-app-card home-discover-card" style={{ padding: '12px 16px', marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <Link to="/app/friends" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: 'inherit' }}>
             <Users size={20} className="home-discover-icon" style={{ color: '#7c3aed' }} />
@@ -913,7 +899,13 @@ export default function Home() {
             description={p.description}
             media={p.media}
             hashtags={p.hashtags}
+            visibility={p.visibility ?? null}
+            location={p.location ?? null}
+            feelingActivity={p.feelingActivity ?? null}
+            taggedUsers={p.taggedUsers ?? []}
+            topReactors={p.topReactors ?? []}
             liked={p.liked}
+            userReaction={p.userReaction ?? null}
             likesCount={p.likesCount}
             commentsCount={p.commentsCount}
             sharesCount={p.sharesCount}
@@ -931,10 +923,11 @@ export default function Home() {
         const videoUrl = getVideoUrl(current);
         if (!videoUrl) return null;
         const handleOverlayLike = async () => {
-          const next = !current.liked;
-          setPosts((prev) => prev.map((p) => (p.id === current.id ? { ...p, liked: next, likesCount: next ? p.likesCount + 1 : Math.max(0, p.likesCount - 1) } : p)));
+          const nextReaction = current.userReaction === 'LIKE' ? null : 'LIKE';
+          const countDelta = nextReaction ? (current.userReaction ? 0 : 1) : -1;
+          setPosts((prev) => prev.map((p) => (p.id === current.id ? { ...p, userReaction: nextReaction, liked: !!nextReaction, likesCount: Math.max(0, p.likesCount + countDelta) } : p)));
           try {
-            if (next) await likePost(current.id);
+            if (nextReaction) await reactToPost(current.id, 'LIKE');
             else await unlikePost(current.id);
           } catch (_) {}
         };

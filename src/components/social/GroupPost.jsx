@@ -50,7 +50,7 @@ function MediaGrid({ images = [] }) {
       {images.slice(0, 4).map((img, i) => (
         <div key={i} className="group-post-media-item">
           {img.url ? (
-            <img src={img.url} alt="" />
+            <img src={img.url} alt="" loading="lazy" />
           ) : (
             <div className="group-post-media-placeholder" />
           )}

@@ -74,10 +74,13 @@ export default function Notifications() {
   const [notifs, setNotifs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState(''); // '', 'LIKE', 'COMMENT', 'FOLLOW'
 
   useEffect(() => {
     let cancelled = false;
-    getNotifications({ page: 0, size: 50 })
+    const params = { page: 0, size: 50 };
+    if (typeFilter) params.type = typeFilter;
+    getNotifications(params)
       .then((res) => {
         if (!cancelled && res?.content) setNotifs(res.content);
       })
@@ -88,7 +91,7 @@ export default function Notifications() {
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
-  }, []);
+  }, [typeFilter]);
 
   const markRead = async (id) => {
     setNotifs((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
@@ -131,6 +134,27 @@ export default function Notifications() {
               onClick={() => setFilter('unread')}
             >
               Unread
+            </button>
+            <button
+              type="button"
+              className={`notif-filter-btn ${typeFilter === 'LIKE' ? 'active' : ''}`}
+              onClick={() => setTypeFilter(typeFilter === 'LIKE' ? '' : 'LIKE')}
+            >
+              Likes
+            </button>
+            <button
+              type="button"
+              className={`notif-filter-btn ${typeFilter === 'COMMENT' ? 'active' : ''}`}
+              onClick={() => setTypeFilter(typeFilter === 'COMMENT' ? '' : 'COMMENT')}
+            >
+              Comments
+            </button>
+            <button
+              type="button"
+              className={`notif-filter-btn ${typeFilter === 'FOLLOW' ? 'active' : ''}`}
+              onClick={() => setTypeFilter(typeFilter === 'FOLLOW' ? '' : 'FOLLOW')}
+            >
+              Follows
             </button>
           </div>
           {unreadCount > 0 && (
