@@ -98,6 +98,8 @@ export default function UserLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [navMenuOpen, setNavMenuOpen] = useState(false);
+  const [navMenuSearch, setNavMenuSearch] = useState('');
   const [incomingCall, setIncomingCall] = useState(null);
   const [callActionLoading, setCallActionLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -113,7 +115,18 @@ export default function UserLayout() {
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const impressedAdIds = useRef(new Set());
   const menuRef = useRef(null);
+  const navMenuRef = useRef(null);
   const searchRef = useRef(null);
+
+  const navItems = [
+    ...leftNav,
+    ...(String(user?.role ?? '').toLowerCase() === ROLES.AGENT
+      ? [{ to: '/agent', icon: Sparkles, label: 'Agent Dashboard' }]
+      : []),
+  ];
+  const filteredNavItems = navMenuSearch.trim()
+    ? navItems.filter((item) => item.label.toLowerCase().includes(navMenuSearch.toLowerCase().trim()))
+    : navItems;
 
   const isHome = location.pathname === '/app' || location.pathname === '/app/';
   const isOnCallPage = location.pathname.startsWith('/app/call');
@@ -232,6 +245,18 @@ export default function UserLayout() {
       document.removeEventListener('click', handleClickOutside);
     };
   }, [menuOpen]);
+
+  useEffect(() => {
+    if (!navMenuOpen) return;
+    function handleClickOutside(e) {
+      if (navMenuRef.current && !navMenuRef.current.contains(e.target)) setNavMenuOpen(false);
+    }
+    const id = setTimeout(() => document.addEventListener('click', handleClickOutside), 0);
+    return () => {
+      clearTimeout(id);
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [navMenuOpen]);
 
   useEffect(() => {
     if (!searchOpen) return;
@@ -583,25 +608,77 @@ export default function UserLayout() {
         </nav>
 
         <div className="user-app-header-right">
-          <div className="user-app-dropdown" ref={menuRef}>
+          <div className={`user-app-dropdown user-app-nav-menu-wrap ${navMenuOpen ? 'open' : ''}`} ref={navMenuRef}>
             <button
               type="button"
-              onClick={() => setMenuOpen((o) => !o)}
+              onClick={() => { setNavMenuOpen((o) => !o); setNavMenuSearch(''); }}
               className="user-app-icon-btn user-app-menu-btn"
-              aria-expanded={menuOpen}
+              aria-expanded={navMenuOpen}
               aria-haspopup="true"
               aria-label="Menu"
             >
               <LayoutGrid size={20} />
             </button>
-            <Link to="/app/notifications" className="user-app-icon-btn" aria-label="Notifications">
-              <Bell size={20} />
-              {unreadNotificationCount > 0 && (
-                <span className="badge">
-                  {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
-                </span>
-              )}
-            </Link>
+            {navMenuOpen && (
+              <>
+                <div className="user-app-nav-drawer-backdrop" onClick={() => setNavMenuOpen(false)} aria-hidden />
+                <div className="user-app-nav-drawer">
+                <div className="user-app-nav-drawer-header">
+                  <h3 className="user-app-nav-drawer-title">Menu</h3>
+                  <button type="button" className="user-app-nav-drawer-close" onClick={() => setNavMenuOpen(false)} aria-label="Close">
+                    <X size={22} />
+                  </button>
+                </div>
+                <div className="user-app-nav-drawer-search">
+                  <Search size={18} className="user-app-nav-drawer-search-icon" />
+                  <input
+                    type="text"
+                    placeholder="Search menu…"
+                    value={navMenuSearch}
+                    onChange={(e) => setNavMenuSearch(e.target.value)}
+                    className="user-app-nav-drawer-search-input"
+                    aria-label="Search menu"
+                  />
+                </div>
+                <nav className="user-app-nav-drawer-list">
+                  {filteredNavItems.length > 0 ? (
+                    filteredNavItems.map((item) => {
+                      const Icon = item.icon;
+                      const isActive = location.pathname === item.to || (item.to.length > 1 && location.pathname.startsWith(item.to + '/'));
+                      return (
+                        <Link
+                          key={item.to + item.label}
+                          to={item.to}
+                          className={`user-app-nav-drawer-item ${isActive ? 'active' : ''}`}
+                          onClick={() => setNavMenuOpen(false)}
+                        >
+                          <span className="user-app-nav-drawer-icon">
+                            <Icon size={22} />
+                          </span>
+                          <span className="user-app-nav-drawer-label">{item.label}</span>
+                          {item.label === 'Notifications' && unreadNotificationCount > 0 && (
+                            <span className="user-app-nav-drawer-badge">{unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}</span>
+                          )}
+                        </Link>
+                      );
+                    })
+                  ) : (
+                    <p className="user-app-nav-drawer-empty">No results for &quot;{navMenuSearch}&quot;</p>
+                  )}
+                </nav>
+                </div>
+              </>
+            )}
+          </div>
+          <Link to="/app/notifications" className="user-app-icon-btn" aria-label="Notifications">
+            <Bell size={20} />
+            {unreadNotificationCount > 0 && (
+              <span className="badge">
+                {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+              </span>
+            )}
+          </Link>
+          <div className="user-app-dropdown" ref={menuRef}>
             <button
               type="button"
               onClick={() => setMenuOpen((o) => !o)}

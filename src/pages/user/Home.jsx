@@ -799,11 +799,7 @@ export default function Home() {
         <Link to="/app/create" className="user-app-composer">
           <Avatar user={user} size={40} className="user-app-composer-avatar" />
           <span className="user-app-composer-input user-app-composer-placeholder">
-            What's on your mind{user?.name ? (
-              <>, <span className="user-app-composer-name">{user.name}</span>?</>
-            ) : (
-              '?'
-            )}
+            What&apos;s on your mind?
           </span>
         </Link>
         <div className="user-app-composer-actions-inline">

@@ -135,6 +135,55 @@
   border-bottom-color: #3e4042;
 }
 
+/* Nav drawer - dark */
+[data-theme="dark"] .user-app-nav-drawer {
+  background: #242526;
+}
+[data-theme="dark"] .user-app-nav-drawer-title {
+  color: #fff;
+}
+[data-theme="dark"] .user-app-nav-drawer-close {
+  color: #b0b3b8;
+}
+[data-theme="dark"] .user-app-nav-drawer-close:hover {
+  background: #3a3b3c;
+}
+[data-theme="dark"] .user-app-nav-drawer-search {
+  background: #3a3b3c;
+}
+[data-theme="dark"] .user-app-nav-drawer-search-input {
+  color: #e4e6eb;
+}
+[data-theme="dark"] .user-app-nav-drawer-search-input::placeholder {
+  color: #b0b3b8;
+}
+[data-theme="dark"] .user-app-nav-drawer-search-icon {
+  color: #b0b3b8;
+}
+[data-theme="dark"] .user-app-nav-drawer-header {
+  border-bottom-color: #3e4042;
+}
+[data-theme="dark"] .user-app-nav-drawer-item {
+  color: #e4e6eb;
+}
+[data-theme="dark"] .user-app-nav-drawer-item:hover {
+  background: #3a3b3c;
+}
+[data-theme="dark"] .user-app-nav-drawer-item.active {
+  background: rgba(124, 58, 237, 0.2);
+  color: #a78bfa;
+}
+[data-theme="dark"] .user-app-nav-drawer-icon {
+  background: #3a3b3c;
+}
+[data-theme="dark"] .user-app-nav-drawer-item.active .user-app-nav-drawer-icon {
+  background: rgba(124, 58, 237, 0.25);
+  color: #a78bfa;
+}
+[data-theme="dark"] .user-app-nav-drawer-empty {
+  color: #b0b3b8;
+}
+
 [data-theme="dark"] .user-app-stories-header h3 {
   color: #fff;
 }
