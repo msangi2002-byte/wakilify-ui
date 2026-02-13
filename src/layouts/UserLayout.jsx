@@ -420,7 +420,7 @@ export default function UserLayout() {
             <BrandLogo size={40} />
             <span>{APP_NAME}</span>
           </Link>
-          <div className="user-app-search-wrap" ref={searchRef}>
+          <div className={`user-app-search-wrap ${searchOpen ? 'expanded' : ''}`} ref={searchRef}>
             <div
               className="user-app-search"
               onClick={() => setSearchOpen(true)}

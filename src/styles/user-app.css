@@ -146,10 +146,39 @@
   background: #f0f2f5;
   border-radius: 50px;
   padding: 8px 12px 8px 16px;
-  cursor: text;
+  cursor: pointer;
   gap: 8px;
   max-width: 240px;
   margin-left: 8px;
+  transition: max-width 0.25s ease, padding 0.2s ease;
+}
+
+/* Desktop: icon-only when collapsed, expand on click */
+@media (min-width: 769px) {
+  .user-app-search-wrap:not(.expanded) .user-app-search {
+    max-width: 44px;
+    min-width: 44px;
+    padding: 10px;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .user-app-search-wrap:not(.expanded) .user-app-search-input {
+    position: absolute;
+    width: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .user-app-search-wrap.expanded .user-app-search {
+    cursor: text;
+    min-width: 200px;
+  }
+  .user-app-search-wrap.expanded .user-app-search-input {
+    position: static;
+    width: 100%;
+    min-width: 120px;
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 .user-app-search input {
