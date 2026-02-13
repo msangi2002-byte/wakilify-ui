@@ -29,6 +29,7 @@ import IncomingCallModal from '@/components/call/IncomingCallModal';
 import { APP_NAME, LOGO_PNG, LOGO_ICON } from '@/lib/constants/brand';
 import { clearAuth } from '@/store/auth.store';
 import '@/styles/user-app.css';
+import '@/styles/theme-dark.css';
 
 const POLL_INTERVAL_MS = 2500;
 

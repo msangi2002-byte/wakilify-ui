@@ -1,6 +1,16 @@
+const THEME_STORAGE_KEY = 'wakilify-ui-theme';
+
+function getStoredTheme() {
+  try {
+    const v = localStorage.getItem(THEME_STORAGE_KEY);
+    if (v === 'dark' || v === 'light') return v;
+  } catch (_) {}
+  return 'light';
+}
+
 let state = {
   sidebarOpen: true,
-  theme: 'light',
+  theme: getStoredTheme(),
 };
 
 const listeners = new Set();
@@ -18,6 +28,11 @@ export function useUIStore() {
 
 export function setUI(updates) {
   state = { ...state, ...updates };
+  if (updates.theme !== undefined) {
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, updates.theme);
+    } catch (_) {}
+  }
   listeners.forEach((fn) => fn(state));
 }
 

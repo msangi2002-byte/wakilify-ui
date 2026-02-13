@@ -1,0 +1,509 @@
+/* Dark theme – kufuata Facebook dark: tabaka za grey, maandishi nyeupe, secondary light grey */
+/* Facebook: #18191A (sidebar), #242526 (header/feed/cards), #3A3B3C (inputs), white + #b0b3b8 */
+
+[data-theme="dark"] .user-app {
+  background: #18191a;
+  color: #fff;
+}
+
+[data-theme="dark"] .user-app-header {
+  background: #242526;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .user-app-header-left .user-app-logo-text {
+  color: #fff;
+}
+
+[data-theme="dark"] .user-app-search-wrap {
+  background: #3a3b3c;
+  color: #fff;
+}
+
+[data-theme="dark"] .user-app-search-wrap::placeholder,
+[data-theme="dark"] .user-app-search-wrap input::placeholder {
+  color: #b0b3b8;
+}
+
+[data-theme="dark"] .user-app-header-right .icon-btn {
+  color: #fff;
+  background: transparent;
+}
+
+[data-theme="dark"] .user-app-header-right .icon-btn:hover {
+  background: #3a3b3c;
+  color: #fff;
+}
+
+[data-theme="dark"] .user-app-header-right .icon-btn.primary {
+  background: #7c3aed;
+  color: #fff;
+}
+
+[data-theme="dark"] .user-app-header-right .icon-btn.danger {
+  background: #e41e3f;
+  color: #fff;
+}
+
+[data-theme="dark"] .user-app-card {
+  background: #242526;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .user-app-body {
+  background: #18191a;
+}
+
+/* Ukurasa wa kati (feed strip) – Facebook ina #242526; sidebar kushoto #18191A */
+[data-theme="dark"] .user-app-main {
+  background: #242526;
+  border-radius: 8px;
+}
+
+[data-theme="dark"] .user-app-sidebar-link {
+  color: #fff;
+}
+
+[data-theme="dark"] .user-app-sidebar-link:hover {
+  background: #3a3b3c;
+}
+
+[data-theme="dark"] .user-app-sidebar-link .icon-wrap {
+  background: #3a3b3c;
+  color: #a78bfa;
+}
+
+[data-theme="dark"] .user-app-composer-inner {
+  background: #242526;
+  border-color: #3e4042;
+}
+
+[data-theme="dark"] .user-app-composer-placeholder {
+  color: #b0b3b8;
+}
+
+[data-theme="dark"] .user-app-composer-actions {
+  border-top-color: #3e4042;
+}
+
+[data-theme="dark"] .user-app-composer-btn {
+  color: #b0b3b8;
+}
+
+[data-theme="dark"] .user-app-composer-btn.post { color: #34d399; }
+[data-theme="dark"] .user-app-composer-btn.trade { color: #60a5fa; }
+[data-theme="dark"] .user-app-composer-btn.video { color: #f87171; }
+
+[data-theme="dark"] .user-app-stories-header h3 {
+  color: #fff;
+}
+
+[data-theme="dark"] .user-app-stories-header a {
+  color: #a78bfa;
+}
+
+[data-theme="dark"] .user-app-story-card.create {
+  background: #242526;
+  border-color: #3e4042;
+}
+
+[data-theme="dark"] .user-app-story-card.create .label {
+  color: #fff;
+}
+
+[data-theme="dark"] .user-app-discover-card {
+  background: #242526;
+  border-color: #3e4042;
+}
+
+[data-theme="dark"] .user-app-discover-card h3,
+[data-theme="dark"] .user-app-discover-card p {
+  color: #fff;
+}
+
+[data-theme="dark"] .user-app-discover-card a {
+  color: #a78bfa;
+}
+
+/* Feed post */
+[data-theme="dark"] .feed-post-header {
+  border-color: transparent;
+}
+
+[data-theme="dark"] .feed-post-name {
+  color: #fff;
+}
+
+/* Jina la user kwenye post liko ndani ya UserProfileMenu (si feed-post-name) */
+[data-theme="dark"] .user-profile-menu-name,
+[data-theme="dark"] .user-profile-menu-trigger {
+  color: #fff;
+}
+
+[data-theme="dark"] .feed-post-comment-author-inline .user-profile-menu-trigger {
+  color: #fff;
+}
+
+[data-theme="dark"] .user-profile-menu {
+  background: #242526;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .user-profile-menu-item {
+  color: #fff;
+}
+
+[data-theme="dark"] .user-profile-menu-item:hover {
+  background: #3a3b3c;
+}
+
+[data-theme="dark"] .feed-post-time,
+[data-theme="dark"] .feed-post-meta-extra,
+[data-theme="dark"] .feed-post-visibility {
+  color: #b0b3b8;
+}
+
+[data-theme="dark"] .feed-post-description {
+  color: #fff;
+}
+
+[data-theme="dark"] .feed-post-hashtag {
+  color: #a78bfa;
+}
+
+[data-theme="dark"] .feed-post-engagement {
+  border-top-color: #3e4042;
+}
+
+[data-theme="dark"] .feed-post-counts,
+[data-theme="dark"] .feed-post-comments-share {
+  color: #b0b3b8;
+}
+
+[data-theme="dark"] .feed-post-comments-share span:hover {
+  color: #fff;
+}
+
+[data-theme="dark"] .feed-post-action {
+  color: #b0b3b8;
+}
+
+[data-theme="dark"] .feed-post-action:hover {
+  background: #3a3b3c;
+  color: #fff;
+}
+
+[data-theme="dark"] .feed-post-action.active {
+  color: #a78bfa;
+}
+
+[data-theme="dark"] .feed-post-reaction-picker {
+  background: #242526;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .feed-post-reaction-picker-btn:hover {
+  background: #3a3b3c;
+}
+
+[data-theme="dark"] .feed-post-share-menu {
+  background: #242526;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .feed-post-share-menu button {
+  color: #fff;
+}
+
+[data-theme="dark"] .feed-post-share-menu button:hover {
+  background: #3a3b3c;
+}
+
+[data-theme="dark"] .feed-post-options-menu {
+  background: #242526;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .feed-post-option-item {
+  color: #fff;
+}
+
+[data-theme="dark"] .feed-post-option-item:hover {
+  background: #3a3b3c;
+}
+
+[data-theme="dark"] .feed-post-report-modal {
+  background: #242526;
+  color: #fff;
+}
+
+[data-theme="dark"] .feed-post-report-label {
+  color: #fff;
+}
+
+[data-theme="dark"] .feed-post-report-label select,
+[data-theme="dark"] .feed-post-report-label textarea {
+  background: #3a3b3c;
+  border-color: #3e4042;
+  color: #fff;
+}
+
+[data-theme="dark"] .feed-post-comment-form-wrap input,
+[data-theme="dark"] .feed-post-comment-form-wrap textarea {
+  background: #3a3b3c;
+  border-color: #3e4042;
+  color: #fff;
+}
+
+[data-theme="dark"] .feed-post-comment-form-wrap input::placeholder,
+[data-theme="dark"] .feed-post-comment-form-wrap textarea::placeholder {
+  color: #b0b3b8;
+}
+
+[data-theme="dark"] .feed-post-comments {
+  border-top-color: #3e4042;
+}
+
+[data-theme="dark"] .feed-post-comment-author,
+[data-theme="dark"] .feed-post-comment-author-inline,
+[data-theme="dark"] .feed-post-comment-content {
+  color: #fff;
+}
+
+[data-theme="dark"] .feed-post-comment-meta,
+[data-theme="dark"] .feed-post-comment-time,
+[data-theme="dark"] .feed-post-comment-action,
+[data-theme="dark"] .feed-post-comment-like {
+  color: #b0b3b8;
+}
+
+[data-theme="dark"] .feed-post-comment-action:hover,
+[data-theme="dark"] .feed-post-comment-like:hover {
+  color: #fff;
+}
+
+/* Sidebar kulia (Sponsored, People you may know, Contacts) */
+[data-theme="dark"] .user-app-right-section-header h3 {
+  color: #fff;
+}
+
+[data-theme="dark"] .user-app-right-section-header button {
+  color: #b0b3b8;
+}
+
+[data-theme="dark"] .user-app-right-section-header button:hover {
+  background: #3a3b3c;
+  color: #fff;
+}
+
+[data-theme="dark"] .user-app-right-loading,
+[data-theme="dark"] .user-app-right-empty {
+  color: #b0b3b8;
+}
+
+[data-theme="dark"] .user-app-right-see-all {
+  color: #a78bfa;
+}
+
+[data-theme="dark"] .user-app-right-see-all:hover {
+  color: #c4b5fd;
+}
+
+[data-theme="dark"] .user-app-sponsored-card {
+  background: transparent;
+  color: inherit;
+}
+
+[data-theme="dark"] .user-app-sponsored-card:hover {
+  background: #3a3b3c;
+}
+
+[data-theme="dark"] .user-app-sponsored-card .thumb {
+  background: #3a3b3c;
+}
+
+[data-theme="dark"] .user-app-sponsored-card .title {
+  color: #fff;
+}
+
+[data-theme="dark"] .user-app-sponsored-card .desc,
+[data-theme="dark"] .user-app-sponsored-label {
+  color: #b0b3b8;
+}
+
+[data-theme="dark"] .user-app-contact {
+  color: #fff;
+}
+
+[data-theme="dark"] .user-app-contact:hover {
+  background: #3a3b3c;
+}
+
+[data-theme="dark"] .user-app-contact .name {
+  color: #fff;
+}
+
+[data-theme="dark"] .user-app-follow-btn {
+  color: #a78bfa;
+}
+
+[data-theme="dark"] .user-app-follow-btn:hover:not(:disabled) {
+  background: rgba(124, 58, 237, 0.2);
+  color: #c4b5fd;
+}
+
+[data-theme="dark"] .user-app-follow-badge {
+  color: #b0b3b8;
+  background: #3a3b3c;
+}
+
+[data-theme="dark"] .user-app-online-dot {
+  border-color: #242526;
+}
+
+/* Dropdown menus (header profile, etc.) */
+[data-theme="dark"] .user-app-dropdown-menu {
+  background: #242526;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .user-app-dropdown-menu button,
+[data-theme="dark"] .user-app-dropdown-menu a {
+  color: #fff;
+}
+
+[data-theme="dark"] .user-app-dropdown-menu button:hover,
+[data-theme="dark"] .user-app-dropdown-menu a:hover {
+  background: #3a3b3c;
+}
+
+[data-theme="dark"] .user-app-dropdown-menu button.danger {
+  color: #f87171;
+}
+
+[data-theme="dark"] .user-app-dropdown-menu button.danger:hover {
+  background: rgba(248, 113, 113, 0.15);
+}
+
+/* Bottom nav (mobile) */
+[data-theme="dark"] .user-app-bottom-nav {
+  background: #242526;
+  border-top-color: #3e4042;
+}
+
+[data-theme="dark"] .user-app-bottom-nav a {
+  color: #b0b3b8;
+}
+
+[data-theme="dark"] .user-app-bottom-nav a.active {
+  color: #a78bfa;
+}
+
+/* Settings page */
+[data-theme="dark"] .settings-page {
+  background: #18191a;
+  color: #fff;
+}
+
+[data-theme="dark"] .settings-header h1 {
+  color: #fff;
+}
+
+[data-theme="dark"] .settings-section-title {
+  color: #fff;
+}
+
+[data-theme="dark"] .settings-row-title {
+  color: #fff;
+}
+
+[data-theme="dark"] .settings-row-desc {
+  color: #b0b3b8;
+}
+
+[data-theme="dark"] .settings-toggle {
+  background: #3e4042;
+}
+
+[data-theme="dark"] .settings-toggle.on {
+  background: #7c3aed;
+}
+
+[data-theme="dark"] .settings-toggle-thumb {
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .settings-theme-preview {
+  color: #b0b3b8;
+}
+
+[data-theme="dark"] .settings-section-actions {
+  border-top-color: #3e4042;
+}
+
+[data-theme="dark"] .settings-btn-secondary {
+  background: #3a3b3c;
+  color: #fff;
+}
+
+[data-theme="dark"] .settings-btn-secondary:hover {
+  background: #3e4042;
+}
+
+[data-theme="dark"] .settings-input,
+[data-theme="dark"] .settings-select,
+[data-theme="dark"] .settings-input-wrap input {
+  background: #3a3b3c;
+  border-color: #3e4042;
+  color: #fff;
+}
+
+[data-theme="dark"] .settings-header-breadcrumb,
+[data-theme="dark"] .settings-breadcrumb-sep {
+  color: #b0b3b8;
+}
+
+[data-theme="dark"] .settings-breadcrumb-link {
+  color: #a78bfa;
+}
+
+/* Notifications */
+[data-theme="dark"] .notif-filter {
+  background: #3a3b3c;
+}
+
+[data-theme="dark"] .notif-filter-btn {
+  color: #b0b3b8;
+}
+
+[data-theme="dark"] .notif-filter-btn:hover {
+  color: #fff;
+}
+
+[data-theme="dark"] .notif-filter-btn.active {
+  background: #242526;
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .notif-list li {
+  border-bottom-color: #3e4042;
+}
+
+[data-theme="dark"] .notif-item {
+  color: #fff;
+}
+
+/* Scrollbars (desktop) – dark theme */
+[data-theme="dark"] html {
+  scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .user-app-body .user-app-sidebar:last-child::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+[data-theme="dark"] .user-app-body .user-app-sidebar:last-child::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}

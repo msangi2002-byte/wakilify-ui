@@ -3,6 +3,7 @@ import { Link, Outlet, useParams } from 'react-router-dom';
 import { Users, ChevronRight, Plus, Search, Loader2, Check, X } from 'lucide-react';
 import { getAllCommunities, getMyInvites, acceptInvite, declineInvite } from '@/lib/api/communities';
 import '@/styles/user-app.css';
+import '@/styles/theme-dark.css';
 
 /** Sort so joined groups (isMember/member true) come first, then others. */
 function sortJoinedFirst(list) {
