@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Building2, UserPlus } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Building2, UserPlus, Package, AlertTriangle } from 'lucide-react';
 import { activateBusiness } from '@/lib/api/agent';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import '@/styles/agent.css';
@@ -249,7 +250,45 @@ export default function Requests() {
               />
             </div>
             {error && (
-              <p className="agent-requests-message agent-requests-message--error" role="alert">{error}</p>
+              <div className="agent-requests-message agent-requests-message--error" role="alert" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                  <AlertTriangle size={18} style={{ marginTop: '2px', flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <p style={{ margin: 0 }}>{error}</p>
+                    {(error.toLowerCase().includes('package limit') || error.toLowerCase().includes('upgrade') || error.toLowerCase().includes('purchase a package')) && (
+                      <Link
+                        to="/agent"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          marginTop: '8px',
+                          padding: '8px 16px',
+                          background: 'rgba(124, 58, 237, 0.2)',
+                          border: '1px solid #7c3aed',
+                          borderRadius: '6px',
+                          color: '#a78bfa',
+                          textDecoration: 'none',
+                          fontSize: '0.875rem',
+                          fontWeight: 600,
+                          transition: 'all 0.2s',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.background = 'rgba(124, 58, 237, 0.3)';
+                          e.target.style.borderColor = '#a78bfa';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.background = 'rgba(124, 58, 237, 0.2)';
+                          e.target.style.borderColor = '#7c3aed';
+                        }}
+                      >
+                        <Package size={16} />
+                        Upgrade Package
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              </div>
             )}
             {success && (
               <p className="agent-requests-message agent-requests-message--success" role="status">{success}</p>

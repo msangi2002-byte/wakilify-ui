@@ -17,3 +17,12 @@ export async function getMyPayments(params = {}) {
   });
   return unwrap({ data }) ?? data;
 }
+
+/**
+ * Check payment status by orderId
+ * GET /api/v1/payments/status/{orderId}
+ */
+export async function checkPaymentStatus(orderId) {
+  const { data } = await api.get(`/payments/status/${orderId}`);
+  return unwrap({ data }) ?? data;
+}

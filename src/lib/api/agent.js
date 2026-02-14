@@ -134,3 +134,24 @@ export async function getAgentWithdrawals(params = {}) {
 export async function cancelWithdrawal(id) {
   await api.delete(`/agent/withdrawals/${id}`);
 }
+
+/**
+ * Get available agent packages
+ * GET /api/v1/agent/packages
+ */
+export async function getAgentPackages() {
+  const { data } = await api.get('/agent/packages');
+  return data?.data ?? data;
+}
+
+/**
+ * Initiate package purchase/upgrade payment
+ * POST /api/v1/agent/packages/{packageId}/purchase
+ * Body: { paymentPhone: "+255712345678" }
+ */
+export async function purchaseAgentPackage(packageId, paymentPhone) {
+  const { data } = await api.post(`/agent/packages/${packageId}/purchase`, {
+    paymentPhone,
+  });
+  return data?.data ?? data;
+}
