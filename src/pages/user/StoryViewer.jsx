@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { X, Eye } from 'lucide-react';
+import { X, Eye, Heart, MessageCircle, Send, Loader2 } from 'lucide-react';
 import { UserProfileMenu } from '@/components/ui/UserProfileMenu';
-import { getStories, recordStoryView, getStoryViewers } from '@/lib/api/posts';
+import { getStories, recordStoryView, getStoryViewers, getPostById, likePost, unlikePost, getComments, addComment } from '@/lib/api/posts';
 import { useAuthStore } from '@/store/auth.store';
 import { parseApiDate, formatPostTime } from '@/lib/utils/dateUtils';
 import '@/styles/user-app.css';
@@ -96,6 +96,16 @@ export default function StoryViewer() {
   const [viewersOpen, setViewersOpen] = useState(false);
   const [viewers, setViewers] = useState([]);
   const [viewersLoading, setViewersLoading] = useState(false);
+  const [viewersCount, setViewersCount] = useState(0);
+  const [liked, setLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState(0);
+  const [likeLoading, setLikeLoading] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [comments, setComments] = useState([]);
+  const [commentsCount, setCommentsCount] = useState(0);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [commentSubmitting, setCommentSubmitting] = useState(false);
   const viewedStoryIdsRef = useRef(new Set());
   const timerRef = useRef(null);
   const startTimeRef = useRef(null);
@@ -137,10 +147,57 @@ export default function StoryViewer() {
   const isTextOnly = currentStory && !mediaUrl && (currentStory.caption ?? '').trim().length > 0;
   const isMyStory = currentUser?.id && currentGroup?.authorId === currentUser.id;
 
+  // Fetch post details (likes, comments, viewers count) when story changes
   useEffect(() => {
-    if (!currentStory?.id || viewedStoryIdsRef.current.has(currentStory.id)) return;
-    viewedStoryIdsRef.current.add(currentStory.id);
-    recordStoryView(currentStory.id).catch(() => {});
+    if (!currentStory?.id) {
+      setLiked(false);
+      setLikesCount(0);
+      setCommentsCount(0);
+      setViewersCount(0);
+      setComments([]);
+      return;
+    }
+
+    // Record view
+    if (!viewedStoryIdsRef.current.has(currentStory.id)) {
+      viewedStoryIdsRef.current.add(currentStory.id);
+      recordStoryView(currentStory.id).catch(() => {});
+    }
+
+    // Fetch post details
+    const fetchPostDetails = async () => {
+      try {
+        const post = await getPostById(currentStory.id);
+        setLiked(post?.liked ?? false);
+        setLikesCount(post?.reactionsCount ?? post?.likesCount ?? 0);
+        setCommentsCount(post?.commentsCount ?? 0);
+      } catch {
+        // Use story data if available
+        setLiked(currentStory?.liked ?? false);
+        setLikesCount(currentStory?.reactionsCount ?? currentStory?.likesCount ?? 0);
+        setCommentsCount(currentStory?.commentsCount ?? 0);
+      }
+    };
+
+    // Fetch viewers count
+    const fetchViewersCount = async () => {
+      try {
+        const list = await getStoryViewers(currentStory.id, { page: 0, size: 50 });
+        // Check if it's a paginated response with totalElements
+        if (list && typeof list === 'object' && !Array.isArray(list)) {
+          const total = list.totalElements ?? list.total ?? (list.content?.length ?? 0);
+          setViewersCount(total);
+        } else {
+          // It's an array, use length
+          setViewersCount(Array.isArray(list) ? list.length : 0);
+        }
+      } catch {
+        setViewersCount(0);
+      }
+    };
+
+    fetchPostDetails();
+    fetchViewersCount();
   }, [currentStory?.id]);
 
   const openViewers = useCallback(async () => {
@@ -149,13 +206,76 @@ export default function StoryViewer() {
     setViewersLoading(true);
     try {
       const list = await getStoryViewers(currentStory.id, { page: 0, size: 50 });
-      setViewers(Array.isArray(list) ? list : list?.content ?? []);
+      const viewersList = Array.isArray(list) ? list : list?.content ?? [];
+      setViewers(viewersList);
+      // Update count if we got pagination info
+      if (list && typeof list === 'object' && !Array.isArray(list)) {
+        const total = list.totalElements ?? list.total ?? viewersList.length;
+        setViewersCount(total);
+      }
     } catch {
       setViewers([]);
     } finally {
       setViewersLoading(false);
     }
   }, [currentStory?.id]);
+
+  const handleLikeClick = useCallback(async (e) => {
+    e.stopPropagation();
+    if (!currentStory?.id || likeLoading) return;
+    const next = !liked;
+    setLiked(next);
+    setLikesCount((c) => (next ? c + 1 : Math.max(0, c - 1)));
+    setLikeLoading(true);
+    try {
+      if (next) {
+        await likePost(currentStory.id);
+      } else {
+        await unlikePost(currentStory.id);
+      }
+    } catch {
+      setLiked(!next);
+      setLikesCount((c) => (next ? c - 1 : c + 1));
+    } finally {
+      setLikeLoading(false);
+    }
+  }, [currentStory?.id, liked, likeLoading]);
+
+  const loadComments = useCallback(async () => {
+    if (!currentStory?.id) return;
+    setCommentsLoading(true);
+    try {
+      const list = await getComments(currentStory.id, { page: 0, size: 50 });
+      setComments(Array.isArray(list) ? list : list?.content ?? []);
+    } catch {
+      setComments([]);
+    } finally {
+      setCommentsLoading(false);
+    }
+  }, [currentStory?.id]);
+
+  const handleCommentClick = useCallback((e) => {
+    e.stopPropagation();
+    const next = !commentsOpen;
+    setCommentsOpen(next);
+    if (next && comments.length === 0) loadComments();
+  }, [commentsOpen, comments.length, loadComments]);
+
+  const handleSubmitComment = useCallback(async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const content = commentText.trim();
+    if (!currentStory?.id || !content || commentSubmitting) return;
+    setCommentSubmitting(true);
+    try {
+      await addComment(currentStory.id, content);
+      setCommentText('');
+      setCommentsCount((c) => c + 1);
+      await loadComments();
+    } finally {
+      setCommentSubmitting(false);
+    }
+  }, [currentStory?.id, commentText, commentSubmitting, loadComments]);
 
   const goNext = useCallback(() => {
     if (currentStoryIndex < currentStories.length - 1) {
@@ -322,11 +442,55 @@ export default function StoryViewer() {
         <div className="story-viewer-meta">
           <span className="story-viewer-time">{formatPostTime(currentStory?.createdAt)}</span>
         </div>
-        {isMyStory && currentStory?.id && (
-          <button type="button" className="story-viewer-viewers-btn" onClick={openViewers} aria-label="Viewers">
-            <Eye size={20} />
-            Viewers
-          </button>
+        {currentStory?.id && (
+          <div className="story-viewer-actions" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            {viewersCount > 0 && (
+              <button
+                type="button"
+                className="story-viewer-action-btn"
+                onClick={(e) => { e.stopPropagation(); openViewers(); }}
+                aria-label="Viewers"
+                style={{
+                  background: 'rgba(0, 0, 0, 0.5)',
+                  border: 'none',
+                  color: '#fff',
+                  padding: '8px 12px',
+                  borderRadius: '20px',
+                  fontSize: '0.875rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: 'pointer',
+                }}
+              >
+                <Eye size={16} />
+                {viewersCount}
+              </button>
+            )}
+            {isMyStory && (
+              <button
+                type="button"
+                className="story-viewer-action-btn"
+                onClick={(e) => { e.stopPropagation(); openViewers(); }}
+                aria-label="Viewers"
+                style={{
+                  background: 'rgba(0, 0, 0, 0.5)',
+                  border: 'none',
+                  color: '#fff',
+                  padding: '8px 12px',
+                  borderRadius: '20px',
+                  fontSize: '0.875rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: 'pointer',
+                }}
+              >
+                <Eye size={16} />
+                Viewers
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -386,6 +550,212 @@ export default function StoryViewer() {
 
       {currentStory?.caption && mediaUrl && (
         <div className="story-viewer-caption">{currentStory.caption}</div>
+      )}
+
+      {/* Like, Comment, Viewers buttons - Right side like Facebook */}
+      {currentStory?.id && (
+        <div
+          className="story-viewer-interactions"
+          style={{
+            position: 'absolute',
+            right: '20px',
+            bottom: '100px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '20px',
+            alignItems: 'center',
+            zIndex: 10,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Like button with count */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+            <button
+              type="button"
+              onClick={handleLikeClick}
+              disabled={likeLoading}
+              style={{
+                background: liked ? 'rgba(239, 68, 68, 0.9)' : 'rgba(0, 0, 0, 0.6)',
+                border: 'none',
+                color: '#fff',
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: likeLoading ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+              }}
+              onMouseEnter={(e) => {
+                if (!likeLoading) e.currentTarget.style.transform = 'scale(1.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+              aria-label={liked ? 'Unlike' : 'Like'}
+            >
+              {likeLoading ? (
+                <Loader2 size={20} style={{ animation: 'spin 0.8s linear infinite' }} />
+              ) : (
+                <Heart size={20} fill={liked ? '#fff' : 'transparent'} />
+              )}
+            </button>
+            {likesCount > 0 && (
+              <div style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 600, textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)' }}>
+                {likesCount}
+              </div>
+            )}
+          </div>
+
+          {/* Comment button with count */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+            <button
+              type="button"
+              onClick={handleCommentClick}
+              style={{
+                background: 'rgba(0, 0, 0, 0.6)',
+                border: 'none',
+                color: '#fff',
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              aria-label="Comments"
+            >
+              <MessageCircle size={20} />
+            </button>
+            {commentsCount > 0 && (
+              <div style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 600, textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)' }}>
+                {commentsCount}
+              </div>
+            )}
+          </div>
+
+          {/* Viewers button with count */}
+          {viewersCount > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); openViewers(); }}
+                style={{
+                  background: 'rgba(0, 0, 0, 0.6)',
+                  border: 'none',
+                  color: '#fff',
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                aria-label="Viewers"
+              >
+                <Eye size={20} />
+              </button>
+              <div style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 600, textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)' }}>
+                {viewersCount}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Comments Drawer - Slides up from bottom like Reels */}
+      {commentsOpen && (
+        <div
+          className="reels-comments-overlay"
+          onClick={(e) => { e.stopPropagation(); setCommentsOpen(false); }}
+          role="presentation"
+        >
+          <div
+            className="reels-comments-drawer"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="reels-comments-header">
+              <h3 className="reels-comments-title">Comments {commentsCount > 0 && `(${commentsCount})`}</h3>
+              <button
+                type="button"
+                className="reels-comments-close"
+                onClick={(e) => { e.stopPropagation(); setCommentsOpen(false); }}
+                aria-label="Close"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <ul className="reels-comments-list">
+              {commentsLoading ? (
+                <li className="reels-comments-loading">Loading comments…</li>
+              ) : comments.length === 0 ? (
+                <li className="reels-comments-empty">No comments yet.</li>
+              ) : (
+                comments.map((comment) => (
+                  <li
+                    key={comment.id}
+                    style={{
+                      display: 'flex',
+                      gap: '12px',
+                      alignItems: 'flex-start',
+                      padding: '12px 0',
+                    }}
+                  >
+                    <UserProfileMenu user={comment.author} avatarSize={36} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'baseline', marginBottom: '4px', flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 600, fontSize: '0.9375rem', color: '#050505' }}>
+                          {comment.author?.name ?? comment.author?.username ?? 'User'}
+                        </span>
+                        <span style={{ fontSize: '0.8125rem', color: '#65676b' }}>
+                          {formatPostTime(comment.createdAt)}
+                        </span>
+                      </div>
+                      <p style={{ margin: 0, fontSize: '0.9375rem', color: '#050505', lineHeight: 1.4, wordBreak: 'break-word' }}>
+                        {comment.content}
+                      </p>
+                    </div>
+                  </li>
+                ))
+              )}
+            </ul>
+            <form onSubmit={handleSubmitComment} className="reels-comments-input-wrap">
+              <input
+                type="text"
+                className="reels-comments-input"
+                placeholder="Add a comment..."
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                maxLength={2000}
+                disabled={commentSubmitting}
+                onFocus={(e) => e.stopPropagation()}
+              />
+              <button
+                type="submit"
+                className="reels-comments-submit"
+                disabled={!commentText.trim() || commentSubmitting}
+              >
+                {commentSubmitting ? (
+                  <Loader2 size={18} style={{ animation: 'spin 0.8s linear infinite' }} />
+                ) : (
+                  'Post'
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
       )}
 
       <div className="story-viewer-tap-zones">
