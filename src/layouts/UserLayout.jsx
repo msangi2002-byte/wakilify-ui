@@ -17,6 +17,7 @@ import {
   Package,
   LayoutGrid,
   X,
+  Shield,
 } from 'lucide-react';
 import { ROLES } from '@/types/roles';
 import { useAuthStore } from '@/store/auth.store';
@@ -714,6 +715,14 @@ export default function UserLayout() {
                     </Link>
                   </li>
                 )}
+                {String(user?.role ?? '').toLowerCase() === ROLES.ADMIN && (
+                  <li>
+                    <Link to="/admin" onClick={() => setMenuOpen(false)}>
+                      <Shield size={20} />
+                      Admin Dashboard
+                    </Link>
+                  </li>
+                )}
                 <li>
                   <Link to="/app/settings" onClick={() => setMenuOpen(false)}>
                     <Settings size={20} />
@@ -743,6 +752,9 @@ export default function UserLayout() {
                 ...leftNav,
                 ...(String(user?.role ?? '').toLowerCase() === ROLES.AGENT
                   ? [{ to: '/agent', icon: Sparkles, label: 'Agent Dashboard' }]
+                  : []),
+                ...(String(user?.role ?? '').toLowerCase() === ROLES.ADMIN
+                  ? [{ to: '/admin', icon: Shield, label: 'Admin Dashboard' }]
                   : []),
               ].map((item) => {
                 const Icon = item.icon;
