@@ -217,6 +217,9 @@ export default function Agents() {
                       Status
                     </th>
                     <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.875rem', fontWeight: 600 }}>
+                      Package
+                    </th>
+                    <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.875rem', fontWeight: 600 }}>
                       Performance
                     </th>
                     <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.875rem', fontWeight: 600 }}>
@@ -301,6 +304,25 @@ export default function Agents() {
                             <Shield size={12} />
                             {agent.status || 'UNKNOWN'}
                           </span>
+                        </td>
+                        <td style={{ padding: '16px 12px' }}>
+                          {agent.packageName ? (
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '6px 12px',
+                              borderRadius: '6px',
+                              background: 'rgba(124, 58, 237, 0.2)',
+                              color: '#a78bfa',
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                            }}>
+                              {agent.packageName}
+                            </span>
+                          ) : (
+                            <span style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.875rem' }}>No Package</span>
+                          )}
                         </td>
                         <td style={{ padding: '16px 12px' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.7)' }}>
