@@ -68,18 +68,22 @@ export default function Create() {
       const hasLargeFile = files.some((f) => f.size > CHUNK_THRESHOLD_BYTES);
       if (hasLargeFile && files.length > 0) {
         const mediaUrls = [];
+        const thumbnailUrls = [];
         const total = files.length;
         for (let i = 0; i < files.length; i++) {
-          const url = await uploadChunked(files[i], 'posts', (pct) =>
+          const result = await uploadChunked(files[i], 'posts', (pct) =>
             setUploadProgress(((i + pct / 100) / total) * 100)
           );
+          const url = typeof result === 'string' ? result : result.url;
           mediaUrls.push(url);
+          thumbnailUrls.push(typeof result === 'object' && result.thumbnailUrl ? result.thumbnailUrl : null);
         }
         await createPost({
           caption: caption.trim(),
           visibility,
           postType,
           mediaUrls,
+          thumbnailUrls: thumbnailUrls.some(Boolean) ? thumbnailUrls : undefined,
         });
       } else {
         await createPost({

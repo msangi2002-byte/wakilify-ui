@@ -95,7 +95,7 @@ export default function Messages() {
     return () => clearInterval(interval);
   }, [selectedUser?.id, currentUserId, loadMessages, loadConversations]);
 
-  // Open chat with user when navigating from profile (Message button)
+  // Open chat with user when navigating from profile or story quick reply
   useEffect(() => {
     const openUser = location.state?.openUser;
     if (openUser?.id) setSelectedUser(openUser);

@@ -256,9 +256,12 @@ export async function uploadChunked(file, subdirectory = 'posts', onProgress) {
   });
   if (onProgress) onProgress(100);
 
-  const url = data?.data?.url ?? data?.url;
+  const raw = data?.data ?? data;
+  const url = raw?.url;
   if (!url) throw new Error('Upload complete but no URL returned');
-  return url;
+  // For videos, backend may return thumbnailUrl - return both for createPost
+  const thumbnailUrl = raw?.thumbnailUrl ?? null;
+  return thumbnailUrl ? { url, thumbnailUrl } : url;
 }
 
 /**
@@ -292,12 +295,14 @@ export async function createPost({
   productTags = null,
   files = [],
   mediaUrls = null,
+  thumbnailUrls = null,
 }) {
   if (mediaUrls && mediaUrls.length > 0) {
     const payload = { caption, visibility, postType, mediaUrls };
     if (originalPostId) payload.originalPostId = originalPostId;
     if (communityId) payload.communityId = communityId;
     if (productTags?.length) payload.productTags = productTags;
+    if (thumbnailUrls && thumbnailUrls.length > 0) payload.thumbnailUrls = thumbnailUrls;
     const { data } = await api.post('/posts', payload);
     return data;
   }

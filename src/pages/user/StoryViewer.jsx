@@ -1,13 +1,35 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { X, Eye, Heart, MessageCircle, Send, Loader2 } from 'lucide-react';
+import { X, Eye, Heart, MessageCircle, Send, Loader2, Volume2, VolumeX, BarChart2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { UserProfileMenu } from '@/components/ui/UserProfileMenu';
-import { getStories, recordStoryView, getStoryViewers, getPostById, likePost, unlikePost, getComments, addComment } from '@/lib/api/posts';
+import {
+  getStories,
+  recordStoryView,
+  getStoryViewers,
+  getPostById,
+  reactToPost,
+  unlikePost,
+  getComments,
+  addComment,
+  getPostInsights,
+} from '@/lib/api/posts';
+import { sendMessage } from '@/lib/api/messages';
 import { useAuthStore } from '@/store/auth.store';
 import { parseApiDate, formatPostTime } from '@/lib/utils/dateUtils';
 import '@/styles/user-app.css';
 
 const STORY_DURATION_MS = 5000;
+
+// Facebook-style reaction types with emoji
+const REACTIONS = [
+  { type: 'LIKE', emoji: '👍', label: 'Like' },
+  { type: 'LOVE', emoji: '❤️', label: 'Love' },
+  { type: 'HAHA', emoji: '😂', label: 'Haha' },
+  { type: 'WOW', emoji: '😮', label: 'Wow' },
+  { type: 'SAD', emoji: '😢', label: 'Sad' },
+  { type: 'ANGRY', emoji: '😠', label: 'Angry' },
+];
 
 function Avatar({ user, size = 40, className = '' }) {
   const src = user?.profilePic;
@@ -35,11 +57,6 @@ function Avatar({ user, size = 40, className = '' }) {
   );
 }
 
-/**
- * Group flat list of story posts by author id.
- * Returns [{ authorId, author: { id, name, profilePic }, stories: [ ... ] }]
- * Sorted: current user first, then by latest story time.
- */
 function groupStoriesByAuthor(stories, currentUserId) {
   const map = new Map();
   for (const s of stories) {
@@ -97,21 +114,31 @@ export default function StoryViewer() {
   const [viewers, setViewers] = useState([]);
   const [viewersLoading, setViewersLoading] = useState(false);
   const [viewersCount, setViewersCount] = useState(0);
-  const [liked, setLiked] = useState(false);
-  const [likesCount, setLikesCount] = useState(0);
-  const [likeLoading, setLikeLoading] = useState(false);
+  const [userReaction, setUserReaction] = useState(null); // 'LIKE' | 'LOVE' | etc or null
+  const [reactionsCount, setReactionsCount] = useState(0);
+  const [reactionLoading, setReactionLoading] = useState(false);
+  const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
+  const [emojiOverlay, setEmojiOverlay] = useState(null); // { emoji, type } for animate-on-react
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [comments, setComments] = useState([]);
   const [commentsCount, setCommentsCount] = useState(0);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [commentSubmitting, setCommentSubmitting] = useState(false);
+  const [insightsOpen, setInsightsOpen] = useState(false);
+  const [insights, setInsights] = useState(null);
+  const [insightsLoading, setInsightsLoading] = useState(false);
+  const [quickReplyText, setQuickReplyText] = useState('');
+  const [quickReplySending, setQuickReplySending] = useState(false);
+  const [quickReplyFocused, setQuickReplyFocused] = useState(false);
+  const [videoMuted, setVideoMuted] = useState(false);
   const viewedStoryIdsRef = useRef(new Set());
   const timerRef = useRef(null);
   const startTimeRef = useRef(null);
   const videoRef = useRef(null);
-  const [videoMuted, setVideoMuted] = useState(false);
   const stallTimeoutRef = useRef(null);
+  const holdTimerRef = useRef(null);
+  const reactionPickerTimeoutRef = useRef(null);
 
   const fetchStories = useCallback(async () => {
     setLoading(true);
@@ -146,49 +173,47 @@ export default function StoryViewer() {
   const isVideo = currentStory ? getMediaType(currentStory) === 'video' : false;
   const isTextOnly = currentStory && !mediaUrl && (currentStory.caption ?? '').trim().length > 0;
   const isMyStory = currentUser?.id && currentGroup?.authorId === currentUser.id;
+  const author = currentGroup?.author ?? null;
 
-  // Fetch post details (likes, comments, viewers count) when story changes
   useEffect(() => {
     if (!currentStory?.id) {
-      setLiked(false);
-      setLikesCount(0);
+      setUserReaction(null);
+      setReactionsCount(0);
       setCommentsCount(0);
       setViewersCount(0);
       setComments([]);
+      setCommentsOpen(false);
+      setQuickReplyText('');
       return;
     }
 
-    // Record view
+    setComments([]);
+    setCommentsOpen(false);
+
     if (!viewedStoryIdsRef.current.has(currentStory.id)) {
       viewedStoryIdsRef.current.add(currentStory.id);
       recordStoryView(currentStory.id).catch(() => {});
     }
 
-    // Fetch post details
     const fetchPostDetails = async () => {
       try {
         const post = await getPostById(currentStory.id);
-        setLiked(post?.liked ?? false);
-        setLikesCount(post?.reactionsCount ?? post?.likesCount ?? 0);
+        setUserReaction(post?.userReaction ?? null);
+        setReactionsCount(post?.reactionsCount ?? post?.likesCount ?? 0);
         setCommentsCount(post?.commentsCount ?? 0);
       } catch {
-        // Use story data if available
-        setLiked(currentStory?.liked ?? false);
-        setLikesCount(currentStory?.reactionsCount ?? currentStory?.likesCount ?? 0);
+        setUserReaction(currentStory?.userReaction ?? null);
+        setReactionsCount(currentStory?.reactionsCount ?? currentStory?.likesCount ?? 0);
         setCommentsCount(currentStory?.commentsCount ?? 0);
       }
     };
 
-    // Fetch viewers count
     const fetchViewersCount = async () => {
       try {
         const list = await getStoryViewers(currentStory.id, { page: 0, size: 50 });
-        // Check if it's a paginated response with totalElements
         if (list && typeof list === 'object' && !Array.isArray(list)) {
-          const total = list.totalElements ?? list.total ?? (list.content?.length ?? 0);
-          setViewersCount(total);
+          setViewersCount(list.totalElements ?? list.total ?? (list.content?.length ?? 0));
         } else {
-          // It's an array, use length
           setViewersCount(Array.isArray(list) ? list.length : 0);
         }
       } catch {
@@ -208,10 +233,8 @@ export default function StoryViewer() {
       const list = await getStoryViewers(currentStory.id, { page: 0, size: 50 });
       const viewersList = Array.isArray(list) ? list : list?.content ?? [];
       setViewers(viewersList);
-      // Update count if we got pagination info
       if (list && typeof list === 'object' && !Array.isArray(list)) {
-        const total = list.totalElements ?? list.total ?? viewersList.length;
-        setViewersCount(total);
+        setViewersCount(list.totalElements ?? list.total ?? viewersList.length);
       }
     } catch {
       setViewers([]);
@@ -220,26 +243,90 @@ export default function StoryViewer() {
     }
   }, [currentStory?.id]);
 
-  const handleLikeClick = useCallback(async (e) => {
-    e.stopPropagation();
-    if (!currentStory?.id || likeLoading) return;
-    const next = !liked;
-    setLiked(next);
-    setLikesCount((c) => (next ? c + 1 : Math.max(0, c - 1)));
-    setLikeLoading(true);
+  const openInsights = useCallback(async () => {
+    if (!currentStory?.id) return;
+    setInsightsOpen(true);
+    setInsightsLoading(true);
     try {
-      if (next) {
-        await likePost(currentStory.id);
-      } else {
-        await unlikePost(currentStory.id);
-      }
+      const data = await getPostInsights(currentStory.id);
+      setInsights(data);
     } catch {
-      setLiked(!next);
-      setLikesCount((c) => (next ? c - 1 : c + 1));
+      setInsights(null);
     } finally {
-      setLikeLoading(false);
+      setInsightsLoading(false);
     }
-  }, [currentStory?.id, liked, likeLoading]);
+  }, [currentStory?.id]);
+
+  const handleReact = useCallback(
+    async (type) => {
+      if (!currentStory?.id || reactionLoading) return;
+      const r = REACTIONS.find((x) => x.type === type);
+      if (!r) return;
+      const prev = userReaction;
+      setUserReaction(type);
+      setReactionsCount((c) => (prev ? c : c + 1));
+      setReactionPickerOpen(false);
+      setEmojiOverlay({ emoji: r.emoji, type });
+      setTimeout(() => setEmojiOverlay(null), 1800);
+      setReactionLoading(true);
+      try {
+        await reactToPost(currentStory.id, type);
+      } catch {
+        setUserReaction(prev);
+        setReactionsCount((c) => (prev ? c : Math.max(0, c - 1)));
+      } finally {
+        setReactionLoading(false);
+      }
+    },
+    [currentStory?.id, userReaction, reactionLoading]
+  );
+
+  const handleRemoveReaction = useCallback(async () => {
+    if (!currentStory?.id || reactionLoading) return;
+    const prev = userReaction;
+    setUserReaction(null);
+    setReactionsCount((c) => Math.max(0, c - 1));
+    setReactionPickerOpen(false);
+    setReactionLoading(true);
+    try {
+      await unlikePost(currentStory.id);
+    } catch {
+      setUserReaction(prev);
+      setReactionsCount((c) => c + 1);
+    } finally {
+      setReactionLoading(false);
+    }
+  }, [currentStory?.id, userReaction, reactionLoading]);
+
+  const handleReactionBtnPointerDown = useCallback(() => {
+    holdTimerRef.current = setTimeout(() => {
+      setReactionPickerOpen(true);
+    }, 400);
+  }, []);
+
+  const handleReactionBtnPointerUp = useCallback(() => {
+    if (holdTimerRef.current) {
+      clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
+    if (reactionPickerTimeoutRef.current) {
+      clearTimeout(reactionPickerTimeoutRef.current);
+      reactionPickerTimeoutRef.current = null;
+    }
+  }, []);
+
+  const handleReactionBtnClick = useCallback(
+    (e) => {
+      e.stopPropagation();
+      if (reactionPickerOpen) return;
+      if (userReaction) {
+        handleRemoveReaction();
+      } else {
+        handleReact('LIKE');
+      }
+    },
+    [reactionPickerOpen, userReaction, handleReact, handleRemoveReaction]
+  );
 
   const loadComments = useCallback(async () => {
     if (!currentStory?.id) return;
@@ -254,28 +341,54 @@ export default function StoryViewer() {
     }
   }, [currentStory?.id]);
 
-  const handleCommentClick = useCallback((e) => {
-    e.stopPropagation();
-    const next = !commentsOpen;
-    setCommentsOpen(next);
-    if (next && comments.length === 0) loadComments();
-  }, [commentsOpen, comments.length, loadComments]);
+  const handleCommentClick = useCallback(
+    (e) => {
+      e.stopPropagation();
+      const next = !commentsOpen;
+      setCommentsOpen(next);
+      if (next && comments.length === 0) loadComments();
+    },
+    [commentsOpen, comments.length, loadComments]
+  );
 
-  const handleSubmitComment = useCallback(async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const content = commentText.trim();
-    if (!currentStory?.id || !content || commentSubmitting) return;
-    setCommentSubmitting(true);
-    try {
-      await addComment(currentStory.id, content);
-      setCommentText('');
-      setCommentsCount((c) => c + 1);
-      await loadComments();
-    } finally {
-      setCommentSubmitting(false);
-    }
-  }, [currentStory?.id, commentText, commentSubmitting, loadComments]);
+  const handleSubmitComment = useCallback(
+    async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const content = commentText.trim();
+      if (!currentStory?.id || !content || commentSubmitting) return;
+      setCommentSubmitting(true);
+      try {
+        await addComment(currentStory.id, content);
+        setCommentText('');
+        setCommentsCount((c) => c + 1);
+        await loadComments();
+      } finally {
+        setCommentSubmitting(false);
+      }
+    },
+    [currentStory?.id, commentText, commentSubmitting, loadComments]
+  );
+
+  const handleQuickReplySubmit = useCallback(
+    async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const text = quickReplyText.trim();
+      if (!author?.id || !text || quickReplySending || isMyStory) return;
+      setQuickReplySending(true);
+      try {
+        await sendMessage(author.id, text);
+        navigate('/app/messages', { state: { openUser: author } });
+      } catch {
+        // Fallback: just navigate with openUser
+        navigate('/app/messages', { state: { openUser: author } });
+      } finally {
+        setQuickReplySending(false);
+      }
+    },
+    [author, quickReplyText, quickReplySending, isMyStory, navigate]
+  );
 
   const goNext = useCallback(() => {
     if (currentStoryIndex < currentStories.length - 1) {
@@ -309,12 +422,22 @@ export default function StoryViewer() {
     }
   }, [currentStoryIndex, currentGroupIndex, groups, navigate]);
 
-  // Reset mute when switching to a new story so we try sound again
   useEffect(() => {
     if (isVideo && mediaUrl) setVideoMuted(false);
   }, [mediaUrl, isVideo]);
 
-  // Ensure story video plays with sound when possible; avoid stuck playback
+  const isPaused = paused || commentsOpen || viewersOpen || insightsOpen || quickReplyFocused;
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !isVideo) return;
+    if (isPaused) {
+      video.pause();
+    } else {
+      video.play().catch(() => {});
+    }
+  }, [isPaused, isVideo]);
+
   useEffect(() => {
     if (!isVideo || !mediaUrl) return;
     const video = videoRef.current;
@@ -334,7 +457,9 @@ export default function StoryViewer() {
       }
     };
 
-    const onCanPlay = () => tryPlay();
+    const onCanPlay = () => {
+      if (!isPaused) tryPlay();
+    };
     const onError = () => {
       if (stallTimeoutRef.current) clearTimeout(stallTimeoutRef.current);
       goNext();
@@ -354,23 +479,23 @@ export default function StoryViewer() {
     video.addEventListener('canplay', onCanPlay);
     video.addEventListener('error', onError);
     video.addEventListener('stalled', onStalled);
-    tryPlay(false);
+    if (!isPaused) tryPlay(false);
     return () => {
       if (stallTimeoutRef.current) clearTimeout(stallTimeoutRef.current);
       video.removeEventListener('canplay', onCanPlay);
       video.removeEventListener('error', onError);
       video.removeEventListener('stalled', onStalled);
     };
-  }, [isVideo, mediaUrl, currentStoryIndex, currentGroupIndex, goNext, videoMuted]);
+  }, [isVideo, mediaUrl, currentStoryIndex, currentGroupIndex, goNext, videoMuted, isPaused]);
 
   useEffect(() => {
-    if (!currentStory || paused) return;
+    if (!currentStory || isPaused) return;
     const duration = isVideo ? STORY_DURATION_MS * 2 : STORY_DURATION_MS;
     const start = startTimeRef.current ?? Date.now();
     startTimeRef.current = start;
 
     const tick = () => {
-      if (paused) return;
+      if (isPaused) return;
       const elapsed = Date.now() - start;
       const p = Math.min(1, elapsed / duration);
       setProgress(p);
@@ -380,15 +505,19 @@ export default function StoryViewer() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [currentStory, currentStoryIndex, currentGroupIndex, mediaUrl, isVideo, paused, goNext]);
+  }, [currentStory, currentStoryIndex, currentGroupIndex, mediaUrl, isVideo, isPaused, goNext]);
 
   const handleTap = (e) => {
+    setReactionPickerOpen(false);
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const width = rect.width;
     if (x > width / 2) goNext();
     else goPrev();
   };
+
+  const handlePointerDown = () => setPaused(true);
+  const handlePointerUp = () => setPaused(false);
 
   if (loading) {
     return (
@@ -413,17 +542,29 @@ export default function StoryViewer() {
     );
   }
 
+  const currentReactionEmoji = userReaction ? REACTIONS.find((r) => r.type === userReaction)?.emoji : null;
+
   return (
-    <div className="story-viewer" onClick={handleTap}>
+    <div
+      className="story-viewer story-viewer-fb"
+      onClick={handleTap}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerLeave={handlePointerUp}
+    >
       <button
         type="button"
         className="story-viewer-close"
-        onClick={(e) => { e.stopPropagation(); navigate(-1); }}
+        onClick={(e) => {
+          e.stopPropagation();
+          navigate(-1);
+        }}
         aria-label="Close"
       >
-        <X size={28} />
+        <X size={24} />
       </button>
 
+      {/* Progress bars - Facebook style */}
       <div className="story-viewer-progress-row">
         {currentStories.map((_, i) => (
           <div key={i} className="story-viewer-progress-track">
@@ -437,82 +578,84 @@ export default function StoryViewer() {
         ))}
       </div>
 
-      <div className="story-viewer-header">
+      {/* Header */}
+      <div className="story-viewer-header story-viewer-header-fb">
         <UserProfileMenu user={currentGroup.author} avatarSize={40} className="story-viewer-author" />
         <div className="story-viewer-meta">
+          <span className="story-viewer-name">{currentGroup.author?.name ?? 'User'}</span>
           <span className="story-viewer-time">{formatPostTime(currentStory?.createdAt)}</span>
         </div>
-        {currentStory?.id && (
-          <div className="story-viewer-actions" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            {viewersCount > 0 && (
-              <button
-                type="button"
-                className="story-viewer-action-btn"
-                onClick={(e) => { e.stopPropagation(); openViewers(); }}
-                aria-label="Viewers"
-                style={{
-                  background: 'rgba(0, 0, 0, 0.5)',
-                  border: 'none',
-                  color: '#fff',
-                  padding: '8px 12px',
-                  borderRadius: '20px',
-                  fontSize: '0.875rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  cursor: 'pointer',
-                }}
-              >
-                <Eye size={16} />
-                {viewersCount}
-              </button>
-            )}
-            {isMyStory && (
-              <button
-                type="button"
-                className="story-viewer-action-btn"
-                onClick={(e) => { e.stopPropagation(); openViewers(); }}
-                aria-label="Viewers"
-                style={{
-                  background: 'rgba(0, 0, 0, 0.5)',
-                  border: 'none',
-                  color: '#fff',
-                  padding: '8px 12px',
-                  borderRadius: '20px',
-                  fontSize: '0.875rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  cursor: 'pointer',
-                }}
-              >
-                <Eye size={16} />
-                Viewers
-              </button>
-            )}
-          </div>
-        )}
+        <div className="story-viewer-header-actions">
+          {isVideo && (
+            <button
+              type="button"
+              className="story-viewer-mute-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                setVideoMuted((m) => !m);
+              }}
+              aria-label={videoMuted ? 'Unmute' : 'Mute'}
+            >
+              {videoMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+            </button>
+          )}
+          {currentStory?.id && (
+            <>
+              {(viewersCount > 0 || isMyStory) && (
+                <button type="button" className="story-viewer-action-btn" onClick={(e) => { e.stopPropagation(); openViewers(); }} aria-label="Viewers">
+                  <Eye size={18} />
+                  <span>{viewersCount > 0 ? viewersCount : 'Viewers'}</span>
+                </button>
+              )}
+              {isMyStory && (
+                <button type="button" className="story-viewer-action-btn story-viewer-insights-btn" onClick={(e) => { e.stopPropagation(); openInsights(); }} aria-label="Insights">
+                  <BarChart2 size={18} />
+                  <span>Insights</span>
+                </button>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
+      {/* Emoji overlay on story when user reacts */}
+      <AnimatePresence>
+        {emojiOverlay && (
+          <motion.div
+            className="story-viewer-emoji-overlay"
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1.2, opacity: 1 }}
+            exit={{ scale: 1.5, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <span className="story-viewer-emoji-big">{emojiOverlay.emoji}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Viewers modal */}
       {viewersOpen && (
         <div className="story-viewer-modal-overlay" onClick={() => setViewersOpen(false)} role="dialog" aria-label="Story viewers">
-          <div className="story-viewer-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="story-viewer-modal story-viewer-modal-fb" onClick={(e) => e.stopPropagation()}>
             <div className="story-viewer-modal-header">
-              <h3>Watu walioona story / Viewers</h3>
+              <h3>Watu walioona story</h3>
               <button type="button" className="story-viewer-modal-close" onClick={() => setViewersOpen(false)} aria-label="Close">
-                <X size={24} />
+                <X size={22} />
               </button>
             </div>
             <div className="story-viewer-modal-body">
               {viewersLoading ? (
-                <p>Loading…</p>
+                <div className="story-viewer-modal-loading">
+                  <Loader2 size={32} className="spin" />
+                  <p>Inapakia…</p>
+                </div>
               ) : viewers.length === 0 ? (
-                <p>Hakuna mtu ameona bado.</p>
+                <p className="story-viewer-modal-empty">Hakuna mtu ameona bado.</p>
               ) : (
                 <ul className="story-viewer-viewers-list">
                   {viewers.map((v) => (
                     <li key={v.id} className="story-viewer-viewer-item">
-                      <UserProfileMenu user={v} avatarSize={40} />
+                      <UserProfileMenu user={v} avatarSize={44} showName={true} />
                     </li>
                   ))}
                 </ul>
@@ -522,9 +665,53 @@ export default function StoryViewer() {
         </div>
       )}
 
+      {/* Insights modal */}
+      {insightsOpen && (
+        <div className="story-viewer-modal-overlay" onClick={() => setInsightsOpen(false)} role="dialog" aria-label="Story insights">
+          <div className="story-viewer-modal story-viewer-insights-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="story-viewer-modal-header">
+              <h3>Story Insights</h3>
+              <button type="button" className="story-viewer-modal-close" onClick={() => setInsightsOpen(false)} aria-label="Close">
+                <X size={22} />
+              </button>
+            </div>
+            <div className="story-viewer-modal-body">
+              {insightsLoading ? (
+                <div className="story-viewer-modal-loading">
+                  <Loader2 size={32} className="spin" />
+                  <p>Inapakia…</p>
+                </div>
+              ) : insights ? (
+                <div className="story-insights-grid">
+                  <div className="story-insight-card">
+                    <span className="story-insight-value">{insights.viewsCount ?? 0}</span>
+                    <span className="story-insight-label">Views</span>
+                  </div>
+                  <div className="story-insight-card">
+                    <span className="story-insight-value">{insights.likesCount ?? 0}</span>
+                    <span className="story-insight-label">Reactions</span>
+                  </div>
+                  <div className="story-insight-card">
+                    <span className="story-insight-value">{insights.commentsCount ?? 0}</span>
+                    <span className="story-insight-label">Comments</span>
+                  </div>
+                  <div className="story-insight-card">
+                    <span className="story-insight-value">{insights.sharesCount ?? 0}</span>
+                    <span className="story-insight-label">Shares</span>
+                  </div>
+                </div>
+              ) : (
+                <p className="story-viewer-modal-empty">Could not load insights.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Media */}
       <div className="story-viewer-media-wrap">
-        {mediaUrl && (
-          isVideo ? (
+        {mediaUrl &&
+          (isVideo ? (
             <video
               key={mediaUrl}
               ref={videoRef}
@@ -536,11 +723,11 @@ export default function StoryViewer() {
               onEnded={goNext}
               preload="auto"
               className="story-viewer-media"
+              style={{ opacity: paused ? 0.95 : 1 }}
             />
           ) : (
             <img key={mediaUrl} src={mediaUrl} alt="" className="story-viewer-media" />
-          )
-        )}
+          ))}
         {isTextOnly && (
           <div className="story-viewer-text-story" style={{ background: 'linear-gradient(135deg, #6366f1 0%, #7c3aed 50%, #4c1d95 100%)' }}>
             <p className="story-viewer-text-story-content">{currentStory.caption}</p>
@@ -548,152 +735,106 @@ export default function StoryViewer() {
         )}
       </div>
 
-      {currentStory?.caption && mediaUrl && (
-        <div className="story-viewer-caption">{currentStory.caption}</div>
-      )}
+      {currentStory?.caption && mediaUrl && <div className="story-viewer-caption">{currentStory.caption}</div>}
 
-      {/* Like, Comment, Viewers buttons - Right side like Facebook */}
+      {/* Right side: Reactions + Comment + Viewers - Facebook style */}
       {currentStory?.id && (
-        <div
-          className="story-viewer-interactions"
-          style={{
-            position: 'absolute',
-            right: '20px',
-            bottom: '100px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '20px',
-            alignItems: 'center',
-            zIndex: 10,
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Like button with count */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+        <div className="story-viewer-interactions story-viewer-interactions-fb" onClick={(e) => e.stopPropagation()}>
+          <div className="story-viewer-reaction-wrap">
+            <div className="story-viewer-reaction-picker-wrap">
+              <AnimatePresence>
+                {reactionPickerOpen && (
+                  <motion.div
+                    className="story-viewer-reaction-picker"
+                    initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    {REACTIONS.map((r) => (
+                      <button
+                        key={r.type}
+                        type="button"
+                        className={`story-viewer-reaction-emoji ${userReaction === r.type ? 'active' : ''}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleReact(r.type);
+                        }}
+                        title={r.label}
+                      >
+                        {r.emoji}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
             <button
               type="button"
-              onClick={handleLikeClick}
-              disabled={likeLoading}
-              style={{
-                background: liked ? 'rgba(239, 68, 68, 0.9)' : 'rgba(0, 0, 0, 0.6)',
-                border: 'none',
-                color: '#fff',
-                width: '48px',
-                height: '48px',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: likeLoading ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s',
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
-              }}
-              onMouseEnter={(e) => {
-                if (!likeLoading) e.currentTarget.style.transform = 'scale(1.1)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'scale(1)';
-              }}
-              aria-label={liked ? 'Unlike' : 'Like'}
+              className="story-viewer-reaction-btn"
+              onPointerDown={handleReactionBtnPointerDown}
+              onPointerUp={handleReactionBtnPointerUp}
+              onPointerLeave={handleReactionBtnPointerUp}
+              onClick={handleReactionBtnClick}
+              disabled={reactionLoading}
+              aria-label={userReaction ? 'Remove reaction' : 'Like'}
             >
-              {likeLoading ? (
-                <Loader2 size={20} style={{ animation: 'spin 0.8s linear infinite' }} />
+              {reactionLoading ? (
+                <Loader2 size={24} className="spin" />
+              ) : currentReactionEmoji ? (
+                <span className="story-viewer-reaction-emoji-display">{currentReactionEmoji}</span>
               ) : (
-                <Heart size={20} fill={liked ? '#fff' : 'transparent'} />
+                <Heart size={24} />
               )}
             </button>
-            {likesCount > 0 && (
-              <div style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 600, textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)' }}>
-                {likesCount}
-              </div>
-            )}
+            {reactionsCount > 0 && <span className="story-viewer-count">{reactionsCount}</span>}
           </div>
 
-          {/* Comment button with count */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-            <button
-              type="button"
-              onClick={handleCommentClick}
-              style={{
-                background: 'rgba(0, 0, 0, 0.6)',
-                border: 'none',
-                color: '#fff',
-                width: '48px',
-                height: '48px',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-              aria-label="Comments"
-            >
-              <MessageCircle size={20} />
+          <div className="story-viewer-interaction-item">
+            <button type="button" className="story-viewer-interaction-btn" onClick={handleCommentClick} aria-label="Comments">
+              <MessageCircle size={24} />
             </button>
-            {commentsCount > 0 && (
-              <div style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 600, textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)' }}>
-                {commentsCount}
-              </div>
-            )}
+            {commentsCount > 0 && <span className="story-viewer-count">{commentsCount}</span>}
           </div>
 
-          {/* Viewers button with count */}
           {viewersCount > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); openViewers(); }}
-                style={{
-                  background: 'rgba(0, 0, 0, 0.6)',
-                  border: 'none',
-                  color: '#fff',
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
-                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                aria-label="Viewers"
-              >
-                <Eye size={20} />
+            <div className="story-viewer-interaction-item">
+              <button type="button" className="story-viewer-interaction-btn" onClick={(e) => { e.stopPropagation(); openViewers(); }} aria-label="Viewers">
+                <Eye size={24} />
               </button>
-              <div style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 600, textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)' }}>
-                {viewersCount}
-              </div>
+              <span className="story-viewer-count">{viewersCount}</span>
             </div>
           )}
         </div>
       )}
 
-      {/* Comments Drawer - Slides up from bottom like Reels */}
+      {/* Quick reply - Facebook style bottom input */}
+      {!isMyStory && author?.id && (
+        <form className="story-viewer-quick-reply" onSubmit={handleQuickReplySubmit} onClick={(e) => e.stopPropagation()}>
+          <input
+            type="text"
+            className="story-viewer-quick-reply-input"
+            placeholder={`Message ${author?.name ?? 'them'}...`}
+            value={quickReplyText}
+            onChange={(e) => setQuickReplyText(e.target.value)}
+            onFocus={() => setQuickReplyFocused(true)}
+            onBlur={() => setQuickReplyFocused(false)}
+            maxLength={500}
+            disabled={quickReplySending}
+          />
+          <button type="submit" className="story-viewer-quick-reply-send" disabled={!quickReplyText.trim() || quickReplySending} aria-label="Send">
+            {quickReplySending ? <Loader2 size={20} className="spin" /> : <Send size={20} />}
+          </button>
+        </form>
+      )}
+
+      {/* Comments drawer */}
       {commentsOpen && (
-        <div
-          className="reels-comments-overlay"
-          onClick={(e) => { e.stopPropagation(); setCommentsOpen(false); }}
-          role="presentation"
-        >
-          <div
-            className="reels-comments-drawer"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="reels-comments-overlay story-viewer-comments-overlay" onClick={(e) => { e.stopPropagation(); setCommentsOpen(false); }} role="presentation">
+          <div className="reels-comments-drawer story-viewer-comments-drawer" onClick={(e) => e.stopPropagation()}>
             <div className="reels-comments-header">
               <h3 className="reels-comments-title">Comments {commentsCount > 0 && `(${commentsCount})`}</h3>
-              <button
-                type="button"
-                className="reels-comments-close"
-                onClick={(e) => { e.stopPropagation(); setCommentsOpen(false); }}
-                aria-label="Close"
-              >
+              <button type="button" className="reels-comments-close" onClick={(e) => { e.stopPropagation(); setCommentsOpen(false); }} aria-label="Close">
                 <X size={24} />
               </button>
             </div>
@@ -704,28 +845,14 @@ export default function StoryViewer() {
                 <li className="reels-comments-empty">No comments yet.</li>
               ) : (
                 comments.map((comment) => (
-                  <li
-                    key={comment.id}
-                    style={{
-                      display: 'flex',
-                      gap: '12px',
-                      alignItems: 'flex-start',
-                      padding: '12px 0',
-                    }}
-                  >
-                    <UserProfileMenu user={comment.author} avatarSize={36} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'baseline', marginBottom: '4px', flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: 600, fontSize: '0.9375rem', color: '#050505' }}>
-                          {comment.author?.name ?? comment.author?.username ?? 'User'}
-                        </span>
-                        <span style={{ fontSize: '0.8125rem', color: '#65676b' }}>
-                          {formatPostTime(comment.createdAt)}
-                        </span>
+                  <li key={comment.id} className="story-viewer-comment-item">
+                    <UserProfileMenu user={comment.author} avatarSize={36} showName={false} />
+                    <div className="story-viewer-comment-body">
+                      <div className="story-viewer-comment-meta">
+                        <span className="story-viewer-comment-author">{comment.author?.name ?? comment.author?.username ?? 'User'}</span>
+                        <span className="story-viewer-comment-time"> · {formatPostTime(comment.createdAt)}</span>
                       </div>
-                      <p style={{ margin: 0, fontSize: '0.9375rem', color: '#050505', lineHeight: 1.4, wordBreak: 'break-word' }}>
-                        {comment.content}
-                      </p>
+                      <p className="story-viewer-comment-content">{comment.content}</p>
                     </div>
                   </li>
                 ))
@@ -742,16 +869,8 @@ export default function StoryViewer() {
                 disabled={commentSubmitting}
                 onFocus={(e) => e.stopPropagation()}
               />
-              <button
-                type="submit"
-                className="reels-comments-submit"
-                disabled={!commentText.trim() || commentSubmitting}
-              >
-                {commentSubmitting ? (
-                  <Loader2 size={18} style={{ animation: 'spin 0.8s linear infinite' }} />
-                ) : (
-                  'Post'
-                )}
+              <button type="submit" className="reels-comments-submit" disabled={!commentText.trim() || commentSubmitting}>
+                {commentSubmitting ? <Loader2 size={18} className="spin" /> : 'Post'}
               </button>
             </form>
           </div>
@@ -759,8 +878,8 @@ export default function StoryViewer() {
       )}
 
       <div className="story-viewer-tap-zones">
-        <button type="button" className="story-viewer-tap-left" aria-label="Previous" onClick={(e) => { e.stopPropagation(); goPrev(); }} />
-        <button type="button" className="story-viewer-tap-right" aria-label="Next" onClick={(e) => { e.stopPropagation(); goNext(); }} />
+        <button type="button" className="story-viewer-tap-left" aria-label="Previous" onClick={(e) => { e.stopPropagation(); setReactionPickerOpen(false); goPrev(); }} />
+        <button type="button" className="story-viewer-tap-right" aria-label="Next" onClick={(e) => { e.stopPropagation(); setReactionPickerOpen(false); goNext(); }} />
       </div>
     </div>
   );

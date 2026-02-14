@@ -735,34 +735,36 @@ export default function UserLayout() {
         </div>
       </header>
 
-      <div className="user-app-body">
-        <aside className="user-app-sidebar">
-          <ul className="user-app-sidebar-list">
-            {[
-              ...leftNav,
-              ...(String(user?.role ?? '').toLowerCase() === ROLES.AGENT
-                ? [{ to: '/agent', icon: Sparkles, label: 'Agent Dashboard' }]
-                : []),
-            ].map((item) => {
-              const Icon = item.icon;
-              return (
-                <li key={item.to + item.label}>
-                  <Link
-                    to={item.to}
-                    className="user-app-sidebar-link"
-                  >
-                    <span className="icon-wrap">
-                      <Icon size={20} />
-                    </span>
-                    {item.label}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </aside>
+      <div className={`user-app-body ${location.pathname.startsWith('/app/shop') ? 'user-app-body-shop' : ''}`}>
+        {!location.pathname.startsWith('/app/shop') && (
+          <aside className="user-app-sidebar">
+            <ul className="user-app-sidebar-list">
+              {[
+                ...leftNav,
+                ...(String(user?.role ?? '').toLowerCase() === ROLES.AGENT
+                  ? [{ to: '/agent', icon: Sparkles, label: 'Agent Dashboard' }]
+                  : []),
+              ].map((item) => {
+                const Icon = item.icon;
+                return (
+                  <li key={item.to + item.label}>
+                    <Link
+                      to={item.to}
+                      className="user-app-sidebar-link"
+                    >
+                      <span className="icon-wrap">
+                        <Icon size={20} />
+                      </span>
+                      {item.label}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </aside>
+        )}
 
-        <main className="user-app-main">
+        <main className={`user-app-main ${location.pathname.startsWith('/app/shop') ? 'user-app-main-no-left-sidebar' : ''}`}>
           <Outlet />
         </main>
 

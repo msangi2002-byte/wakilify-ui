@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Search, Users, UserPlus, Phone } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
 import { getFollowing, followUser, unfollowUser } from '@/lib/api/friends';
 import {
@@ -9,12 +11,18 @@ import {
   uploadContacts,
 } from '@/lib/api/users';
 
+const TABS = [
+  { id: 'following', label: 'Following', icon: Users },
+  { id: 'suggestions', label: 'Suggestions', icon: UserPlus },
+  { id: 'find', label: 'Find', icon: Search },
+];
+
 function UserAvatar({ user, size = 48 }) {
   const name = user?.name || 'User';
   const initial = name.charAt(0).toUpperCase();
   return (
     <div
-      className="friends-list-avatar"
+      className="friends-fb-avatar"
       style={{
         width: size,
         height: size,
@@ -39,21 +47,6 @@ function UserAvatar({ user, size = 48 }) {
   );
 }
 
-function normalizeFriend(item) {
-  const user = item.user ?? item;
-  return {
-    id: user.id,
-    name: user.name ?? user.username ?? 'User',
-    username: user.username ?? user.name?.replace(/\s+/g, '_').toLowerCase(),
-    profilePic: user.profilePic ?? user.avatar ?? user.image,
-    isFollowing: item.isFollowing ?? true,
-    region: user.region,
-    country: user.country,
-    age: user.age,
-    interests: user.interests,
-  };
-}
-
 function normalizeUser(u) {
   return {
     id: u.id,
@@ -70,6 +63,9 @@ function normalizeUser(u) {
 
 export default function Friends() {
   const { user: currentUser } = useAuthStore();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('following');
+
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -102,7 +98,7 @@ export default function Friends() {
         if (!cancelled && res?.content) setUsers(res.content.map(normalizeUser));
       })
       .catch((err) => {
-        if (!cancelled) setError(err.response?.data?.message || err.message || 'Failed to load people you follow');
+        if (!cancelled) setError(err.response?.data?.message || err.message || 'Failed to load');
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -171,9 +167,8 @@ export default function Friends() {
       setPymkLoading(true);
       const res = await getPeopleYouMayKnow({ page: 0, size: 20 });
       setPeopleYouMayKnow((res?.content ?? []).map(normalizeUser));
-    } catch (_) {
-      // keep modal open
-    } finally {
+    } catch (_) {}
+    finally {
       setContactsSubmitting(false);
       setPymkLoading(false);
     }
@@ -215,125 +210,216 @@ export default function Friends() {
       else await unfollowUser(String(user.id));
     } catch (err) {
       setList((prev) => prev.map((u) => (u.id === user.id ? { ...u, isFollowing: user.isFollowing } : u)));
-      const msg = err.response?.data?.message || err.message || 'Action failed';
-      alert(msg);
+      alert(err.response?.data?.message || err.message || 'Action failed');
     } finally {
       setLoadingId(null);
     }
   };
 
-  const renderUserRow = (user, setList) => (
-    <li key={user.id} className="friends-list-item">
-      <UserAvatar user={user} size={48} />
-      <div className="friends-list-info">
-        <span className="friends-list-name">{user.name}</span>
-        <span className="friends-list-username">@{user.username}</span>
-        {(user.region || user.country || user.age != null) && (
-          <span className="friends-list-meta">
-            {[user.region, user.country].filter(Boolean).join(', ')}
-            {user.age != null ? ` · ${user.age} yrs` : ''}
+  const handleMessage = (user) => {
+    navigate('/app/messages', { state: { openUser: user } });
+  };
+
+  const UserCard = ({ user, setList }) => (
+    <div className="friends-fb-card">
+      <Link to={`/app/profile/${user.id}`} className="friends-fb-card-avatar-wrap">
+        <UserAvatar user={user} size={72} />
+      </Link>
+      <div className="friends-fb-card-body">
+        <Link to={`/app/profile/${user.id}`} className="friends-fb-card-name">
+          {user.name}
+        </Link>
+        <span className="friends-fb-card-username">@{user.username}</span>
+        {(user.region || user.country) && (
+          <span className="friends-fb-card-meta">
+            {[user.region, user.country].filter(Boolean).join(' · ')}
           </span>
         )}
+        <div className="friends-fb-card-actions">
+          <button
+            type="button"
+            className={`friends-fb-btn ${user.isFollowing ? 'following' : 'follow'}`}
+            onClick={() => handleFollowToggle(user, setList)}
+            disabled={loadingId === user.id}
+          >
+            {loadingId === user.id ? '…' : user.isFollowing ? 'Following' : 'Add friend'}
+          </button>
+          <button
+            type="button"
+            className="friends-fb-btn secondary"
+            onClick={() => handleMessage(user)}
+          >
+            Message
+          </button>
+        </div>
       </div>
-      <button
-        type="button"
-        className={`friends-list-follow-btn ${user.isFollowing ? 'following' : ''}`}
-        onClick={() => handleFollowToggle(user, setList)}
-        disabled={loadingId === user.id}
-      >
-        {loadingId === user.id ? '…' : user.isFollowing ? 'Following' : 'Follow'}
-      </button>
-    </li>
+    </div>
+  );
+
+  const UserRow = ({ user, setList }) => (
+    <div className="friends-fb-row">
+      <Link to={`/app/profile/${user.id}`} className="friends-fb-row-left">
+        <UserAvatar user={user} size={48} />
+        <div className="friends-fb-row-info">
+          <span className="friends-fb-row-name">{user.name}</span>
+          <span className="friends-fb-row-username">@{user.username}</span>
+          {(user.region || user.country) && (
+            <span className="friends-fb-row-meta">
+              {[user.region, user.country].filter(Boolean).join(' · ')}
+            </span>
+          )}
+        </div>
+      </Link>
+      <div className="friends-fb-row-actions">
+        <button
+          type="button"
+          className={`friends-fb-btn small ${user.isFollowing ? 'following' : 'follow'}`}
+          onClick={() => handleFollowToggle(user, setList)}
+          disabled={loadingId === user.id}
+        >
+          {loadingId === user.id ? '…' : user.isFollowing ? 'Following' : 'Add friend'}
+        </button>
+        <button type="button" className="friends-fb-btn small secondary" onClick={() => handleMessage(user)}>
+          Message
+        </button>
+      </div>
+    </div>
   );
 
   return (
-    <div className="user-app-card">
-      <div className="friends-list-header">
-        <h1 className="friends-list-title">Friends</h1>
-        <p className="friends-list-subtitle">People you follow and connect with</p>
+    <div className="user-app-card friends-fb-page">
+      <div className="friends-fb-sidebar">
+        <h1 className="friends-fb-sidebar-title">Friends</h1>
+        <nav className="friends-fb-tabs">
+          {TABS.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              className={`friends-fb-tab ${activeTab === id ? 'active' : ''}`}
+              onClick={() => setActiveTab(id)}
+            >
+              <Icon size={22} />
+              <span>{label}</span>
+            </button>
+          ))}
+        </nav>
       </div>
 
-      <div className="friends-search-wrap">
-        <input
-          type="search"
-          className="friends-search-input"
-          placeholder="Search any user (A–Z)"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          aria-label="Search users"
-        />
-        {searching && <span className="friends-search-loading">Searching…</span>}
-      </div>
-
-      {searchQuery.trim() && (
-        <section className="friends-section" aria-label="Search results">
-          <h2 className="friends-section-title">Search results</h2>
-          {searching && searchResults.length === 0 && (
-            <p className="friends-list-loading">Searching…</p>
-          )}
-          {!searching && searchResults.length === 0 && (
-            <p className="friends-list-empty">No users found. Try another name.</p>
-          )}
-          {!searching && searchResults.length > 0 && (
-            <ul className="friends-list">
-              {searchResults.map((u) => renderUserRow(u, setSearchResults))}
-            </ul>
-          )}
-        </section>
-      )}
-
-      <section className="friends-section" aria-label="Suggested (region & country)">
-        <h2 className="friends-section-title">Suggested (region & country)</h2>
-        {suggestedLoading && <p className="friends-list-loading">Loading…</p>}
-        {!suggestedLoading && suggested.length === 0 && (
-          <p className="friends-list-empty">No suggestions right now.</p>
-        )}
-        {!suggestedLoading && suggested.length > 0 && (
-          <ul className="friends-list">
-            {suggested.map((u) => renderUserRow(u, setSuggested))}
-          </ul>
-        )}
-      </section>
-
-      <section className="friends-section" aria-label="People nearby">
-        <h2 className="friends-section-title">People nearby (city → region → country)</h2>
-        {nearbyLoading && <p className="friends-list-loading">Loading…</p>}
-        {!nearbyLoading && nearby.length === 0 && (
-          <p className="friends-list-empty">No one nearby right now. Add city/region in profile.</p>
-        )}
-        {!nearbyLoading && nearby.length > 0 && (
-          <ul className="friends-list">
-            {nearby.map((u) => renderUserRow(u, setNearby))}
-          </ul>
-        )}
-      </section>
-
-      <section className="friends-section" aria-label="People you may know">
-        <div className="friends-section-header">
-          <h2 className="friends-section-title">People you may know</h2>
-          <button
-            type="button"
-            className="friends-upload-contacts-btn"
-            onClick={() => setContactsModalOpen(true)}
-            title="Sync contacts to find friends"
-          >
-            Sync contacts
-          </button>
+      <div className="friends-fb-main">
+        <div className="friends-fb-search-wrap">
+          <Search size={20} className="friends-fb-search-icon" />
+          <input
+            type="search"
+            className="friends-fb-search-input"
+            placeholder="Search people"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Search"
+          />
         </div>
-        {pymkLoading && <p className="friends-list-loading">Loading…</p>}
-        {!pymkLoading && peopleYouMayKnow.length === 0 && (
-          <p className="friends-list-empty">Sync contacts or add location to get suggestions.</p>
+
+        {activeTab === 'following' && (
+          <section className="friends-fb-section">
+            <h2 className="friends-fb-section-title">People you follow</h2>
+            {error && <p className="friends-fb-error">{error}</p>}
+            {loading && <p className="friends-fb-loading">Loading…</p>}
+            {!loading && !error && users.length === 0 && (
+              <p className="friends-fb-empty">You don&apos;t follow anyone yet. Find people in Suggestions or search.</p>
+            )}
+            {!loading && users.length > 0 && (
+              <div className="friends-fb-list">
+                {users.map((u) => (
+                  <UserRow key={u.id} user={u} setList={setUsers} />
+                ))}
+              </div>
+            )}
+          </section>
         )}
-        {!pymkLoading && peopleYouMayKnow.length > 0 && (
-          <ul className="friends-list">
-            {peopleYouMayKnow.map((u) => renderUserRow(u, setPeopleYouMayKnow))}
-          </ul>
+
+        {activeTab === 'suggestions' && (
+          <section className="friends-fb-section">
+            <h2 className="friends-fb-section-title">Suggestions for you</h2>
+            <p className="friends-fb-section-desc">People with similar location or interests</p>
+            {suggestedLoading && <p className="friends-fb-loading">Loading…</p>}
+            {!suggestedLoading && suggested.length === 0 && (
+              <p className="friends-fb-empty">No suggestions right now. Add your location in profile.</p>
+            )}
+            {!suggestedLoading && suggested.length > 0 && (
+              <div className="friends-fb-grid">
+                {suggested.map((u) => (
+                  <UserCard key={u.id} user={u} setList={setSuggested} />
+                ))}
+              </div>
+            )}
+          </section>
         )}
-      </section>
+
+        {activeTab === 'find' && (
+          <section className="friends-fb-section">
+            {searchQuery.trim() ? (
+              <>
+                <h2 className="friends-fb-section-title">Search results</h2>
+                {searching && <p className="friends-fb-loading">Searching…</p>}
+                {!searching && searchResults.length === 0 && (
+                  <p className="friends-fb-empty">No users found. Try another search.</p>
+                )}
+                {!searching && searchResults.length > 0 && (
+                  <div className="friends-fb-grid">
+                    {searchResults.map((u) => (
+                      <UserCard key={u.id} user={u} setList={setSearchResults} />
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="friends-fb-section-header">
+                  <h2 className="friends-fb-section-title">People nearby</h2>
+                  <span className="friends-fb-section-hint">Same region or country</span>
+                </div>
+                {nearbyLoading && <p className="friends-fb-loading">Loading…</p>}
+                {!nearbyLoading && nearby.length === 0 && (
+                  <p className="friends-fb-empty">No one nearby. Add city/region in your profile.</p>
+                )}
+                {!nearbyLoading && nearby.length > 0 && (
+                  <div className="friends-fb-grid">
+                    {nearby.map((u) => (
+                      <UserCard key={u.id} user={u} setList={setNearby} />
+                    ))}
+                  </div>
+                )}
+
+                <div className="friends-fb-section-header" style={{ marginTop: 32 }}>
+                  <h2 className="friends-fb-section-title">People you may know</h2>
+                  <button
+                    type="button"
+                    className="friends-fb-sync-btn"
+                    onClick={() => setContactsModalOpen(true)}
+                  >
+                    <Phone size={16} />
+                    Sync contacts
+                  </button>
+                </div>
+                {pymkLoading && <p className="friends-fb-loading">Loading…</p>}
+                {!pymkLoading && peopleYouMayKnow.length === 0 && (
+                  <p className="friends-fb-empty">Sync your contacts to find friends on Wakify.</p>
+                )}
+                {!pymkLoading && peopleYouMayKnow.length > 0 && (
+                  <div className="friends-fb-grid">
+                    {peopleYouMayKnow.map((u) => (
+                      <UserCard key={u.id} user={u} setList={setPeopleYouMayKnow} />
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </section>
+        )}
+      </div>
 
       {contactsModalOpen && (
-        <div className="friends-modal-overlay" role="dialog" aria-label="Upload contacts">
-          <div className="friends-modal">
+        <div className="friends-modal-overlay friends-fb-modal-overlay" onClick={() => setContactsModalOpen(false)} role="dialog">
+          <div className="friends-modal friends-fb-modal" onClick={(e) => e.stopPropagation()}>
             <h3>Sync contacts</h3>
             <p className="friends-modal-desc">Phones and emails are stored hashed. We match with Wakify users only.</p>
             <label>
@@ -371,26 +457,6 @@ export default function Friends() {
             </div>
           </div>
         </div>
-      )}
-
-      <section className="friends-section" aria-label="People you follow">
-        <h2 className="friends-section-title">People you follow</h2>
-      </section>
-      {error && (
-        <div className="friends-list-error" role="alert">
-          {error}
-        </div>
-      )}
-      {loading && (
-        <p className="friends-list-loading">Loading friends…</p>
-      )}
-      {!loading && !error && users.length === 0 && (
-        <p className="friends-list-empty">You don't follow anyone yet. Find people from the search or suggestions above.</p>
-      )}
-      {!loading && users.length > 0 && (
-        <ul className="friends-list">
-          {users.map((user) => renderUserRow(user, setUsers))}
-        </ul>
       )}
     </div>
   );

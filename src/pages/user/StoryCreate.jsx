@@ -91,13 +91,17 @@ export default function StoryCreate() {
     setError('');
     try {
       let mediaUrl = null;
+      let thumbnailUrl = null;
       if (file.size > CHUNK_THRESHOLD_BYTES) {
-        mediaUrl = await uploadChunked(file, 'posts', (pct) => setUploadProgress(pct));
+        const result = await uploadChunked(file, 'posts', (pct) => setUploadProgress(pct));
+        mediaUrl = typeof result === 'string' ? result : result.url;
+        thumbnailUrl = typeof result === 'object' && result.thumbnailUrl ? result.thumbnailUrl : null;
         await createPost({
           caption: caption.trim(),
           postType: 'STORY',
           visibility: 'PUBLIC',
           mediaUrls: [mediaUrl],
+          thumbnailUrls: thumbnailUrl ? [thumbnailUrl] : undefined,
         });
       } else {
         await createPost({

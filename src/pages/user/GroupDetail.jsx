@@ -190,17 +190,21 @@ export default function GroupDetail() {
       const hasLargeFile = createFiles.some((f) => f.size > CHUNK_THRESHOLD_BYTES);
       if (hasLargeFile && createFiles.length > 0) {
         const mediaUrls = [];
+        const thumbnailUrls = [];
         const total = createFiles.length;
         for (let i = 0; i < createFiles.length; i++) {
-          const url = await uploadChunked(createFiles[i], 'posts', (pct) =>
+          const result = await uploadChunked(createFiles[i], 'posts', (pct) =>
             setCreateUploadProgress(((i + pct / 100) / total) * 100)
           );
+          const url = typeof result === 'string' ? result : result.url;
           mediaUrls.push(url);
+          thumbnailUrls.push(typeof result === 'object' && result.thumbnailUrl ? result.thumbnailUrl : null);
         }
         await createPost({
           caption: createCaption.trim(),
           communityId: id,
           mediaUrls,
+          thumbnailUrls: thumbnailUrls.some(Boolean) ? thumbnailUrls : undefined,
         });
       } else {
         await createPost({

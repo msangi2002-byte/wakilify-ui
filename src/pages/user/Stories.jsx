@@ -36,7 +36,9 @@ function getStoryThumbnail(story) {
   const media = story?.media;
   if (!Array.isArray(media) || media.length === 0) return null;
   const first = media[0];
-  return typeof first === 'string' ? first : first?.url ?? first?.thumbnailUrl ?? null;
+  if (typeof first === 'string') return first;
+  // Prefer thumbnailUrl for video (background-image can't use .mp4)
+  return first?.thumbnailUrl ?? first?.url ?? null;
 }
 
 function Avatar({ user, size = 40, className = '' }) {
