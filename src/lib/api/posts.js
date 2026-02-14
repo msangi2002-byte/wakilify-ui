@@ -296,6 +296,7 @@ export async function createPost({
   files = [],
   mediaUrls = null,
   thumbnailUrls = null,
+  storyGradient = null,
 }) {
   if (mediaUrls && mediaUrls.length > 0) {
     const payload = { caption, visibility, postType, mediaUrls };
@@ -303,6 +304,7 @@ export async function createPost({
     if (communityId) payload.communityId = communityId;
     if (productTags?.length) payload.productTags = productTags;
     if (thumbnailUrls && thumbnailUrls.length > 0) payload.thumbnailUrls = thumbnailUrls;
+    if (storyGradient) payload.storyGradient = storyGradient;
     const { data } = await api.post('/posts', payload);
     return data;
   }
@@ -312,6 +314,7 @@ export async function createPost({
   if (originalPostId) dataPayload.originalPostId = originalPostId;
   if (communityId) dataPayload.communityId = communityId;
   if (productTags?.length) dataPayload.productTags = productTags;
+  if (storyGradient) dataPayload.storyGradient = storyGradient;
   formData.append('data', new Blob([JSON.stringify(dataPayload)], { type: 'application/json' }));
   for (const file of files) {
     if (file instanceof File) formData.append('files', file);

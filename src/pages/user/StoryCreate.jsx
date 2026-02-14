@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, ImagePlus, Type, Loader2 } from 'lucide-react';
 import { createPost, uploadChunked, CHUNK_THRESHOLD_BYTES } from '@/lib/api/posts';
+import { captureVideoFrame } from '@/lib/utils/videoThumbnail';
 import { UploadProgressBar } from '@/components/ui/UploadProgressBar';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import { useAuthStore } from '@/store/auth.store';
@@ -92,10 +93,20 @@ export default function StoryCreate() {
     try {
       let mediaUrl = null;
       let thumbnailUrl = null;
-      if (file.size > CHUNK_THRESHOLD_BYTES) {
+      const isVideo = file.type?.startsWith('video/');
+      // Use chunked for video (any size) so we get client-side thumbnail fallback if FFmpeg fails
+      if (file.size > CHUNK_THRESHOLD_BYTES || isVideo) {
         const result = await uploadChunked(file, 'posts', (pct) => setUploadProgress(pct));
         mediaUrl = typeof result === 'string' ? result : result.url;
         thumbnailUrl = typeof result === 'object' && result.thumbnailUrl ? result.thumbnailUrl : null;
+        // Fallback: if video and backend didn't return thumbnail (e.g. FFmpeg missing), capture client-side
+        if (!thumbnailUrl && isVideo) {
+          const thumbFile = await captureVideoFrame(file);
+          if (thumbFile) {
+            const thumbResult = await uploadChunked(thumbFile, 'posts');
+            thumbnailUrl = typeof thumbResult === 'string' ? thumbResult : thumbResult?.url;
+          }
+        }
         await createPost({
           caption: caption.trim(),
           postType: 'STORY',
@@ -135,6 +146,7 @@ export default function StoryCreate() {
         postType: 'STORY',
         visibility: 'PUBLIC',
         files: [],
+        storyGradient: textGradient,
       });
       goBack();
       navigate('/app', { replace: true });

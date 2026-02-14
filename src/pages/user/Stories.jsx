@@ -41,6 +41,11 @@ function getStoryThumbnail(story) {
   return first?.thumbnailUrl ?? first?.url ?? null;
 }
 
+/** For text stories: user's chosen gradient or default */
+function getStoryGradient(story) {
+  return story?.storyGradient || 'linear-gradient(135deg, #7c3aed, #d946ef)';
+}
+
 function Avatar({ user, size = 40, className = '' }) {
   const src = user?.profilePic;
   const name = user?.name || 'User';
@@ -106,7 +111,9 @@ export default function Stories() {
             <span className="stories-all-card-label">Create story</span>
           </Link>
           {groups.map((group) => {
-            const thumb = getStoryThumbnail(group.stories[0]);
+            const story = group.stories[0];
+            const thumb = getStoryThumbnail(story);
+            const gradient = getStoryGradient(story);
             const authorId = group.authorId ?? group.author?.id;
             return (
               <Link key={authorId} to={`/app/stories/view/${authorId}`} className="stories-all-card">
@@ -116,7 +123,12 @@ export default function Stories() {
                     style={{ backgroundImage: `url(${thumb})` }}
                   />
                 )}
-                {!thumb && <div className="stories-all-card-bg stories-all-card-bg-gradient" />}
+                {!thumb && (
+                  <div
+                    className="stories-all-card-bg"
+                    style={{ background: gradient }}
+                  />
+                )}
                 <div className="stories-all-card-inner">
                   <Avatar user={group.author} size={56} className="stories-all-card-avatar" />
                   <span className="stories-all-card-name">{group.author?.name ?? 'User'}</span>
