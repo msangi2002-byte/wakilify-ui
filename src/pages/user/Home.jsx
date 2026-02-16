@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ImagePlus, Users, Video, MoreHorizontal, Plus, ThumbsUp, Heart, MessageCircle, Share2, Play, Sparkles, Globe, Lock, Film } from 'lucide-react';
+import { ImagePlus, Users, Video, MoreHorizontal, Plus, ThumbsUp, Heart, MessageCircle, Share2, Play, Sparkles, Globe, Lock, Film, TrendingUp } from 'lucide-react';
 import { UserProfileMenu } from '@/components/ui/UserProfileMenu';
 import { CommentItem } from '@/components/social/CommentItem';
 import { VideoFullscreenOverlay } from '@/components/social/VideoFullscreenOverlay';
@@ -82,7 +82,7 @@ function Avatar({ user, size = 40, className = '' }) {
   );
 }
 
-function FeedPost({ id, author, time, description, media = [], hashtags = [], visibility, location, feelingActivity, taggedUsers = [], topReactors = [], liked: initialLiked = false, userReaction: initialUserReaction = null, likesCount: initialLikesCount = 0, commentsCount: initialCommentsCount = 0, sharesCount = 0, saved: initialSaved = false, authorIsFollowed: initialAuthorIsFollowed = false, onFollowChange, onSaveChange, videoIndex, onOpenVideo }) {
+function FeedPost({ id, author, time, description, media = [], hashtags = [], visibility, location, feelingActivity, taggedUsers = [], topReactors = [], liked: initialLiked = false, userReaction: initialUserReaction = null, likesCount: initialLikesCount = 0, commentsCount: initialCommentsCount = 0, sharesCount = 0, saved: initialSaved = false, authorIsFollowed: initialAuthorIsFollowed = false, isSponsored = false, onFollowChange, onSaveChange, videoIndex, onOpenVideo }) {
   const { user: currentUser } = useAuthStore();
   const isSelf = currentUser?.id && author?.id && currentUser.id === author.id;
   const resolvedInitialReaction = initialUserReaction || (initialLiked ? 'LIKE' : null);
@@ -351,6 +351,12 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], vi
         <UserProfileMenu user={author} avatarSize={40} className="feed-post-avatar-wrap" />
         <div className="feed-post-meta">
           <div className="feed-post-meta-top">
+            {isSponsored && (
+              <span className="feed-post-sponsored" title="Sponsored post">
+                <TrendingUp size={12} />
+                <span>Sponsored</span>
+              </span>
+            )}
             {!isSelf && author?.id && (
               <button
                 type="button"
@@ -723,6 +729,7 @@ function normalizePost(post) {
     sharesCount: post.sharesCount ?? post.shares_count ?? 0,
     saved: !!post.saved,
     authorIsFollowed: !!post.authorIsFollowed,
+    isSponsored: !!post.isSponsored,
   };
 }
 
@@ -911,6 +918,7 @@ export default function Home() {
             sharesCount={p.sharesCount}
             saved={p.saved}
             authorIsFollowed={p.authorIsFollowed}
+            isSponsored={p.isSponsored}
             videoIndex={videoIndex >= 0 ? videoIndex : undefined}
             onOpenVideo={videoIndex >= 0 ? (idx) => { setCurrentVideoIndex(idx); setVideoOverlayOpen(true); } : undefined}
           />

@@ -131,3 +131,15 @@ export async function updateAdminSettings(payload) {
   const { data } = await api.put(`${base}/settings`, payload);
   return data?.data ?? data;
 }
+
+// ==================== PAYMENT MONITORING ====================
+
+/**
+ * Get all payments with filters (for admin monitoring)
+ * GET /api/v1/admin/payments
+ * Params: page, size, status, type, userId, startDate, endDate
+ */
+export async function getAdminPayments(params = {}) {
+  const { data } = await api.get(`${base}/payments`, { params });
+  return data?.data ?? data;
+}
