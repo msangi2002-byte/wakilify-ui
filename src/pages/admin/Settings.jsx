@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 import { useState, useEffect, useCallback } from 'react';
 import { Settings as SettingsIcon, Save, Loader2 } from 'lucide-react';
 import { getAdminSettings, updateAdminSettings } from '@/lib/api/admin';
@@ -57,12 +58,63 @@ export default function Settings() {
       loadSettings();
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to save settings'));
+=======
+import { useEffect, useState } from 'react';
+import { getAdminSettings, updateAdminSettings } from '@/lib/api/admin';
+
+export default function Settings() {
+  const [agentRegisterAmount, setAgentRegisterAmount] = useState('');
+  const [toBeBusinessAmount, setToBeBusinessAmount] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState({ type: '', text: '' });
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const settings = await getAdminSettings();
+        if (!cancelled && settings) {
+          setAgentRegisterAmount(settings.agentRegisterAmount != null ? String(settings.agentRegisterAmount) : '');
+          setToBeBusinessAmount(settings.toBeBusinessAmount != null ? String(settings.toBeBusinessAmount) : '');
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setMessage({ type: 'error', text: e.response?.data?.message || e.message || 'Failed to load settings' });
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const agent = parseFloat(agentRegisterAmount);
+    const business = parseFloat(toBeBusinessAmount);
+    if (Number.isNaN(agent) || agent < 0 || Number.isNaN(business) || business < 0) {
+      setMessage({ type: 'error', text: 'Please enter valid non-negative numbers.' });
+      return;
+    }
+    setSaving(true);
+    setMessage({ type: '', text: '' });
+    try {
+      await updateAdminSettings({
+        agentRegisterAmount: agent,
+        toBeBusinessAmount: business,
+      });
+      setMessage({ type: 'success', text: 'Settings saved.' });
+    } catch (e) {
+      setMessage({ type: 'error', text: e.response?.data?.message || e.message || 'Failed to save settings' });
+>>>>>>> Stashed changes
     } finally {
       setSaving(false);
     }
   };
 
   if (loading) {
+<<<<<<< Updated upstream
     return (
       <div className="admin-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200 }}>
         <Loader2 size={32} className="admin-icon-spin" style={{ color: '#7c3aed' }} />
@@ -202,6 +254,54 @@ export default function Settings() {
           </fieldset>
         </form>
       </div>
+=======
+    return <div className="admin-settings"><p>Loading settings…</p></div>;
+  }
+
+  return (
+    <div className="admin-settings">
+      <h1>Admin Settings</h1>
+      <form onSubmit={handleSubmit}>
+        <fieldset className="admin-settings-fieldset">
+          <legend>Setup amounts</legend>
+          <p className="admin-settings-hint">
+            Configure the amounts used for agent registration and business activation (TZS).
+          </p>
+          <div className="admin-settings-row">
+            <label htmlFor="agent-register-amount">Agent register amount (TZS)</label>
+            <input
+              id="agent-register-amount"
+              type="number"
+              min="0"
+              step="1"
+              value={agentRegisterAmount}
+              onChange={(e) => setAgentRegisterAmount(e.target.value)}
+              placeholder="e.g. 20000"
+            />
+          </div>
+          <div className="admin-settings-row">
+            <label htmlFor="toBe-business-amount">To-be business amount (TZS)</label>
+            <input
+              id="toBe-business-amount"
+              type="number"
+              min="0"
+              step="1"
+              value={toBeBusinessAmount}
+              onChange={(e) => setToBeBusinessAmount(e.target.value)}
+              placeholder="e.g. 10000"
+            />
+          </div>
+        </fieldset>
+        {message.text && (
+          <p className={`admin-settings-message admin-settings-message--${message.type}`}>
+            {message.text}
+          </p>
+        )}
+        <button type="submit" disabled={saving} className="admin-settings-submit">
+          {saving ? 'Saving…' : 'Save settings'}
+        </button>
+      </form>
+>>>>>>> Stashed changes
     </div>
   );
 }
