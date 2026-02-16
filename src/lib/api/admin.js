@@ -93,7 +93,7 @@ export async function getAdminAuditLogs(params = {}) {
 }
 
 export async function getAgentPackages() {
-  const { data } = await api.get('/agent/packages');
+  const { data } = await api.get(`${base}/agent-packages`);
   return data?.data ?? data;
 }
 
