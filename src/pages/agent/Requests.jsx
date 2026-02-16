@@ -1,11 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Building2, UserPlus, Package, AlertTriangle } from 'lucide-react';
 import { activateBusiness } from '@/lib/api/agent';
+import { getFeeAmounts } from '@/lib/api/config';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import '@/styles/agent.css';
 
+function formatTzs(amount) {
+  if (amount == null || amount === '') return '—';
+  const n = Number(amount);
+  return Number.isNaN(n) ? String(amount) : n.toLocaleString('en-TZ') + ' TZS';
+}
+
 export default function Requests() {
+  const [businessActivationAmount, setBusinessActivationAmount] = useState(null);
   const [businessName, setBusinessName] = useState('');
   const [ownerName, setOwnerName] = useState('');
   const [ownerPhone, setOwnerPhone] = useState('');
@@ -22,6 +30,12 @@ export default function Requests() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  useEffect(() => {
+    getFeeAmounts()
+      .then((fees) => setBusinessActivationAmount(fees?.businessActivationAmount ?? 10000))
+      .catch(() => setBusinessActivationAmount(10000));
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -208,12 +222,12 @@ export default function Requests() {
                 id="paymentPhone"
                 type="tel"
                 className="agent-input"
-                placeholder="+255712345678 (for 10,000 TZS activation fee)"
+                placeholder={`+255712345678 (for ${businessActivationAmount != null ? formatTzs(businessActivationAmount) : '—'} activation fee)`}
                 value={paymentPhone}
                 onChange={(e) => setPaymentPhone(e.target.value)}
                 required
               />
-              <span className="agent-stat-label">Owner will pay 10,000 TZS to this number to complete activation.</span>
+              <span className="agent-stat-label">Owner will pay {formatTzs(businessActivationAmount)} to this number to complete activation.</span>
             </div>
             <div className="agent-form-field">
               <label className="agent-label" htmlFor="ward">Ward (optional)</label>

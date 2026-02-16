@@ -1,14 +1,22 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Sparkles, Building2, ArrowLeft } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
 import { registerAgent } from '@/lib/api/agent';
+import { getFeeAmounts } from '@/lib/api/config';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import { ROLES } from '@/types/roles';
 import '@/styles/user-app.css';
 
+function formatTzs(amount) {
+  if (amount == null || amount === '') return '—';
+  const n = Number(amount);
+  return Number.isNaN(n) ? String(amount) : n.toLocaleString('en-TZ') + ' TZS';
+}
+
 export default function RegisterAgent() {
   const { user } = useAuthStore();
+  const [agentRegisterAmount, setAgentRegisterAmount] = useState(null);
   const [form, setForm] = useState({
     nationalId: '',
     region: '',
@@ -22,6 +30,12 @@ export default function RegisterAgent() {
   const [success, setSuccess] = useState(null);
 
   const isAgent = String(user?.role ?? '').toLowerCase() === ROLES.AGENT;
+
+  useEffect(() => {
+    getFeeAmounts()
+      .then((fees) => setAgentRegisterAmount(fees?.agentRegisterAmount ?? 20000))
+      .catch(() => setAgentRegisterAmount(20000));
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -79,7 +93,7 @@ export default function RegisterAgent() {
           Register as agent
         </h1>
         <p style={{ color: '#65676b', marginBottom: 24, fontSize: 14 }}>
-          Become a Wakilfy agent to onboard businesses and earn commissions. Registration fee: 20,000 TZS. You will receive payment instructions after submitting this form.
+          Become a Wakilfy agent to onboard businesses and earn commissions. Registration fee: {formatTzs(agentRegisterAmount)}. You will receive payment instructions after submitting this form.
         </p>
 
         {success ? (
@@ -89,7 +103,7 @@ export default function RegisterAgent() {
               Your agent code is <strong>{success.agentCode}</strong>. Status: {success.status}.
             </p>
             <p style={{ margin: '12px 0 0', color: '#166534', fontSize: 14 }}>
-              Please complete the registration payment (20,000 TZS) to activate your agent account. You will receive payment details via the phone number you provided.
+              Please complete the registration payment ({formatTzs(agentRegisterAmount)}) to activate your agent account. You will receive payment details via the phone number you provided.
             </p>
             <div style={{ marginTop: 16, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               <Link to="/app" className="settings-btn settings-btn-secondary" style={{ textDecoration: 'none' }}>
@@ -178,7 +192,7 @@ export default function RegisterAgent() {
                 required
               />
               <span className="settings-row-desc" style={{ display: 'block', marginTop: 4, fontSize: 12, color: '#65676b' }}>
-                You will receive payment instructions on this number (20,000 TZS registration fee).
+                You will receive payment instructions on this number ({formatTzs(agentRegisterAmount)} registration fee).
               </span>
             </div>
             {error && (

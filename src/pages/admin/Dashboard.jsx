@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Users, Building2, ShoppingBag, DollarSign, TrendingUp, Activity } from 'lucide-react';
 
 export default function Dashboard() {
@@ -113,9 +114,9 @@ export default function Dashboard() {
             <button className="admin-btn-ghost" style={{ width: '100%', justifyContent: 'center' }}>
               Generate Report
             </button>
-            <button className="admin-btn-ghost" style={{ width: '100%', justifyContent: 'center' }}>
+            <Link to="/admin/settings" className="admin-btn-ghost" style={{ width: '100%', justifyContent: 'center', textDecoration: 'none' }}>
               System Settings
-            </button>
+            </Link>
           </div>
         </div>
       </div>
