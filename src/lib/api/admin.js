@@ -1,6 +1,5 @@
 import { api } from './client';
 
-<<<<<<< Updated upstream
 const base = '/admin';
 
 /**
@@ -112,45 +111,23 @@ export async function deleteAgentPackage(packageId) {
   await api.delete(`${base}/agent-packages/${packageId}`);
 }
 
-// ==================== SETTINGS (FEE AMOUNTS) ====================
+// ==================== SETTINGS ====================
 
 /**
- * Get admin settings (agent register amount, business activation amount)
+ * Get admin settings (agent register amount, to-be-business amount, ads price per person)
  * GET /api/v1/admin/settings
  */
 export async function getAdminSettings() {
   const { data } = await api.get(`${base}/settings`);
-=======
-/**
- * Admin API – requires ADMIN role.
- * Base path: /api/v1/admin
- */
-
-/**
- * Get admin settings (agent register amount, to-be-business amount)
- * GET /api/v1/admin/settings
- */
-export async function getAdminSettings() {
-  const { data } = await api.get('/admin/settings');
->>>>>>> Stashed changes
   return data?.data ?? data;
 }
 
 /**
-<<<<<<< Updated upstream
- * Update fee amounts
+ * Update admin settings
  * PUT /api/v1/admin/settings
- * Body: { agentRegisterAmount: number, businessActivationAmount: number }
+ * Body: { agentRegisterAmount: number, toBeBusinessAmount: number, adsPricePerPerson: number }
  */
 export async function updateAdminSettings(payload) {
   const { data } = await api.put(`${base}/settings`, payload);
-=======
- * Update admin settings
- * PUT /api/v1/admin/settings
- * Body: { agentRegisterAmount: number, toBeBusinessAmount: number }
- */
-export async function updateAdminSettings(body) {
-  const { data } = await api.put('/admin/settings', body);
->>>>>>> Stashed changes
   return data?.data ?? data;
 }

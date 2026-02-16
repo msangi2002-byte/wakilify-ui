@@ -1,4 +1,3 @@
-<<<<<<< Updated upstream
 import { useState, useEffect, useCallback } from 'react';
 import { Settings as SettingsIcon, Save, Loader2 } from 'lucide-react';
 import { getAdminSettings, updateAdminSettings } from '@/lib/api/admin';
@@ -11,7 +10,8 @@ export default function Settings() {
   const [success, setSuccess] = useState('');
   const [form, setForm] = useState({
     agentRegisterAmount: '',
-    businessActivationAmount: '',
+    toBeBusinessAmount: '',
+    adsPricePerPerson: '',
   });
 
   const loadSettings = useCallback(async () => {
@@ -21,7 +21,8 @@ export default function Settings() {
       const settings = await getAdminSettings();
       setForm({
         agentRegisterAmount: settings?.agentRegisterAmount != null ? String(settings.agentRegisterAmount) : '20000',
-        businessActivationAmount: settings?.businessActivationAmount != null ? String(settings.businessActivationAmount) : '10000',
+        toBeBusinessAmount: settings?.toBeBusinessAmount != null ? String(settings.toBeBusinessAmount) : '10000',
+        adsPricePerPerson: settings?.adsPricePerPerson != null ? String(settings.adsPricePerPerson) : '2',
       });
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to load settings'));
@@ -39,7 +40,8 @@ export default function Settings() {
     setError('');
     setSuccess('');
     const agentNum = parseFloat(form.agentRegisterAmount);
-    const businessNum = parseFloat(form.businessActivationAmount);
+    const businessNum = parseFloat(form.toBeBusinessAmount);
+    const adsNum = parseFloat(form.adsPricePerPerson);
     if (Number.isNaN(agentNum) || agentNum < 0) {
       setError('Agent register amount must be a non-negative number.');
       return;
@@ -48,73 +50,27 @@ export default function Settings() {
       setError('Business activation amount must be a non-negative number.');
       return;
     }
+    if (Number.isNaN(adsNum) || adsNum < 0) {
+      setError('Ads price per person must be a non-negative number.');
+      return;
+    }
     setSaving(true);
     try {
       await updateAdminSettings({
         agentRegisterAmount: agentNum,
-        businessActivationAmount: businessNum,
+        toBeBusinessAmount: businessNum,
+        adsPricePerPerson: adsNum,
       });
-      setSuccess('Settings saved. Agent registration and business activation amounts are updated.');
+      setSuccess('Settings saved. Agent registration, business activation, and ads pricing amounts are updated.');
       loadSettings();
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to save settings'));
-=======
-import { useEffect, useState } from 'react';
-import { getAdminSettings, updateAdminSettings } from '@/lib/api/admin';
-
-export default function Settings() {
-  const [agentRegisterAmount, setAgentRegisterAmount] = useState('');
-  const [toBeBusinessAmount, setToBeBusinessAmount] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState({ type: '', text: '' });
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const settings = await getAdminSettings();
-        if (!cancelled && settings) {
-          setAgentRegisterAmount(settings.agentRegisterAmount != null ? String(settings.agentRegisterAmount) : '');
-          setToBeBusinessAmount(settings.toBeBusinessAmount != null ? String(settings.toBeBusinessAmount) : '');
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setMessage({ type: 'error', text: e.response?.data?.message || e.message || 'Failed to load settings' });
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const agent = parseFloat(agentRegisterAmount);
-    const business = parseFloat(toBeBusinessAmount);
-    if (Number.isNaN(agent) || agent < 0 || Number.isNaN(business) || business < 0) {
-      setMessage({ type: 'error', text: 'Please enter valid non-negative numbers.' });
-      return;
-    }
-    setSaving(true);
-    setMessage({ type: '', text: '' });
-    try {
-      await updateAdminSettings({
-        agentRegisterAmount: agent,
-        toBeBusinessAmount: business,
-      });
-      setMessage({ type: 'success', text: 'Settings saved.' });
-    } catch (e) {
-      setMessage({ type: 'error', text: e.response?.data?.message || e.message || 'Failed to save settings' });
->>>>>>> Stashed changes
     } finally {
       setSaving(false);
     }
   };
 
   if (loading) {
-<<<<<<< Updated upstream
     return (
       <div className="admin-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200 }}>
         <Loader2 size={32} className="admin-icon-spin" style={{ color: '#7c3aed' }} />
@@ -131,7 +87,7 @@ export default function Settings() {
               Admin Settings
             </h1>
             <p style={{ color: 'rgba(255, 255, 255, 0.7)', margin: 0 }}>
-              Configure system-wide amounts for agent registration and business activation.
+              Configure system-wide amounts for agent registration, business activation, and ads pricing.
             </p>
           </div>
           <div style={{
@@ -217,7 +173,7 @@ export default function Settings() {
               <span style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 13, marginLeft: 8 }}>Amount users pay to register as an agent.</span>
             </div>
 
-            <div style={{ marginBottom: 24 }}>
+            <div style={{ marginBottom: 20 }}>
               <label style={{ display: 'block', color: 'rgba(255, 255, 255, 0.9)', fontWeight: 500, marginBottom: 8 }}>
                 Business activation amount (TZS)
               </label>
@@ -225,8 +181,8 @@ export default function Settings() {
                 type="number"
                 min="0"
                 step="1"
-                value={form.businessActivationAmount}
-                onChange={(e) => setForm((f) => ({ ...f, businessActivationAmount: e.target.value }))}
+                value={form.toBeBusinessAmount}
+                onChange={(e) => setForm((f) => ({ ...f, toBeBusinessAmount: e.target.value }))}
                 placeholder="e.g. 10000"
                 style={{
                   width: '100%',
@@ -242,6 +198,31 @@ export default function Settings() {
               <span style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 13, marginLeft: 8 }}>Amount to be paid to activate a business.</span>
             </div>
 
+            <div style={{ marginBottom: 24 }}>
+              <label style={{ display: 'block', color: 'rgba(255, 255, 255, 0.9)', fontWeight: 500, marginBottom: 8 }}>
+                Ads price per person (TZS)
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.adsPricePerPerson}
+                onChange={(e) => setForm((f) => ({ ...f, adsPricePerPerson: e.target.value }))}
+                placeholder="e.g. 2"
+                style={{
+                  width: '100%',
+                  maxWidth: 280,
+                  padding: '12px 16px',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: 8,
+                  color: '#fff',
+                  fontSize: 16,
+                }}
+              />
+              <span style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 13, marginLeft: 8 }}>Price per person for ads (e.g., one person for 2 TZS).</span>
+            </div>
+
             <button
               type="submit"
               disabled={saving}
@@ -254,54 +235,6 @@ export default function Settings() {
           </fieldset>
         </form>
       </div>
-=======
-    return <div className="admin-settings"><p>Loading settings…</p></div>;
-  }
-
-  return (
-    <div className="admin-settings">
-      <h1>Admin Settings</h1>
-      <form onSubmit={handleSubmit}>
-        <fieldset className="admin-settings-fieldset">
-          <legend>Setup amounts</legend>
-          <p className="admin-settings-hint">
-            Configure the amounts used for agent registration and business activation (TZS).
-          </p>
-          <div className="admin-settings-row">
-            <label htmlFor="agent-register-amount">Agent register amount (TZS)</label>
-            <input
-              id="agent-register-amount"
-              type="number"
-              min="0"
-              step="1"
-              value={agentRegisterAmount}
-              onChange={(e) => setAgentRegisterAmount(e.target.value)}
-              placeholder="e.g. 20000"
-            />
-          </div>
-          <div className="admin-settings-row">
-            <label htmlFor="toBe-business-amount">To-be business amount (TZS)</label>
-            <input
-              id="toBe-business-amount"
-              type="number"
-              min="0"
-              step="1"
-              value={toBeBusinessAmount}
-              onChange={(e) => setToBeBusinessAmount(e.target.value)}
-              placeholder="e.g. 10000"
-            />
-          </div>
-        </fieldset>
-        {message.text && (
-          <p className={`admin-settings-message admin-settings-message--${message.type}`}>
-            {message.text}
-          </p>
-        )}
-        <button type="submit" disabled={saving} className="admin-settings-submit">
-          {saving ? 'Saving…' : 'Save settings'}
-        </button>
-      </form>
->>>>>>> Stashed changes
     </div>
   );
 }
