@@ -1,13 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Users as UsersIcon, Search, Eye, Mail, Phone, Shield, CheckCircle, XCircle, UserPlus, UserMinus, BadgeCheck, Ban, Download, LogIn } from 'lucide-react';
-import { getAdminUsers, updateUserStatus, updateUserRole, verifyUser, exportUsersCsv, impersonateUser } from '@/lib/api/admin';
+import { getAdminUsers, updateUserStatus, updateUserRole, verifyUser, exportUsersCsv, impersonateUser, setUserAdminRole } from '@/lib/api/admin';
 import { openImpersonateSession } from '@/pages/auth/Impersonate';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
+import { showAdminToast } from '@/lib/adminToast';
+import { useAuthStore } from '@/store/auth.store';
+import { getEffectiveAdminRole, ADMIN_ROLES } from '@/lib/adminRoles';
 
 const ROLES = ['USER', 'BUSINESS', 'AGENT', 'ADMIN', 'VISITOR'];
+const ADMIN_ROLE_LABELS = { SUPER_ADMIN: 'Super Admin', MODERATOR: 'Moderator', SUPPORT_AGENT: 'Support', FINANCE_MANAGER: 'Finance' };
 
 export default function Users() {
+  const { user: currentUser } = useAuthStore();
+  const isSuperAdmin = getEffectiveAdminRole(currentUser) === 'SUPER_ADMIN';
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -58,7 +64,9 @@ export default function Users() {
     setSuccess('');
     try {
       await updateUserStatus(user.id, newActive, 'Admin action');
-      setSuccess(newActive ? 'User activated' : 'User deactivated');
+      const msg = newActive ? 'User activated' : 'User deactivated';
+      setSuccess(msg);
+      showAdminToast(msg, 'success');
       loadUsers();
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to update status'));
@@ -71,6 +79,7 @@ export default function Users() {
     try {
       await updateUserRole(userId, newRole, 'Admin action');
       setSuccess('Role updated');
+      showAdminToast('Role updated', 'success');
       setRoleModal(null);
       loadUsers();
     } catch (err) {
@@ -84,6 +93,7 @@ export default function Users() {
     try {
       await verifyUser(user.id);
       setSuccess('User verified (Blue Tick)');
+      showAdminToast('User verified (Blue Tick)', 'success');
       loadUsers();
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to verify user'));
@@ -96,6 +106,7 @@ export default function Users() {
     try {
       await updateUserStatus(user.id, false, 'Banned by admin');
       setSuccess('User banned');
+      showAdminToast('User banned', 'success');
       loadUsers();
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to ban user'));
@@ -107,8 +118,22 @@ export default function Users() {
     try {
       await exportUsersCsv();
       setSuccess('CSV exported');
+      showAdminToast('CSV exported', 'success');
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to export CSV'));
+    }
+  };
+
+  const handleAdminRoleChange = async (userId, adminRole) => {
+    setError('');
+    setSuccess('');
+    try {
+      await setUserAdminRole(userId, adminRole);
+      setSuccess('Admin role updated');
+      showAdminToast('Admin role updated', 'success');
+      loadUsers();
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Failed to update admin role'));
     }
   };
 
@@ -118,6 +143,7 @@ export default function Users() {
       const auth = await impersonateUser(user.id);
       openImpersonateSession(auth);
       setSuccess('Opened account in new tab');
+      showAdminToast('Opened account in new tab', 'success');
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to access account'));
     }
@@ -248,15 +274,17 @@ export default function Users() {
             <Search size={18} />
             Search
           </button>
-          <button
-            type="button"
-            className="admin-btn-secondary"
-            style={{ whiteSpace: 'nowrap' }}
-            onClick={handleExportCsv}
-          >
-            <Download size={18} />
-            Export CSV
-          </button>
+          {isSuperAdmin && (
+            <button
+              type="button"
+              className="admin-btn-secondary"
+              style={{ whiteSpace: 'nowrap' }}
+              onClick={handleExportCsv}
+            >
+              <Download size={18} />
+              Export CSV
+            </button>
+          )}
         </form>
 
         {error && (
@@ -316,6 +344,11 @@ export default function Users() {
                     <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.875rem', fontWeight: 600 }}>
                       Role
                     </th>
+                    {isSuperAdmin && (
+                      <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.875rem', fontWeight: 600 }}>
+                        Admin role
+                      </th>
+                    )}
                     <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.875rem', fontWeight: 600 }}>
                       Status
                     </th>
@@ -414,6 +447,31 @@ export default function Users() {
                             {user.role || 'USER'}
                           </span>
                         </td>
+                        {isSuperAdmin && (
+                          <td style={{ padding: '16px 12px' }}>
+                            {user.role === 'ADMIN' ? (
+                              <select
+                                value={user.adminRole || 'SUPER_ADMIN'}
+                                onChange={(e) => handleAdminRoleChange(user.id, e.target.value)}
+                                style={{
+                                  padding: '6px 10px',
+                                  background: 'rgba(255, 255, 255, 0.08)',
+                                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                                  borderRadius: '6px',
+                                  color: '#fff',
+                                  fontSize: '0.8rem',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {ADMIN_ROLES.map((r) => (
+                                  <option key={r} value={r}>{ADMIN_ROLE_LABELS[r] || r}</option>
+                                ))}
+                              </select>
+                            ) : (
+                              <span style={{ color: 'rgba(255, 255, 255, 0.4)', fontSize: '0.8rem' }}>—</span>
+                            )}
+                          </td>
+                        )}
                         <td style={{ padding: '16px 12px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             {user.isActive ? (
@@ -435,16 +493,18 @@ export default function Users() {
                         <td style={{ padding: '16px 12px' }}>
                           {userId ? (
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center', justifyContent: 'flex-end' }}>
-                              <button
-                                type="button"
-                                onClick={() => handleAccessAccount(user)}
-                                className="admin-btn-primary"
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '0.8rem' }}
-                                title="Access account (open as user)"
-                              >
-                                <LogIn size={14} />
-                                Access Account
-                              </button>
+                              {isSuperAdmin && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleAccessAccount(user)}
+                                  className="admin-btn-primary"
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '0.8rem' }}
+                                  title="Access account (open as user)"
+                                >
+                                  <LogIn size={14} />
+                                  Access Account
+                                </button>
+                              )}
                               <Link
                                 to={`/app/profile/${userId}`}
                                 className="admin-btn-ghost"

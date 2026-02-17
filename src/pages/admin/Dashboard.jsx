@@ -5,8 +5,6 @@ import {
   Building2,
   ShoppingBag,
   DollarSign,
-  TrendingUp,
-  Activity,
   UserCheck,
   AlertTriangle,
   Wallet,
@@ -15,9 +13,12 @@ import {
   Image,
   Video,
   FileText,
+  Activity,
+  ArrowRight,
+  RefreshCw,
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { getAdminDashboard, getAdminChartData, getMediaStats, getTransactionReports, getAnalytics } from '@/lib/api/admin';
+import { getAdminDashboard, getAdminChartData, getMediaStats, getTransactionReports, getAnalytics, getAdminAuditLogs } from '@/lib/api/admin';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 
 function formatNumber(n) {
@@ -35,6 +36,12 @@ function formatCurrency(n) {
   }).format(n);
 }
 
+function formatRelativeTime(ms) {
+  if (ms < 60000) return 'Just now';
+  if (ms < 3600000) return `${Math.floor(ms / 60000)} min ago`;
+  return `${Math.floor(ms / 3600000)} hr ago`;
+}
+
 export default function Dashboard() {
   const [data, setData] = useState(null);
   const [chartData, setChartData] = useState(null);
@@ -43,33 +50,45 @@ export default function Dashboard() {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [recentActivity, setRecentActivity] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function fetchData() {
-      try {
-        const [dash, charts, media, txn, anl] = await Promise.all([
-          getAdminDashboard(),
-          getAdminChartData(30).catch(() => null),
-          getMediaStats().catch(() => null),
-          getTransactionReports().catch(() => null),
-          getAnalytics().catch(() => null),
-        ]);
-        if (!cancelled) {
-          setData(dash);
-          setChartData(charts);
-          setMediaStats(media);
-          setTransactionReports(txn);
-          setAnalytics(anl);
-        }
-      } catch (err) {
-        if (!cancelled) setError(getApiErrorMessage(err, 'Failed to load dashboard'));
-      } finally {
-        if (!cancelled) setLoading(false);
+  const fetchData = async (isRefresh = false, abortRef = { current: false }) => {
+    if (!isRefresh) setLoading(true);
+    else setRefreshing(true);
+    setError('');
+    try {
+      const [dash, charts, media, txn, anl, auditRes] = await Promise.all([
+        getAdminDashboard(),
+        getAdminChartData(30).catch(() => null),
+        getMediaStats().catch(() => null),
+        getTransactionReports().catch(() => null),
+        getAnalytics().catch(() => null),
+        getAdminAuditLogs({ page: 0, size: 8 }).catch(() => ({ content: [] })),
+      ]);
+      if (abortRef.current) return;
+      setData(dash);
+      setChartData(charts);
+      setMediaStats(media);
+      setTransactionReports(txn);
+      setAnalytics(anl);
+      setLastUpdated(Date.now());
+      setRecentActivity(auditRes?.content || []);
+    } catch (err) {
+      if (!abortRef.current) setError(getApiErrorMessage(err, 'Failed to load dashboard'));
+    } finally {
+      if (!abortRef.current) {
+        setLoading(false);
+        setRefreshing(false);
       }
     }
-    fetchData();
-    return () => { cancelled = true; };
+  };
+
+  useEffect(() => {
+    const abortRef = { current: false };
+    fetchData(false, abortRef);
+    return () => { abortRef.current = true; };
   }, []);
 
   if (loading) {
@@ -132,44 +151,47 @@ export default function Dashboard() {
   const pendingWithdrawals = d.pendingWithdrawals ?? 0;
 
   return (
-    <div>
-      <div className="admin-card" style={{ marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#fff', margin: '0 0 8px 0' }}>
-          Admin Dashboard
-        </h1>
-        <p style={{ color: 'rgba(255, 255, 255, 0.7)', margin: 0 }}>
-          Welcome to the Wakilfy Admin Portal. Manage users, businesses, orders, and more.
-        </p>
-      </div>
+    <div className="admin-dashboard">
+      <header className="admin-command-hero">
+        <div>
+          <h1 className="admin-command-title">Command Center</h1>
+          <p className="admin-command-subtitle">
+            Monitor and control platform-wide activity, revenue, and operations at scale.
+          </p>
+        </div>
+        <div className="admin-command-meta">
+          {lastUpdated != null && (
+            <span className="admin-command-updated" title="Data refresh time">
+              Updated {formatRelativeTime(Date.now() - lastUpdated)}
+            </span>
+          )}
+          <button
+            type="button"
+            className="admin-refresh-btn"
+            onClick={() => fetchData(true, { current: false })}
+            disabled={refreshing}
+            title="Refresh data"
+          >
+            <RefreshCw size={16} className={refreshing ? 'admin-icon-spin' : ''} />
+            {refreshing ? 'Refreshing…' : 'Refresh'}
+          </button>
+          <span className="admin-command-kbd" title="Quick search">⌘K to search</span>
+        </div>
+      </header>
 
-      <div className="admin-grid admin-grid-4" style={{ marginBottom: '32px' }}>
+      <div className="admin-stats-grid">
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
-            <div key={stat.label} className="admin-card">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <div style={{
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: '10px',
-                  background: 'rgba(99, 102, 241, 0.15)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#818cf8',
-                }}>
-                  <Icon size={24} />
-                </div>
+            <div key={stat.label} className="admin-stat-card">
+              <div className="admin-stat-card-icon">
+                <Icon size={22} />
               </div>
-              <div className={`admin-stat-value ${stat.color}`} style={{ marginBottom: '4px' }}>
-                {stat.value}
+              <div className="admin-stat-card-body">
+                <div className={`admin-stat-value ${stat.color}`}>{stat.value}</div>
+                <div className="admin-stat-label">{stat.label}</div>
+                {stat.sub && <div className="admin-stat-sub">{stat.sub}</div>}
               </div>
-              <div className="admin-stat-label">{stat.label}</div>
-              {stat.sub && (
-                <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', marginTop: '4px' }}>
-                  {stat.sub}
-                </div>
-              )}
             </div>
           );
         })}
@@ -287,6 +309,34 @@ export default function Dashboard() {
             </Link>
           </div>
         </div>
+      </div>
+
+      <div className="admin-card" style={{ marginTop: '24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+          <h2 className="admin-card-title" style={{ marginBottom: 0, paddingBottom: 0, borderBottom: 'none' }}>
+            <Activity size={18} style={{ verticalAlign: 'middle', marginRight: 8 }} />
+            Recent Activity
+          </h2>
+          <Link to="/admin/audit-logs" className="admin-activity-view-all">
+            View all <ArrowRight size={14} />
+          </Link>
+        </div>
+        {recentActivity.length === 0 ? (
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.875rem', margin: 0 }}>No recent activity</p>
+        ) : (
+          <ul className="admin-activity-list">
+            {recentActivity.map((log) => (
+              <li key={log.id} className="admin-activity-item">
+                <span className="admin-activity-action">{log.action || 'Action'}</span>
+                {log.entityType && <span className="admin-activity-entity">{log.entityType}</span>}
+                {log.user?.name && <span className="admin-activity-user">{log.user.name}</span>}
+                <span className="admin-activity-time">
+                  {log.createdAt ? formatRelativeTime(Date.now() - new Date(log.createdAt).getTime()) : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {chartData && (chartData.revenueByDay?.length > 0 || chartData.usersByDay?.length > 0) && (
