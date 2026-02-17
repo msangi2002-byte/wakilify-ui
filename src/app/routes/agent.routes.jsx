@@ -6,6 +6,7 @@ import { RoleGuard } from '@/app/guards/RoleGuard';
 import { ROLES } from '@/types/roles';
 
 const Dashboard = lazy(() => import('@/pages/agent/Dashboard'));
+const Requests = lazy(() => import('@/pages/agent/Requests'));
 const Activate = lazy(() => import('@/pages/agent/Activate'));
 const Commissions = lazy(() => import('@/pages/agent/Commissions'));
 const Withdrawals = lazy(() => import('@/pages/agent/Withdrawals'));
@@ -16,6 +17,7 @@ export function AgentRoutes() {
   return (
     <Route path="agent" element={<AuthGuard><RoleGuard allowedRoles={[ROLES.AGENT]}><AgentLayout /></RoleGuard></AuthGuard>}>
       <Route index element={<SuspenseWrapper><Dashboard /></SuspenseWrapper>} />
+      <Route path="requests" element={<SuspenseWrapper><Requests /></SuspenseWrapper>} />
       <Route path="activate" element={<SuspenseWrapper><Activate /></SuspenseWrapper>} />
       <Route path="commissions" element={<SuspenseWrapper><Commissions /></SuspenseWrapper>} />
       <Route path="withdrawals" element={<SuspenseWrapper><Withdrawals /></SuspenseWrapper>} />

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Building2, UserPlus, Package, AlertTriangle } from 'lucide-react';
-import { activateBusiness } from '@/lib/api/agent';
+import { Building2, UserPlus, Package, AlertTriangle, CheckCircle, Inbox, RefreshCw, Clock } from 'lucide-react';
+import { activateBusiness, getAgentBusinessRequests } from '@/lib/api/agent';
 import { getFeeAmounts } from '@/lib/api/config';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import { useGeolocation } from '@/hooks/useGeolocation';
@@ -11,6 +11,21 @@ function formatTzs(amount) {
   if (amount == null || amount === '') return '—';
   const n = Number(amount);
   return Number.isNaN(n) ? String(amount) : n.toLocaleString('en-TZ') + ' TZS';
+}
+
+function formatDate(iso) {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleDateString(undefined, {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return iso;
+  }
 }
 
 export default function Requests() {
@@ -33,10 +48,33 @@ export default function Requests() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  const [incomingRequests, setIncomingRequests] = useState([]);
+  const [incomingLoading, setIncomingLoading] = useState(true);
+  const [incomingTotal, setIncomingTotal] = useState(0);
+
+  const loadIncomingRequests = () => {
+    setIncomingLoading(true);
+    getAgentBusinessRequests({ page: 0, size: 20 })
+      .then((res) => {
+        const content = Array.isArray(res?.content) ? res.content : [];
+        setIncomingRequests(content);
+        setIncomingTotal(res?.totalElements ?? content.length);
+      })
+      .catch(() => {
+        setIncomingRequests([]);
+        setIncomingTotal(0);
+      })
+      .finally(() => setIncomingLoading(false));
+  };
+
   useEffect(() => {
     getFeeAmounts()
       .then((fees) => setBusinessActivationAmount(fees?.businessActivationAmount ?? 10000))
       .catch(() => setBusinessActivationAmount(10000));
+  }, []);
+
+  useEffect(() => {
+    loadIncomingRequests();
   }, []);
 
   const handleSubmit = async (e) => {
@@ -95,17 +133,94 @@ export default function Requests() {
   };
 
   return (
-    <div className="agent-requests agent-requests--centered">
-      <div className="agent-requests-inner">
-        <h1 className="agent-requests-title">
-          <UserPlus size={28} />
+    <div className="agent-dashboard agent-dashboard-cards agent-requests-page">
+      <h1 className="agent-dashboard-title">Business Requests</h1>
+
+      <div className="agent-dashboard-card agent-dashboard-card-incoming">
+        <div className="agent-dashboard-card-activate-header">
+          <h2 className="agent-dashboard-card-heading">
+            <Inbox size={20} />
+            Incoming requests (people who chose you)
+          </h2>
+          <button
+            type="button"
+            className="agent-btn-ghost"
+            onClick={loadIncomingRequests}
+            disabled={incomingLoading}
+          >
+            <RefreshCw size={18} style={{ animation: incomingLoading ? 'spin 1s linear infinite' : 'none' }} />
+            Refresh
+          </button>
+        </div>
+        <p className="agent-dashboard-card-desc">
+          Users with an account who requested to become a business and selected you as their agent. After they complete payment, the system creates their business automatically.
+        </p>
+        {incomingLoading ? (
+          <div className="agent-loading">Loading…</div>
+        ) : incomingRequests.length === 0 ? (
+          <p className="agent-empty">No incoming requests yet. Share your agent code so users can select you when they request to become a business.</p>
+        ) : (
+          <ul className="agent-requests-list">
+            {incomingRequests.map((req) => {
+              const status = (req.status || 'PENDING').toUpperCase();
+              const isPending = status === 'PENDING';
+              return (
+                <li key={req.id} className="agent-request-card">
+                  <div className="agent-request-header">
+                    <Building2 className="agent-request-icon" size={20} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="agent-request-name">{req.businessName || 'Unnamed'}</div>
+                      {(req.userName || req.userPhone) && (
+                        <div className="agent-request-meta">
+                          {req.userName && <span>{req.userName}</span>}
+                          {req.userPhone && <span>{req.userName ? ` · ${req.userPhone}` : req.userPhone}</span>}
+                        </div>
+                      )}
+                    </div>
+                    <span
+                      className={`agent-request-status ${isPending ? 'agent-request-status-pending' : 'agent-request-status-approved'}`}
+                    >
+                      {status}
+                    </span>
+                  </div>
+                  <div className="agent-request-details">
+                    {req.category && <div className="agent-request-row"><strong>Category:</strong> {req.category}</div>}
+                    {(req.region || req.district) && (
+                      <div className="agent-request-row">
+                        <strong>Location:</strong> {[req.region, req.district].filter(Boolean).join(', ')}
+                      </div>
+                    )}
+                    {req.createdAt && (
+                      <div className="agent-request-row">
+                        <strong>Requested:</strong>{' '}
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          {isPending ? <Clock size={14} /> : <CheckCircle size={14} />}
+                          {formatDate(req.createdAt)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        {incomingTotal > incomingRequests.length && (
+          <p className="agent-stat-label" style={{ marginTop: 12, marginBottom: 0 }}>
+            Showing {incomingRequests.length} of {incomingTotal}
+          </p>
+        )}
+      </div>
+
+      <div className="agent-dashboard-card agent-dashboard-card-requests">
+        <h2 className="agent-dashboard-card-heading">
+          <UserPlus size={20} />
           Add user (no account)
-        </h1>
-        <p className="agent-requests-desc">
+        </h2>
+        <p className="agent-dashboard-card-desc">
           Register a new business owner who does not have an account. Enter their details; they will pay the activation fee to complete. Users who already have an account use the app and pay via USSD.
         </p>
-        <div className="agent-card agent-requests-card">
-          <form onSubmit={handleSubmit} className="agent-requests-form">
+        <form onSubmit={handleSubmit} className="agent-requests-form agent-requests-form-cols">
             <div className="agent-form-field">
               <label className="agent-label" htmlFor="businessName">Business name *</label>
               <input
@@ -255,7 +370,7 @@ export default function Requests() {
                 onChange={(e) => setStreet(e.target.value)}
               />
             </div>
-            <div className="agent-form-field">
+            <div className="agent-form-field agent-form-field-full">
               <label className="agent-label" htmlFor="description">Description (optional)</label>
               <textarea
                 id="description"
@@ -268,48 +383,24 @@ export default function Requests() {
               />
             </div>
             {error && (
-              <div className="agent-requests-message agent-requests-message--error" role="alert" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                  <AlertTriangle size={18} style={{ marginTop: '2px', flexShrink: 0 }} />
-                  <div style={{ flex: 1 }}>
-                    <p style={{ margin: 0 }}>{error}</p>
-                    {(error.toLowerCase().includes('package limit') || error.toLowerCase().includes('upgrade') || error.toLowerCase().includes('purchase a package')) && (
-                      <Link
-                        to="/agent"
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          marginTop: '8px',
-                          padding: '8px 16px',
-                          background: 'rgba(124, 58, 237, 0.2)',
-                          border: '1px solid #7c3aed',
-                          borderRadius: '6px',
-                          color: '#a78bfa',
-                          textDecoration: 'none',
-                          fontSize: '0.875rem',
-                          fontWeight: 600,
-                          transition: 'all 0.2s',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.target.style.background = 'rgba(124, 58, 237, 0.3)';
-                          e.target.style.borderColor = '#a78bfa';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.target.style.background = 'rgba(124, 58, 237, 0.2)';
-                          e.target.style.borderColor = '#7c3aed';
-                        }}
-                      >
-                        <Package size={16} />
-                        Upgrade Package
-                      </Link>
-                    )}
-                  </div>
+              <div className="agent-dashboard-card-alert agent-dashboard-card-alert-error" role="alert">
+                <AlertTriangle size={18} />
+                <div>
+                  <p style={{ margin: 0 }}>{error}</p>
+                  {(error.toLowerCase().includes('package limit') || error.toLowerCase().includes('upgrade') || error.toLowerCase().includes('purchase a package')) && (
+                    <Link to="/agent" className="agent-dashboard-action-link agent-dashboard-action-secondary" style={{ marginTop: 8, display: 'inline-flex' }}>
+                      <Package size={16} />
+                      Upgrade Package
+                    </Link>
+                  )}
                 </div>
               </div>
             )}
             {success && (
-              <p className="agent-requests-message agent-requests-message--success" role="status">{success}</p>
+              <div className="agent-dashboard-card-alert agent-dashboard-card-alert-success" role="status">
+                <CheckCircle size={18} />
+                {success}
+              </div>
             )}
             <button
               type="submit"
@@ -320,7 +411,6 @@ export default function Requests() {
               {loading ? 'Submitting…' : 'Add user & initiate activation'}
             </button>
           </form>
-        </div>
       </div>
     </div>
   );

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import {
   getAgentDashboard,
+  getAgentMe,
   getAgentCommissions,
   getAgentWithdrawals,
   getAgentPackages,
@@ -52,6 +53,7 @@ function formatDate(iso) {
 
 export default function Dashboard() {
   const [dashboard, setDashboard] = useState(null);
+  const [agentProfile, setAgentProfile] = useState(null);
   const [commissions, setCommissions] = useState({ content: [] });
   const [withdrawals, setWithdrawals] = useState({ content: [] });
   const [packages, setPackages] = useState([]);
@@ -71,13 +73,15 @@ export default function Dashboard() {
     setError('');
     Promise.all([
       getAgentDashboard(),
+      getAgentMe().catch(() => null),
       getAgentCommissions({ page: 0, size: 10 }).then((r) => r || { content: [] }).catch(() => ({ content: [] })),
       getAgentWithdrawals({ page: 0, size: 10 }).then((r) => r || { content: [] }).catch(() => ({ content: [] })),
       getAgentPackages().then((r) => Array.isArray(r) ? r : []).catch(() => []),
     ])
-      .then(([dash, comm, wdraw, pkgs]) => {
+      .then(([dash, profile, comm, wdraw, pkgs]) => {
         if (cancelled) return;
         setDashboard(dash ?? null);
+        setAgentProfile(profile ?? null);
         setCommissions(Array.isArray(comm?.content) ? comm : { content: [] });
         setWithdrawals(Array.isArray(wdraw?.content) ? wdraw : { content: [] });
         setPackages(Array.isArray(pkgs) ? pkgs : []);
@@ -135,124 +139,193 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="agent-dashboard">
-      <h1 style={{ margin: '0 0 24px 0', fontSize: '1.5rem', fontWeight: 700 }}>
-        Agent Overview
-      </h1>
+    <div className="agent-dashboard agent-dashboard-cards">
+      <h1 className="agent-dashboard-title">Agent Overview</h1>
       {error && (
-        <div className="agent-card" style={{ marginBottom: 20, borderColor: '#F09068' }}>
-          <p style={{ color: '#F09068', margin: 0 }}>{error}</p>
+        <div className="agent-dashboard-card agent-dashboard-card-error">
+          <p className="agent-dashboard-card-error-text">{error}</p>
         </div>
       )}
 
-      {/* Overview stats */}
-      <div className="agent-grid agent-grid-2" style={{ marginBottom: 24 }}>
-        <div className="agent-card">
-          <div className="agent-stat-value gold">
-            {dashboard?.currentBalance != null ? `TZS ${formatAmount(dashboard.currentBalance)}` : '—'}
+      {/* Stat cards row */}
+      <div className="agent-dashboard-cards-row agent-dashboard-stats">
+        <div className="agent-dashboard-card agent-dashboard-stat-card">
+          <div className="agent-dashboard-stat-icon agent-dashboard-stat-icon-wallet">
+            <Wallet size={24} />
           </div>
-          <div className="agent-stat-label">Current wallet balance</div>
+          <div className="agent-dashboard-stat-content">
+            <div className="agent-stat-value gold">
+              {dashboard?.currentBalance != null ? `TZS ${formatAmount(dashboard.currentBalance)}` : '—'}
+            </div>
+            <div className="agent-stat-label">Current wallet balance</div>
+          </div>
         </div>
-        <div className="agent-card">
-          <div className="agent-stat-value gold">
-            {dashboard?.totalEarnings != null ? `TZS ${formatAmount(dashboard.totalEarnings)}` : '—'}
+        <div className="agent-dashboard-card agent-dashboard-stat-card">
+          <div className="agent-dashboard-stat-icon agent-dashboard-stat-icon-gold">
+            <Banknote size={24} />
           </div>
-          <div className="agent-stat-label">Total commission earned</div>
+          <div className="agent-dashboard-stat-content">
+            <div className="agent-stat-value gold">
+              {dashboard?.totalEarnings != null ? `TZS ${formatAmount(dashboard.totalEarnings)}` : '—'}
+            </div>
+            <div className="agent-stat-label">Total commission earned</div>
+          </div>
         </div>
-        <div className="agent-card">
-          <div className="agent-stat-value">
-            {dashboard?.totalBusinessesActivated ?? 0}
+        <div className="agent-dashboard-card agent-dashboard-stat-card">
+          <div className="agent-dashboard-stat-icon agent-dashboard-stat-icon-business">
+            <Building2 size={24} />
           </div>
-          <div className="agent-stat-label">Active businesses</div>
+          <div className="agent-dashboard-stat-content">
+            <div className="agent-stat-value">
+              {dashboard?.totalBusinessesActivated ?? 0}
+            </div>
+            <div className="agent-stat-label">Active businesses</div>
+          </div>
         </div>
-        <div className="agent-card">
-          <div className="agent-stat-value warning">
-            {dashboard?.pendingWithdrawals != null ? `TZS ${formatAmount(dashboard.pendingWithdrawals)}` : '—'}
+        <div className="agent-dashboard-card agent-dashboard-stat-card">
+          <div className="agent-dashboard-stat-icon agent-dashboard-stat-icon-warning">
+            <AlertTriangle size={24} />
           </div>
-          <div className="agent-stat-label">Pending withdrawals</div>
+          <div className="agent-dashboard-stat-content">
+            <div className="agent-stat-value warning">
+              {dashboard?.pendingWithdrawals != null ? `TZS ${formatAmount(dashboard.pendingWithdrawals)}` : '—'}
+            </div>
+            <div className="agent-stat-label">Pending withdrawals</div>
+          </div>
         </div>
       </div>
 
-      {/* Package Information */}
-      {dashboard?.packageName && (
-        <div className="agent-card" style={{ marginBottom: 24, background: 'rgba(124, 58, 237, 0.1)', borderColor: '#7c3aed' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-            <div>
-              <h2 className="agent-card-title" style={{ marginBottom: '8px' }}>
-                <Package size={20} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
-                Current Package: {dashboard.packageName}
-              </h2>
-              <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
-                <div>
-                  <div className="agent-stat-label">Business Limit</div>
-                  <div className="agent-stat-value" style={{ fontSize: '1.25rem' }}>
-                    {dashboard.packageMaxBusinesses || 0} businesses
-                  </div>
-                </div>
-                <div>
-                  <div className="agent-stat-label">Activated</div>
-                  <div className="agent-stat-value" style={{ fontSize: '1.25rem' }}>
-                    {dashboard.totalBusinessesActivated || 0} businesses
-                  </div>
-                </div>
-                <div>
-                  <div className="agent-stat-label">Remaining</div>
-                  <div className="agent-stat-value" style={{ fontSize: '1.25rem', color: dashboard.packageRemainingBusinesses > 0 ? '#38B068' : '#F09068' }}>
-                    {dashboard.packageRemainingBusinesses || 0} businesses
-                  </div>
-                </div>
+      {/* Content cards row: Package + Quick actions + Recent activity */}
+      <div className="agent-dashboard-cards-row agent-dashboard-content-cards">
+        {/* Current Package card */}
+        {dashboard?.packageName && (
+          <div className="agent-dashboard-card agent-dashboard-card-package">
+            <h2 className="agent-dashboard-card-heading">
+              <Package size={20} />
+              Current Package
+            </h2>
+            <p className="agent-dashboard-card-package-name">{dashboard.packageName}</p>
+            <div className="agent-dashboard-card-package-stats">
+              <div className="agent-dashboard-card-package-stat">
+                <span className="agent-stat-label">Limit</span>
+                <span className="agent-stat-value">{dashboard.packageMaxBusinesses || 0}</span>
+              </div>
+              <div className="agent-dashboard-card-package-stat">
+                <span className="agent-stat-label">Activated</span>
+                <span className="agent-stat-value">{dashboard.totalBusinessesActivated || 0}</span>
+              </div>
+              <div className="agent-dashboard-card-package-stat">
+                <span className="agent-stat-label">Remaining</span>
+                <span className={`agent-stat-value ${dashboard.packageRemainingBusinesses > 0 ? 'success' : 'warning'}`}>
+                  {dashboard.packageRemainingBusinesses || 0}
+                </span>
               </div>
             </div>
             {dashboard.packageRemainingBusinesses === 0 && (
-              <div style={{ padding: '12px 16px', background: 'rgba(240, 144, 104, 0.2)', borderRadius: '8px', border: '1px solid #F09068' }}>
-                <p style={{ margin: 0, color: '#F09068', fontSize: '0.875rem', fontWeight: 600 }}>
-                  <AlertTriangle size={16} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
-                  Package limit reached! Upgrade to activate more businesses.
-                </p>
+              <div className="agent-dashboard-card-alert">
+                <AlertTriangle size={16} />
+                Package limit reached! Upgrade to activate more businesses.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Quick Actions card */}
+        <div className="agent-dashboard-card agent-dashboard-card-actions">
+          <h2 className="agent-dashboard-card-heading">Quick Actions</h2>
+          <div className="agent-dashboard-card-actions-list">
+            <Link to="/agent/requests" className="agent-dashboard-action-link agent-dashboard-action-secondary">
+              <Inbox size={20} />
+              View business requests
+            </Link>
+            <Link to="/agent/activate" className="agent-dashboard-action-link agent-dashboard-action-primary">
+              <Building2 size={20} />
+              Activate Business
+            </Link>
+            <Link to="/agent/commissions" className="agent-dashboard-action-link agent-dashboard-action-ghost">
+              <TrendingUp size={20} />
+              View Commissions
+            </Link>
+            <Link to="/agent/withdrawals" className="agent-dashboard-action-link agent-dashboard-action-ghost">
+              <Wallet size={20} />
+              Request Withdrawal
+            </Link>
+          </div>
+          <div className="agent-dashboard-card-footer">
+            <div className="agent-stat-value">{dashboard?.totalBusinessesActivated ?? 0} businesses</div>
+            <div className="agent-stat-label">Under your management</div>
+            {agentProfile?.agentCode && (
+              <div className="agent-dashboard-agent-code" style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                <div className="agent-stat-label">Your agent code (share with users)</div>
+                <div className="agent-stat-value" style={{ fontSize: '1.125rem', letterSpacing: '0.05em' }}>{agentProfile.agentCode}</div>
               </div>
             )}
           </div>
         </div>
-      )}
 
-      {/* Available Packages */}
+        {/* Recent Activity card */}
+        <div className="agent-dashboard-card agent-dashboard-card-activity">
+          <h2 className="agent-dashboard-card-heading">Recent Activity</h2>
+          {activityItems.length === 0 ? (
+            <p className="agent-empty">No recent activity yet.</p>
+          ) : (
+            <ul className="agent-activity-list">
+              {activityItems.map((item) => (
+                <li key={item.id} className="agent-activity-item">
+                  <div className={`agent-activity-icon ${item.icon}`}>
+                    {item.type === 'commission' ? (
+                      <Banknote size={18} />
+                    ) : item.statusClass === 'success' ? (
+                      <CheckCircle2 size={18} />
+                    ) : (
+                      <AlertTriangle size={18} />
+                    )}
+                  </div>
+                  <div className="agent-activity-text">
+                    {item.title}
+                    {item.description && (
+                      <div className="agent-activity-meta">
+                        {item.description}
+                        {item.amount != null && (
+                          <span className="amount-gold" style={{ marginLeft: 8 }}>
+                            TZS {formatAmount(item.amount)}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    <div className="agent-activity-meta">{formatDate(item.createdAt)}</div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      {/* Available Packages – full-width card with inner package cards */}
       {packages.length > 0 && (
-        <div className="agent-card" style={{ marginBottom: 24 }}>
-          <h2 className="agent-card-title">
-            <Package size={20} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+        <div className="agent-dashboard-card agent-dashboard-card-packages">
+          <h2 className="agent-dashboard-card-heading">
+            <Package size={20} />
             Available Packages
           </h2>
-          <p className="agent-stat-label" style={{ marginBottom: '20px' }}>
+          <p className="agent-dashboard-card-desc">
             {dashboard?.packageName ? 'Upgrade your package to activate more businesses' : 'Purchase a package to start activating businesses'}
           </p>
 
           {packageError && (
-            <div style={{
-              padding: '12px 16px',
-              background: 'rgba(240, 144, 104, 0.1)',
-              border: '1px solid #F09068',
-              borderRadius: '8px',
-              color: '#F09068',
-              marginBottom: '16px',
-            }}>
+            <div className="agent-dashboard-card-alert agent-dashboard-card-alert-error">
               {packageError}
             </div>
           )}
 
           {packageSuccess && (
-            <div style={{
-              padding: '12px 16px',
-              background: 'rgba(56, 176, 104, 0.1)',
-              border: '1px solid #38B068',
-              borderRadius: '8px',
-              color: '#38B068',
-              marginBottom: '16px',
-            }}>
+            <div className="agent-dashboard-card-alert agent-dashboard-card-alert-success">
               {packageSuccess}
             </div>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+          <div className="agent-dashboard-package-cards">
             {packages.map((pkg) => {
               const isCurrentPackage = dashboard?.packageId === pkg.id;
               const isPurchasing = purchasingId === pkg.id;
@@ -260,63 +333,22 @@ export default function Dashboard() {
               return (
                 <div
                   key={pkg.id}
-                  style={{
-                    padding: '20px',
-                    background: isCurrentPackage ? 'rgba(124, 58, 237, 0.15)' : 'rgba(255, 255, 255, 0.03)',
-                    border: isCurrentPackage ? '2px solid #7c3aed' : '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '12px',
-                    position: 'relative',
-                  }}
+                  className={`agent-dashboard-package-card ${isCurrentPackage ? 'agent-dashboard-package-card-current' : ''}`}
                 >
-                  {pkg.isPopular && (
-                    <div style={{
-                      position: 'absolute',
-                      top: '12px',
-                      right: '12px',
-                      padding: '4px 8px',
-                      background: '#7c3aed',
-                      color: '#fff',
-                      borderRadius: '4px',
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                    }}>
-                      Popular
-                    </div>
-                  )}
+                  {pkg.isPopular && <span className="agent-dashboard-package-badge agent-dashboard-package-badge-popular">Popular</span>}
                   {isCurrentPackage && (
-                    <div style={{
-                      position: 'absolute',
-                      top: '12px',
-                      right: pkg.isPopular ? '60px' : '12px',
-                      padding: '4px 8px',
-                      background: '#38B068',
-                      color: '#fff',
-                      borderRadius: '4px',
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                    }}>
+                    <span className="agent-dashboard-package-badge agent-dashboard-package-badge-current">
                       <CheckCircle size={12} />
                       Current
-                    </div>
+                    </span>
                   )}
-                  <h3 style={{ margin: '0 0 8px 0', fontSize: '1.25rem', fontWeight: 700, color: '#fff' }}>
-                    {pkg.name}
-                  </h3>
+                  <h3 className="agent-dashboard-package-card-title">{pkg.name}</h3>
                   {pkg.description && (
-                    <p style={{ margin: '0 0 16px 0', fontSize: '0.875rem', color: 'rgba(255, 255, 255, 0.7)' }}>
-                      {pkg.description}
-                    </p>
+                    <p className="agent-dashboard-package-card-desc">{pkg.description}</p>
                   )}
-                  <div style={{ marginBottom: '16px' }}>
-                    <div style={{ fontSize: '2rem', fontWeight: 700, color: '#F0C674', marginBottom: '4px' }}>
-                      TZS {formatAmount(pkg.price)}
-                    </div>
-                    <div style={{ fontSize: '0.875rem', color: 'rgba(255, 255, 255, 0.7)' }}>
-                      Up to {pkg.numberOfBusinesses} businesses
-                    </div>
+                  <div className="agent-dashboard-package-card-price">
+                    <span className="agent-dashboard-package-card-amount">TZS {formatAmount(pkg.price)}</span>
+                    <span className="agent-stat-label">Up to {pkg.numberOfBusinesses} businesses</span>
                   </div>
                   <button
                     onClick={() => {
@@ -351,9 +383,9 @@ export default function Dashboard() {
       )}
 
       {!dashboard?.packageName && packages.length === 0 && (
-        <div className="agent-card" style={{ marginBottom: 24, background: 'rgba(240, 144, 104, 0.1)', borderColor: '#F09068' }}>
-          <p style={{ margin: 0, color: '#F09068' }}>
-            <AlertTriangle size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+        <div className="agent-dashboard-card agent-dashboard-card-error">
+          <p className="agent-dashboard-card-error-text">
+            <AlertTriangle size={18} />
             No package assigned. Please contact admin to assign a package.
           </p>
         </div>
@@ -556,74 +588,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="agent-dashboard-two-col">
-        {/* Recent activity */}
-        <div className="agent-card">
-          <h2 className="agent-card-title">Recent Activity</h2>
-          {activityItems.length === 0 ? (
-            <p className="agent-empty">No recent activity yet.</p>
-          ) : (
-            <ul className="agent-activity-list">
-              {activityItems.map((item) => (
-                <li key={item.id} className="agent-activity-item">
-                  <div className={`agent-activity-icon ${item.icon}`}>
-                    {item.type === 'commission' ? (
-                      <Banknote size={18} />
-                    ) : item.statusClass === 'success' ? (
-                      <CheckCircle2 size={18} />
-                    ) : (
-                      <AlertTriangle size={18} />
-                    )}
-                  </div>
-                  <div className="agent-activity-text">
-                    {item.title}
-                    {item.description && (
-                      <div className="agent-activity-meta">
-                        {item.description}
-                        {item.amount != null && (
-                          <span className="amount-gold" style={{ marginLeft: 8 }}>
-                            TZS {formatAmount(item.amount)}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    <div className="agent-activity-meta">{formatDate(item.createdAt)}</div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        {/* Business management & quick actions */}
-        <div className="agent-card">
-          <h2 className="agent-card-title">Quick Actions</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <Link to="/agent/requests" className="agent-btn-secondary">
-              <Inbox size={20} />
-              View business requests
-            </Link>
-            <Link to="/agent/activate" className="agent-btn-primary">
-              <Building2 size={20} />
-              Activate Business
-            </Link>
-            <Link to="/agent/commissions" className="agent-btn-ghost">
-              <TrendingUp size={20} />
-              View Commissions
-            </Link>
-            <Link to="/agent/withdrawals" className="agent-btn-ghost">
-              <Wallet size={20} />
-              Request Withdrawal
-            </Link>
-          </div>
-          <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid #6245A1' }}>
-            <div className="agent-stat-value" style={{ fontSize: '1.25rem' }}>
-              {dashboard?.totalBusinessesActivated ?? 0} businesses
-            </div>
-            <div className="agent-stat-label">Under your management</div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

@@ -112,47 +112,44 @@ export default function Activate() {
   };
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
-        <h1 className="agent-activate-title" style={{ margin: 0 }}>
-          <Building2 size={28} />
-          Activate Business
-        </h1>
-        <button
-          type="button"
-          className="agent-btn-ghost"
-          onClick={loadBusinesses}
-          disabled={loadingBusinesses}
-        >
-          <RefreshCw size={18} style={{ marginRight: '6px', animation: loadingBusinesses ? 'spin 1s linear infinite' : 'none' }} />
-          Refresh
-        </button>
-      </div>
+    <div className="agent-dashboard agent-dashboard-cards agent-page-centered">
+      <h1 className="agent-dashboard-title">Activate Business</h1>
 
       {error && (
-        <div className="agent-card" style={{ marginBottom: '24px', background: 'rgba(240, 144, 104, 0.1)', borderColor: '#F09068' }}>
-          <p className="agent-activate-message agent-activate-message--error" role="alert" style={{ margin: 0 }}>
-            <AlertCircle size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+        <div className="agent-dashboard-card agent-dashboard-card-error">
+          <div className="agent-dashboard-card-alert agent-dashboard-card-alert-error" role="alert">
+            <AlertCircle size={18} />
             {error}
-          </p>
+          </div>
         </div>
       )}
 
       {success && (
-        <div className="agent-card" style={{ marginBottom: '24px', background: 'rgba(56, 176, 104, 0.1)', borderColor: '#38B068' }}>
-          <p className="agent-activate-message agent-activate-message--success" role="status" style={{ margin: 0 }}>
-            <CheckCircle2 size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+        <div className="agent-dashboard-card" role="status">
+          <div className="agent-dashboard-card-alert agent-dashboard-card-alert-success">
+            <CheckCircle2 size={18} />
             {success}
-          </p>
+          </div>
         </div>
       )}
 
-      {/* Pending Business Requests List */}
-      <div className="agent-card">
-        <div className="agent-card-title">
-          Pending Business Activations ({pendingBusinesses.length})
+      <div className="agent-dashboard-card agent-dashboard-card-activate">
+        <div className="agent-dashboard-card-activate-header">
+          <h2 className="agent-dashboard-card-heading">
+            <Building2 size={20} />
+            Pending Business Activations ({pendingBusinesses.length})
+          </h2>
+          <button
+            type="button"
+            className="agent-btn-ghost"
+            onClick={loadBusinesses}
+            disabled={loadingBusinesses}
+          >
+            <RefreshCw size={18} style={{ animation: loadingBusinesses ? 'spin 1s linear infinite' : 'none' }} />
+            Refresh
+          </button>
         </div>
-        <p className="agent-stat-label" style={{ marginBottom: '20px', fontSize: '0.9rem' }}>
+        <p className="agent-dashboard-card-desc">
           Review and verify or cancel business activation requests. You can verify businesses that are waiting for payment or have completed payment.
         </p>
 

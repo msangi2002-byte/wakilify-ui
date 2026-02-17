@@ -67,19 +67,17 @@ export default function Commissions() {
   const totalPages = Math.ceil((data.totalElements || 0) / size);
 
   return (
-    <div className="agent-commissions">
-      <h1 style={{ margin: '0 0 24px 0', fontSize: '1.5rem', fontWeight: 700 }}>
-        Commissions
-      </h1>
-      <p style={{ color: 'rgba(255,255,255,0.8)', marginBottom: 24 }}>
+    <div className="agent-dashboard agent-dashboard-cards agent-page-centered">
+      <h1 className="agent-dashboard-title">Commissions</h1>
+      <p className="agent-dashboard-card-desc" style={{ marginBottom: 0 }}>
         Commission breakdown per activation and renewal. Amounts in TZS.
       </p>
       {error && (
-        <div className="agent-card" style={{ marginBottom: 20, borderColor: '#F09068' }}>
-          <p style={{ color: '#F09068', margin: 0 }}>{error}</p>
+        <div className="agent-dashboard-card agent-dashboard-card-error">
+          <p className="agent-dashboard-card-error-text">{error}</p>
         </div>
       )}
-      <div className="agent-card">
+      <div className="agent-dashboard-card agent-dashboard-card-commissions">
         {loading ? (
           <div className="agent-loading">Loading…</div>
         ) : list.length === 0 ? (
@@ -111,7 +109,7 @@ export default function Commissions() {
           </div>
         )}
         {totalPages > 1 && (
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 16 }}>
+          <div className="agent-dashboard-card-pagination">
             <button
               type="button"
               className="agent-btn-ghost"
@@ -120,7 +118,7 @@ export default function Commissions() {
             >
               Previous
             </button>
-            <span style={{ alignSelf: 'center', color: 'rgba(255,255,255,0.8)' }}>
+            <span className="agent-dashboard-card-pagination-label">
               Page {page + 1} of {totalPages}
             </span>
             <button

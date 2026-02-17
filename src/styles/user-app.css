@@ -350,6 +350,27 @@
   border-radius: 3px 3px 0 0;
 }
 
+.user-app-nav-item-badge {
+  position: relative;
+}
+
+.user-app-nav-item-badge .badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 50%;
+  background: #e41e3f;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .user-app-header-right {
   display: flex;
   align-items: center;
@@ -4964,6 +4985,27 @@
   .user-app-bottom-nav-item:hover,
   .user-app-bottom-nav-item.active {
     color: #7c3aed;
+  }
+
+  .user-app-bottom-nav-item-badge {
+    position: relative;
+  }
+
+  .user-app-bottom-nav-item-badge .badge {
+    position: absolute;
+    top: 2px;
+    left: calc(50% + 10px);
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 50%;
+    background: #e41e3f;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .user-app-body {
