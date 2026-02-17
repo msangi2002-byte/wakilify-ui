@@ -62,7 +62,7 @@ export function filterNavGroupsByRole(navGroups, adminRole) {
         const path = item.to.replace(/^\/admin\/?/, '').split('/')[0] || '';
         const area = PATH_TO_AREA[path];
         return area ? canAccessArea(adminRole, area) : true;
-      });
+      }),
     }))
     .filter((group) => group.items.length > 0);
 }
