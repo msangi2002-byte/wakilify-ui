@@ -1,15 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Users as UsersIcon, Search, Eye, Mail, Phone, Shield, CheckCircle, XCircle, UserPlus, UserMinus, BadgeCheck, Ban, Download, LogIn } from 'lucide-react';
-import { getAdminUsers, updateUserStatus, updateUserRole, verifyUser, exportUsersCsv, impersonateUser, setUserAdminRole } from '@/lib/api/admin';
+import { getAdminUsers, updateUserStatus, updateUserRole, verifyUser, exportUsersCsv, impersonateUser, setUserAdminRole, createAdminUser } from '@/lib/api/admin';
 import { openImpersonateSession } from '@/pages/auth/Impersonate';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import { showAdminToast } from '@/lib/adminToast';
 import { useAuthStore } from '@/store/auth.store';
-import { getEffectiveAdminRole, ADMIN_ROLES } from '@/lib/adminRoles';
+import { getEffectiveAdminRole, ADMIN_ROLES, ADMIN_ROLE_LABELS } from '@/lib/adminRoles';
 
 const ROLES = ['USER', 'BUSINESS', 'AGENT', 'ADMIN', 'VISITOR'];
-const ADMIN_ROLE_LABELS = { SUPER_ADMIN: 'Super Admin', MODERATOR: 'Moderator', SUPPORT_AGENT: 'Support', FINANCE_MANAGER: 'Finance' };
 
 export default function Users() {
   const { user: currentUser } = useAuthStore();
@@ -20,6 +19,9 @@ export default function Users() {
   const [success, setSuccess] = useState('');
   const [page, setPage] = useState(0);
   const [roleModal, setRoleModal] = useState(null);
+  const [createModal, setCreateModal] = useState(false);
+  const [createForm, setCreateForm] = useState({ name: '', phone: '', email: '', password: '', role: 'USER', adminRole: 'SUPER_ADMIN' });
+  const [createLoading, setCreateLoading] = useState(false);
   const [size] = useState(20);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
@@ -134,6 +136,32 @@ export default function Users() {
       loadUsers();
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to update admin role'));
+    }
+  };
+
+  const handleCreateUser = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    if (!createForm.name.trim() || !createForm.phone.trim() || !createForm.password.trim()) {
+      setError('Name, phone and password are required');
+      return;
+    }
+    setCreateLoading(true);
+    try {
+      const body = { name: createForm.name.trim(), phone: createForm.phone.trim(), password: createForm.password, role: createForm.role };
+      if (createForm.email?.trim()) body.email = createForm.email.trim();
+      if (createForm.role === 'ADMIN') body.adminRole = createForm.adminRole;
+      const created = await createAdminUser(body);
+      setSuccess(`User "${created?.name}" created. They can log in with phone/email and password.`);
+      showAdminToast('User created', 'success');
+      setCreateModal(false);
+      setCreateForm({ name: '', phone: '', email: '', password: '', role: 'USER', adminRole: 'SUPER_ADMIN' });
+      loadUsers();
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Failed to create user'));
+    } finally {
+      setCreateLoading(false);
     }
   };
 
@@ -275,15 +303,26 @@ export default function Users() {
             Search
           </button>
           {isSuperAdmin && (
-            <button
-              type="button"
-              className="admin-btn-secondary"
-              style={{ whiteSpace: 'nowrap' }}
-              onClick={handleExportCsv}
-            >
-              <Download size={18} />
-              Export CSV
-            </button>
+            <>
+              <button
+                type="button"
+                className="admin-btn-primary"
+                style={{ whiteSpace: 'nowrap' }}
+                onClick={() => setCreateModal(true)}
+              >
+                <UserPlus size={18} />
+                Create user
+              </button>
+              <button
+                type="button"
+                className="admin-btn-secondary"
+                style={{ whiteSpace: 'nowrap' }}
+                onClick={handleExportCsv}
+              >
+                <Download size={18} />
+                Export CSV
+              </button>
+            </>
           )}
         </form>
 
@@ -344,11 +383,9 @@ export default function Users() {
                     <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.875rem', fontWeight: 600 }}>
                       Role
                     </th>
-                    {isSuperAdmin && (
-                      <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.875rem', fontWeight: 600 }}>
-                        Admin role
-                      </th>
-                    )}
+                    <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.875rem', fontWeight: 600 }}>
+                      Admin role
+                    </th>
                     <th style={{ padding: '12px', textAlign: 'left', color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.875rem', fontWeight: 600 }}>
                       Status
                     </th>
@@ -447,31 +484,35 @@ export default function Users() {
                             {user.role || 'USER'}
                           </span>
                         </td>
-                        {isSuperAdmin && (
-                          <td style={{ padding: '16px 12px' }}>
+                        <td style={{ padding: '16px 12px' }}>
                             {user.role === 'ADMIN' ? (
-                              <select
-                                value={user.adminRole || 'SUPER_ADMIN'}
-                                onChange={(e) => handleAdminRoleChange(user.id, e.target.value)}
-                                style={{
-                                  padding: '6px 10px',
-                                  background: 'rgba(255, 255, 255, 0.08)',
-                                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                                  borderRadius: '6px',
-                                  color: '#fff',
-                                  fontSize: '0.8rem',
-                                  cursor: 'pointer',
-                                }}
-                              >
-                                {ADMIN_ROLES.map((r) => (
-                                  <option key={r} value={r}>{ADMIN_ROLE_LABELS[r] || r}</option>
-                                ))}
-                              </select>
+                              isSuperAdmin ? (
+                                <select
+                                  value={user.adminRole || 'SUPER_ADMIN'}
+                                  onChange={(e) => handleAdminRoleChange(user.id, e.target.value)}
+                                  style={{
+                                    padding: '6px 10px',
+                                    background: 'rgba(255, 255, 255, 0.08)',
+                                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                                    borderRadius: '6px',
+                                    color: '#fff',
+                                    fontSize: '0.8rem',
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  {ADMIN_ROLES.map((r) => (
+                                    <option key={r} value={r}>{ADMIN_ROLE_LABELS[r] || r}</option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <span style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: '0.8rem' }}>
+                                  {ADMIN_ROLE_LABELS[user.adminRole || 'SUPER_ADMIN'] || user.adminRole || 'Super Admin'}
+                                </span>
+                              )
                             ) : (
                               <span style={{ color: 'rgba(255, 255, 255, 0.4)', fontSize: '0.8rem' }}>—</span>
                             )}
                           </td>
-                        )}
                         <td style={{ padding: '16px 12px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             {user.isActive ? (
@@ -625,9 +666,14 @@ export default function Users() {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 style={{ margin: '0 0 16px 0', color: '#fff' }}>Change Role</h3>
-            <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: '16px', fontSize: '0.9rem' }}>
+            <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: '8px', fontSize: '0.9rem' }}>
               {roleModal.name} – current: {roleModal.currentRole}
             </p>
+            {roleModal.currentRole === 'ADMIN' && (
+              <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '16px', fontSize: '0.8rem' }}>
+                Admin sub-role (Super Admin, Moderator, Support, Finance) is set in the <strong>Admin role</strong> column in the table.
+              </p>
+            )}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
               {ROLES.filter((r) => r !== roleModal.currentRole).map((role) => (
                 <button
@@ -644,6 +690,117 @@ export default function Users() {
             <button type="button" onClick={() => setRoleModal(null)} className="admin-btn-ghost" style={{ width: '100%' }}>
               Cancel
             </button>
+          </div>
+        </div>
+      )}
+
+      {createModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="create-user-title"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => setCreateModal(false)}
+        >
+          <div
+            className="admin-card"
+            style={{ maxWidth: '420px', width: '90%' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="create-user-title" style={{ margin: '0 0 16px 0', color: '#fff' }}>Create user</h3>
+            <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '16px', fontSize: '0.875rem' }}>
+              Create a new user. They can log in with phone/email and password.
+            </p>
+            <form onSubmit={handleCreateUser} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label className="admin-label" style={{ marginBottom: 6 }}>Name *</label>
+                <input
+                  type="text"
+                  className="admin-input"
+                  value={createForm.name}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, name: e.target.value }))}
+                  placeholder="Full name"
+                  required
+                />
+              </div>
+              <div>
+                <label className="admin-label" style={{ marginBottom: 6 }}>Phone *</label>
+                <input
+                  type="text"
+                  className="admin-input"
+                  value={createForm.phone}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, phone: e.target.value }))}
+                  placeholder="+255..."
+                  required
+                />
+              </div>
+              <div>
+                <label className="admin-label" style={{ marginBottom: 6 }}>Email (optional)</label>
+                <input
+                  type="email"
+                  className="admin-input"
+                  value={createForm.email}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))}
+                  placeholder="user@example.com"
+                />
+              </div>
+              <div>
+                <label className="admin-label" style={{ marginBottom: 6 }}>Password *</label>
+                <input
+                  type="password"
+                  className="admin-input"
+                  value={createForm.password}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, password: e.target.value }))}
+                  placeholder="Min 6 characters"
+                  required
+                  minLength={6}
+                />
+              </div>
+              <div>
+                <label className="admin-label" style={{ marginBottom: 6 }}>Role *</label>
+                <select
+                  className="admin-input"
+                  value={createForm.role}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, role: e.target.value }))}
+                  style={{ cursor: 'pointer' }}
+                >
+                  {ROLES.map((r) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+              </div>
+              {createForm.role === 'ADMIN' && (
+                <div>
+                  <label className="admin-label" style={{ marginBottom: 6 }}>Admin role</label>
+                  <select
+                    className="admin-input"
+                    value={createForm.adminRole}
+                    onChange={(e) => setCreateForm((f) => ({ ...f, adminRole: e.target.value }))}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {ADMIN_ROLES.map((r) => (
+                      <option key={r} value={r}>{ADMIN_ROLE_LABELS[r] || r}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                <button type="submit" className="admin-btn-primary" disabled={createLoading}>
+                  {createLoading ? 'Creating...' : 'Create'}
+                </button>
+                <button type="button" onClick={() => setCreateModal(false)} className="admin-btn-ghost">
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

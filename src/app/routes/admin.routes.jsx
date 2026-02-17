@@ -18,6 +18,7 @@ const Reports = lazy(() => import('@/pages/admin/Reports'));
 const AuditLogs = lazy(() => import('@/pages/admin/AuditLogs'));
 const Settings = lazy(() => import('@/pages/admin/Settings'));
 const AgentPackages = lazy(() => import('@/pages/admin/AgentPackages'));
+const AdminRoles = lazy(() => import('@/pages/admin/AdminRoles'));
 const MapView = lazy(() => import('@/pages/admin/MapView'));
 
 const SuspenseWrapper = ({ children }) => <Suspense fallback={null}>{children}</Suspense>;
@@ -38,6 +39,7 @@ export function AdminRoutes() {
       <Route path="map" element={<SuspenseWrapper><MapView /></SuspenseWrapper>} />
       <Route path="audit-logs" element={<SuspenseWrapper><AuditLogs /></SuspenseWrapper>} />
       <Route path="agent-packages" element={<SuspenseWrapper><AgentPackages /></SuspenseWrapper>} />
+      <Route path="roles" element={<SuspenseWrapper><AdminRoles /></SuspenseWrapper>} />
       <Route path="settings" element={<SuspenseWrapper><Settings /></SuspenseWrapper>} />
     </Route>
   );
