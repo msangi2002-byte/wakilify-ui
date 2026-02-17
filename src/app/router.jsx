@@ -16,6 +16,7 @@ import { ROLES } from '@/types/roles';
 const Register = lazy(() => import('@/pages/auth/Register'));
 const Otp = lazy(() => import('@/pages/auth/Otp'));
 const Login = lazy(() => import('@/pages/auth/Login'));
+const Impersonate = lazy(() => import('@/pages/auth/Impersonate'));
 
 const Home = lazy(() => import('@/pages/user/Home'));
 const Explore = lazy(() => import('@/pages/user/Explore'));
@@ -93,6 +94,7 @@ const router = createBrowserRouter([
           { path: 'register', element: <Suspense fallback={<Fallback />}><Register /></Suspense> },
           { path: 'otp', element: <Suspense fallback={<Fallback />}><Otp /></Suspense> },
           { path: 'login', element: <Suspense fallback={<Fallback />}><Login /></Suspense> },
+          { path: 'impersonate', element: <Suspense fallback={<Fallback />}><Impersonate /></Suspense> },
         ],
       },
       {

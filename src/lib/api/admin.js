@@ -196,6 +196,40 @@ export async function exportUsersCsv() {
   URL.revokeObjectURL(url);
 }
 
+export async function impersonateUser(userId) {
+  const { data } = await api.post(`${base}/users/${userId}/impersonate`);
+  return data?.data ?? data;
+}
+
+export async function getAdminOrders(params = {}) {
+  const { data } = await api.get(`${base}/orders`, { params });
+  return data?.data ?? data;
+}
+
+export async function getAdminOrderById(orderId) {
+  const { data } = await api.get(`${base}/orders/${orderId}`);
+  return data?.data ?? data;
+}
+
+export async function updateOrderStatus(orderId, body) {
+  const { data } = await api.put(`${base}/orders/${orderId}/status`, body);
+  return data?.data ?? data;
+}
+
+export async function getAdminProducts(params = {}) {
+  const { data } = await api.get(`${base}/products`, { params });
+  return data?.data ?? data;
+}
+
+export async function setProductActive(productId, isActive) {
+  const { data } = await api.put(`${base}/products/${productId}/active`, { isActive });
+  return data?.data ?? data;
+}
+
+export async function deleteProduct(productId) {
+  await api.delete(`${base}/products/${productId}`);
+}
+
 export async function exportBusinessesCsv() {
   const { data } = await api.get(`${base}/businesses/export`, { responseType: 'blob' });
   const url = URL.createObjectURL(new Blob([data], { type: 'text/csv' }));

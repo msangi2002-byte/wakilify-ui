@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Users as UsersIcon, Search, Eye, Mail, Phone, Shield, CheckCircle, XCircle, UserPlus, UserMinus, BadgeCheck, Ban, Download } from 'lucide-react';
-import { getAdminUsers, updateUserStatus, updateUserRole, verifyUser, exportUsersCsv } from '@/lib/api/admin';
+import { Users as UsersIcon, Search, Eye, Mail, Phone, Shield, CheckCircle, XCircle, UserPlus, UserMinus, BadgeCheck, Ban, Download, LogIn } from 'lucide-react';
+import { getAdminUsers, updateUserStatus, updateUserRole, verifyUser, exportUsersCsv, impersonateUser } from '@/lib/api/admin';
+import { openImpersonateSession } from '@/pages/auth/Impersonate';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 
 const ROLES = ['USER', 'BUSINESS', 'AGENT', 'ADMIN', 'VISITOR'];
@@ -108,6 +109,17 @@ export default function Users() {
       setSuccess('CSV exported');
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to export CSV'));
+    }
+  };
+
+  const handleAccessAccount = async (user) => {
+    setError('');
+    try {
+      const auth = await impersonateUser(user.id);
+      openImpersonateSession(auth);
+      setSuccess('Opened account in new tab');
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Failed to access account'));
     }
   };
 
@@ -423,6 +435,16 @@ export default function Users() {
                         <td style={{ padding: '16px 12px' }}>
                           {userId ? (
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center', justifyContent: 'flex-end' }}>
+                              <button
+                                type="button"
+                                onClick={() => handleAccessAccount(user)}
+                                className="admin-btn-primary"
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '0.8rem' }}
+                                title="Access account (open as user)"
+                              >
+                                <LogIn size={14} />
+                                Access Account
+                              </button>
                               <Link
                                 to={`/app/profile/${userId}`}
                                 className="admin-btn-ghost"
