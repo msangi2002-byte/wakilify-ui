@@ -193,9 +193,15 @@ export async function getAdminChartData(days = 30) {
   return data?.data ?? data;
 }
 
-// Map locations
+// Map locations (users, agents, businesses with coordinates)
 export async function getMapLocations() {
   const { data } = await api.get(`${base}/map/locations`);
+  return data?.data ?? data;
+}
+
+// Map stats (by continent, country, type)
+export async function getMapStats() {
+  const { data } = await api.get(`${base}/map/stats`);
   return data?.data ?? data;
 }
 

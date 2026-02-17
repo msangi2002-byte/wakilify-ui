@@ -1704,3 +1704,345 @@
 .admin-roles-footer-note strong {
   color: rgba(255, 255, 255, 0.75);
 }
+
+/* ==================== MAP VIEW PAGE ==================== */
+.map-view-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.map-view-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.map-view-header-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.25), rgba(99, 102, 241, 0.2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #a78bfa;
+}
+
+.map-view-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 4px 0;
+}
+
+.map-view-subtitle {
+  color: rgba(255, 255, 255, 0.65);
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.map-view-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.map-view-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.map-view-tab:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.map-view-tab-active {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(124, 58, 237, 0.2));
+  border-color: rgba(99, 102, 241, 0.4);
+  color: #fff;
+}
+
+.map-view-empty {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 24px;
+  background: rgba(26, 26, 46, 0.95);
+  color: rgba(255, 255, 255, 0.7);
+  border-radius: 12px;
+  text-align: center;
+  z-index: 1000;
+}
+
+.map-view-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.map-view-loading,
+.map-view-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 24px;
+  color: rgba(255, 255, 255, 0.6);
+  text-align: center;
+}
+
+.map-view-empty-state p {
+  margin: 12px 0 0 0;
+  font-size: 0.95rem;
+}
+
+.map-view-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.map-view-summary-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.map-view-summary-icon {
+  color: #818cf8;
+  opacity: 0.9;
+}
+
+.map-view-summary-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.map-view-summary-label {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.map-view-table-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.map-view-section-title {
+  margin: 0 0 20px 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.map-view-continent-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.map-view-continent-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.map-view-continent-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.map-view-continent-rank {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  min-width: 28px;
+}
+
+.map-view-continent-name {
+  flex: 1;
+  font-weight: 600;
+  color: #f8fafc;
+  font-size: 1rem;
+}
+
+.map-view-continent-total {
+  font-weight: 700;
+  color: #818cf8;
+  font-size: 1.1rem;
+}
+
+.map-view-continent-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.map-view-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.map-view-bar-row span:last-child {
+  min-width: 28px;
+  text-align: right;
+}
+
+.map-view-bar-track {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.map-view-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.map-view-countries-table-wrap {
+  overflow-x: auto;
+}
+
+.map-view-countries-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.map-view-countries-table th,
+.map-view-countries-table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.map-view-countries-table th {
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.map-view-countries-table td {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.map-view-country-name {
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.map-view-continent-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  background: rgba(99, 102, 241, 0.15);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: #a5b4fc;
+}
+
+.map-view-bytype-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.map-view-type-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid;
+  cursor: default;
+}
+
+.map-view-type-icon {
+  flex-shrink: 0;
+}
+
+.map-view-type-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.map-view-type-label {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.map-view-type-count {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.map-view-type-pct {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.map-view-breakdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.map-view-breakdown-row {
+  display: grid;
+  grid-template-columns: 24px 100px 1fr 48px;
+  align-items: center;
+  gap: 16px;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.map-view-breakdown-bar {
+  height: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.map-view-breakdown-value {
+  font-weight: 600;
+  text-align: right;
+}
