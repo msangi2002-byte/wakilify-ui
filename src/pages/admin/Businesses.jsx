@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Building2 as Building2Icon, Search, Eye, Mail, Phone, Shield, CheckCircle, XCircle, MapPin, User, Star, Download } from 'lucide-react';
-import { getAdminBusinesses, updateBusinessStatus, verifyBusiness, exportBusinessesCsv } from '@/lib/api/admin';
+import { Building2 as Building2Icon, Search, Eye, Mail, Phone, Shield, CheckCircle, XCircle, MapPin, User, Star, Download, LogIn } from 'lucide-react';
+import { getAdminBusinesses, updateBusinessStatus, verifyBusiness, exportBusinessesCsv, impersonateUser } from '@/lib/api/admin';
+import { openImpersonateSession } from '@/pages/auth/Impersonate';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 
 export default function Businesses() {
@@ -69,6 +70,17 @@ export default function Businesses() {
       await exportBusinessesCsv();
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to export CSV'));
+    }
+  };
+
+  const handleAccessAccount = async (business) => {
+    const ownerId = business.owner?.id;
+    if (!ownerId) return;
+    try {
+      const auth = await impersonateUser(ownerId);
+      openImpersonateSession(auth);
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Failed to access account'));
     }
   };
 
@@ -375,6 +387,25 @@ export default function Businesses() {
                         </td>
                         <td style={{ padding: '16px 12px', textAlign: 'center' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center' }}>
+                            {business.owner?.id && (
+                              <button
+                                onClick={() => handleAccessAccount(business)}
+                                className="admin-btn-primary"
+                                style={{ padding: '6px 12px', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                                title="Access as owner"
+                              >
+                                <LogIn size={12} /> Access
+                              </button>
+                            )}
+                            {business.owner?.id && (
+                              <Link
+                                to={`/app/profile/${business.owner.id}`}
+                                className="admin-btn-ghost"
+                                style={{ padding: '6px 12px', fontSize: '0.75rem', textDecoration: 'none' }}
+                              >
+                                <Eye size={12} /> View
+                              </Link>
+                            )}
                             {!business.isVerified && business.status === 'ACTIVE' && (
                               <button
                                 onClick={() => handleVerify(business.id)}

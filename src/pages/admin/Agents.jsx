@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { UserCheck as UserCheckIcon, Search, Eye, Shield, CheckCircle, XCircle, DollarSign, Building2 } from 'lucide-react';
-import { getAdminAgents, updateAgentStatus, verifyAgent } from '@/lib/api/admin';
+import { UserCheck as UserCheckIcon, Search, Eye, Shield, CheckCircle, XCircle, DollarSign, Building2, LogIn } from 'lucide-react';
+import { getAdminAgents, updateAgentStatus, verifyAgent, impersonateUser } from '@/lib/api/admin';
+import { openImpersonateSession } from '@/pages/auth/Impersonate';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 
 export default function Agents() {
@@ -61,6 +62,16 @@ export default function Agents() {
       loadAgents();
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to verify agent'));
+    }
+  };
+
+  const handleAccessAccount = async (agent) => {
+    if (!agent.userId) return;
+    try {
+      const auth = await impersonateUser(agent.userId);
+      openImpersonateSession(auth);
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Failed to access account'));
     }
   };
 
@@ -345,6 +356,25 @@ export default function Agents() {
                         </td>
                         <td style={{ padding: '16px 12px', textAlign: 'center' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center' }}>
+                            {agent.userId && (
+                              <button
+                                onClick={() => handleAccessAccount(agent)}
+                                className="admin-btn-primary"
+                                style={{ padding: '6px 12px', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                                title="Access as user"
+                              >
+                                <LogIn size={12} /> Access
+                              </button>
+                            )}
+                            {agent.userId && (
+                              <Link
+                                to={`/app/profile/${agent.userId}`}
+                                className="admin-btn-ghost"
+                                style={{ padding: '6px 12px', fontSize: '0.75rem', textDecoration: 'none' }}
+                              >
+                                <Eye size={12} /> View
+                              </Link>
+                            )}
                             {!agent.isVerified && agent.status === 'ACTIVE' && (
                               <button
                                 onClick={() => handleVerify(agent.id)}
