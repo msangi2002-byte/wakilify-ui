@@ -27,6 +27,12 @@ export async function updateUserRole(userId, role, reason = '') {
   return data?.data ?? data;
 }
 
+/** Set admin sub-role (SUPER_ADMIN only). Body: { adminRole: 'MODERATOR' | 'SUPPORT_AGENT' | 'FINANCE_MANAGER' } */
+export async function setUserAdminRole(userId, adminRole) {
+  const { data } = await api.put(`${base}/users/${userId}/admin-role`, { adminRole });
+  return data?.data ?? data;
+}
+
 export async function verifyUser(userId) {
   const { data } = await api.post(`${base}/users/${userId}/verify`);
   return data?.data ?? data;
