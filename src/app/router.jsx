@@ -73,6 +73,7 @@ const Reports = lazy(() => import('@/pages/admin/Reports'));
 const AuditLogs = lazy(() => import('@/pages/admin/AuditLogs'));
 const AdminSettings = lazy(() => import('@/pages/admin/Settings'));
 const AgentPackages = lazy(() => import('@/pages/admin/AgentPackages'));
+const AdminRoles = lazy(() => import('@/pages/admin/AdminRoles'));
 const MapView = lazy(() => import('@/pages/admin/MapView'));
 
 const NotFound = lazy(() => import('@/pages/NotFound'));
@@ -207,6 +208,7 @@ const router = createBrowserRouter([
           { path: 'map', element: <Suspense fallback={<Fallback />}><MapView /></Suspense> },
           { path: 'audit-logs', element: <Suspense fallback={<Fallback />}><AuditLogs /></Suspense> },
           { path: 'agent-packages', element: <Suspense fallback={<Fallback />}><AgentPackages /></Suspense> },
+          { path: 'roles', element: <Suspense fallback={<Fallback />}><AdminRoles /></Suspense> },
           { path: 'settings', element: <Suspense fallback={<Fallback />}><AdminSettings /></Suspense> },
         ],
       },

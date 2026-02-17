@@ -13,6 +13,7 @@ import {
   BarChart3,
   FileText,
   Settings,
+  Shield,
   ArrowLeft,
   Menu,
   X,
@@ -31,7 +32,7 @@ import { useAuthStore } from '@/store/auth.store';
 import { logout as logoutApi } from '@/lib/api/auth';
 import { clearAuth } from '@/store/auth.store';
 import GlobalSearch from '@/components/admin/GlobalSearch';
-import { getEffectiveAdminRole, filterNavGroupsByRole, canAccessPath } from '@/lib/adminRoles';
+import { getEffectiveAdminRole, filterNavGroupsByRole, canAccessPath, getAdminRoleLabel } from '@/lib/adminRoles';
 import '@/styles/admin.css';
 
 const navGroups = [
@@ -40,7 +41,7 @@ const navGroups = [
   { label: 'Business', items: [{ to: '/admin/businesses', end: false, icon: Building2, label: 'Businesses' }, { to: '/admin/products', end: false, icon: Package, label: 'Products' }, { to: '/admin/orders', end: false, icon: ShoppingBag, label: 'Orders' }] },
   { label: 'Financial', items: [{ to: '/admin/payments', end: false, icon: CreditCard, label: 'Payments' }, { to: '/admin/withdrawals', end: false, icon: Wallet, label: 'Withdrawals' }] },
   { label: 'Content & Moderation', items: [{ to: '/admin/promotions', end: false, icon: Megaphone, label: 'Promotions' }, { to: '/admin/reports', end: false, icon: BarChart3, label: 'Reports' }, { to: '/admin/audit-logs', end: false, icon: FileText, label: 'Audit Logs' }] },
-  { label: 'System', items: [{ to: '/admin/agent-packages', end: false, icon: Box, label: 'Agent Packages' }, { to: '/admin/settings', end: false, icon: Settings, label: 'Settings' }] },
+  { label: 'System', items: [{ to: '/admin/roles', end: false, icon: Shield, label: 'Roles & Access' }, { to: '/admin/agent-packages', end: false, icon: Box, label: 'Agent Packages' }, { to: '/admin/settings', end: false, icon: Settings, label: 'Settings' }] },
 ];
 
 export default function AdminLayout() {
@@ -171,6 +172,7 @@ export default function AdminLayout() {
     reports: 'Reports',
     'audit-logs': 'Audit Logs',
     'agent-packages': 'Agent Packages',
+    roles: 'Roles & Access',
     settings: 'Settings',
   };
   const breadcrumbs = [
@@ -257,7 +259,7 @@ export default function AdminLayout() {
                     {displayEmail && <span className="admin-user-dropdown-email">{displayEmail}</span>}
                   </div>
                 </div>
-                <div className="admin-user-dropdown-role">Administrator</div>
+                <div className="admin-user-dropdown-role">{getAdminRoleLabel(adminRole)}</div>
                 <Link
                   to="/app/profile"
                   className="admin-user-dropdown-item"

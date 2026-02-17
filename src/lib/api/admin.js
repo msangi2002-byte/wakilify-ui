@@ -17,6 +17,32 @@ export async function getAdminUsers(params = {}) {
   return data?.data ?? data;
 }
 
+/** Create user (Super Admin only). Body: { name, phone, email?, password, role, adminRole? } */
+export async function createAdminUser(body) {
+  const { data } = await api.post(`${base}/users`, body);
+  return data?.data ?? data;
+}
+
+/** Role definitions (Super Admin only) */
+export async function getRoleDefinitions() {
+  const { data } = await api.get(`${base}/role-definitions`);
+  return data?.data ?? data;
+}
+
+export async function createRoleDefinition(body) {
+  const { data } = await api.post(`${base}/role-definitions`, body);
+  return data?.data ?? data;
+}
+
+export async function updateRoleDefinition(id, body) {
+  const { data } = await api.put(`${base}/role-definitions/${id}`, body);
+  return data?.data ?? data;
+}
+
+export async function deleteRoleDefinition(id) {
+  await api.delete(`${base}/role-definitions/${id}`);
+}
+
 export async function updateUserStatus(userId, isActive, reason = '') {
   const { data } = await api.put(`${base}/users/${userId}/status`, { isActive, reason });
   return data?.data ?? data;

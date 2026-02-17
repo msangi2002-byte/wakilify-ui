@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Users, Building2, UserCheck, CreditCard, FileText, MapPin, Settings } from 'lucide-react';
+import { Search, Users, Building2, UserCheck, CreditCard, FileText, MapPin, Settings, Shield } from 'lucide-react';
 
 const QUICK_LINKS = [
   { path: '/admin', label: 'Dashboard', icon: Search },
@@ -10,6 +10,7 @@ const QUICK_LINKS = [
   { path: '/admin/payments', label: 'Payments', icon: CreditCard },
   { path: '/admin/reports', label: 'Reports', icon: FileText },
   { path: '/admin/map', label: 'Map', icon: MapPin },
+  { path: '/admin/roles', label: 'Roles & Access', icon: Shield },
   { path: '/admin/settings', label: 'Settings', icon: Settings },
 ];
 
