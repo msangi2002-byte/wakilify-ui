@@ -4,6 +4,7 @@ import { Building2, UserPlus, Package, AlertTriangle } from 'lucide-react';
 import { activateBusiness } from '@/lib/api/agent';
 import { getFeeAmounts } from '@/lib/api/config';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
+import { useGeolocation } from '@/hooks/useGeolocation';
 import '@/styles/agent.css';
 
 function formatTzs(amount) {
@@ -13,6 +14,7 @@ function formatTzs(amount) {
 }
 
 export default function Requests() {
+  const { position: geoPosition } = useGeolocation(); // background: capture location for map
   const [businessActivationAmount, setBusinessActivationAmount] = useState(null);
   const [businessName, setBusinessName] = useState('');
   const [ownerName, setOwnerName] = useState('');
@@ -68,6 +70,8 @@ export default function Requests() {
         ...(ward.trim() && { ward: ward.trim() }),
         ...(street.trim() && { street: street.trim() }),
         ...(description.trim() && { description: description.trim() }),
+        ...(geoPosition?.latitude != null && { latitude: geoPosition.latitude }),
+        ...(geoPosition?.longitude != null && { longitude: geoPosition.longitude }),
       });
       setSuccess('Business activation initiated. Give the owner their email/phone and password so they can log in after payment, then go to the business dashboard.');
       setBusinessName('');

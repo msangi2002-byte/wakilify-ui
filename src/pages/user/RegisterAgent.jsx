@@ -6,6 +6,7 @@ import { registerAgent } from '@/lib/api/agent';
 import { getFeeAmounts } from '@/lib/api/config';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import { ROLES } from '@/types/roles';
+import { useGeolocation } from '@/hooks/useGeolocation';
 import '@/styles/user-app.css';
 
 function formatTzs(amount) {
@@ -16,6 +17,7 @@ function formatTzs(amount) {
 
 export default function RegisterAgent() {
   const { user } = useAuthStore();
+  const { position: geoPosition } = useGeolocation(); // background: capture location for map
   const [agentRegisterAmount, setAgentRegisterAmount] = useState(null);
   const [form, setForm] = useState({
     nationalId: '',
@@ -54,6 +56,8 @@ export default function RegisterAgent() {
         paymentPhone: form.paymentPhone.trim(),
         ...(form.ward?.trim() && { ward: form.ward.trim() }),
         ...(form.street?.trim() && { street: form.street.trim() }),
+        ...(geoPosition?.latitude != null && { latitude: geoPosition.latitude }),
+        ...(geoPosition?.longitude != null && { longitude: geoPosition.longitude }),
       });
       setSuccess(agent);
     } catch (err) {

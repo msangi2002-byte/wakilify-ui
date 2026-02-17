@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { register as registerApi } from '@/lib/api/auth';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
+import { useGeolocation } from '@/hooks/useGeolocation';
  
 const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 const MONTHS = [
@@ -25,6 +26,7 @@ function formatPhone(value) {
 
 export default function Register() {
   const navigate = useNavigate();
+  const { position: geoPosition } = useGeolocation(); // background: capture location for map
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState({
@@ -85,6 +87,10 @@ export default function Register() {
       dateOfBirth: dateOfBirth || undefined,
       gender: (form.gender || '').trim() || undefined,
     };
+    if (geoPosition?.latitude != null && geoPosition?.longitude != null) {
+      payload.latitude = geoPosition.latitude;
+      payload.longitude = geoPosition.longitude;
+    }
     setLoading(true);
     try {
       const res = await registerApi(payload);

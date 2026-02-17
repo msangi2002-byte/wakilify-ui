@@ -21,6 +21,8 @@ export async function register(payload) {
   };
   if (payload.dateOfBirth != null) body.dateOfBirth = payload.dateOfBirth;
   if (payload.gender != null && payload.gender !== '') body.gender = payload.gender;
+  if (payload.latitude != null && typeof payload.latitude === 'number') body.latitude = payload.latitude;
+  if (payload.longitude != null && typeof payload.longitude === 'number') body.longitude = payload.longitude;
   const { data } = await api.post('/auth/register', body);
   return data;
 }

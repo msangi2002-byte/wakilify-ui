@@ -1,18 +1,33 @@
 import { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import { Building2, MapPin } from 'lucide-react';
+import { Building2, MapPin, User, UserCircle } from 'lucide-react';
 import { getMapLocations } from '@/lib/api/admin';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import 'leaflet/dist/leaflet.css';
 
-// Fix default marker icon in react-leaflet
 import L from 'leaflet';
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-});
+
+// Custom map icons by type: USER, AGENT, BUSINESS (no image files needed)
+const ICON_STYLES = {
+  USER:   { bg: '#3b82f6', label: 'U', title: 'User' },    // blue
+  AGENT:  { bg: '#8b5cf6', label: 'A', title: 'Agent' },   // violet
+  BUSINESS: { bg: '#10b981', label: 'B', title: 'Business' }, // emerald
+};
+
+function createMapIcon(type) {
+  const style = ICON_STYLES[type] || ICON_STYLES.USER;
+  return L.divIcon({
+    className: 'map-marker-custom',
+    html: `<div style="
+      width:28px;height:28px;border-radius:50%;
+      background:${style.bg};color:#fff;font-size:12px;font-weight:700;
+      display:flex;align-items:center;justify-content:center;
+      border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);
+    " title="${style.title}">${style.label}</div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+  });
+}
 
 const DEFAULT_CENTER = [-6.3690, 34.8888]; // Tanzania center
 const DEFAULT_ZOOM = 6;
@@ -86,7 +101,7 @@ export default function MapView() {
               Map View
             </h1>
             <p style={{ color: 'rgba(255, 255, 255, 0.7)', margin: 0, fontSize: '0.9rem' }}>
-              Businesses with location on OpenStreetMap • {locations.length} locations
+              Users, agents & businesses with location (from registration) • {locations.length} locations
             </p>
           </div>
         </div>
@@ -103,23 +118,30 @@ export default function MapView() {
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-            {locations.map((loc) => (
-              <Marker
-                key={loc.id}
-                position={[loc.latitude, loc.longitude]}
-              >
-                <Popup>
-                  <div style={{ minWidth: '180px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                      <Building2 size={18} color="#7c3aed" />
-                      <strong style={{ color: '#1a1a2e' }}>{loc.name}</strong>
+            {locations.map((loc) => {
+              const type = (loc.type || 'USER').toUpperCase();
+              return (
+                <Marker
+                  key={`${type}-${loc.id}`}
+                  position={[loc.latitude, loc.longitude]}
+                  icon={createMapIcon(type)}
+                >
+                  <Popup>
+                    <div style={{ minWidth: '180px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                        {type === 'BUSINESS' && <Building2 size={18} color="#10b981" />}
+                        {type === 'AGENT' && <UserCircle size={18} color="#8b5cf6" />}
+                        {type === 'USER' && <User size={18} color="#3b82f6" />}
+                        <strong style={{ color: '#1a1a2e' }}>{loc.name}</strong>
+                        <span style={{ fontSize: '0.75rem', color: '#666', textTransform: 'uppercase' }}>{type}</span>
+                      </div>
+                      {loc.category && <div style={{ color: '#555', fontSize: '0.9rem' }}>{loc.category}</div>}
+                      {loc.region && <div style={{ color: '#666', fontSize: '0.85rem' }}>{loc.region}</div>}
                     </div>
-                    {loc.category && <div style={{ color: '#555', fontSize: '0.9rem' }}>{loc.category}</div>}
-                    {loc.region && <div style={{ color: '#666', fontSize: '0.85rem' }}>{loc.region}</div>}
-                  </div>
-                </Popup>
-              </Marker>
-            ))}
+                  </Popup>
+                </Marker>
+              );
+            })}
           </MapContainer>
         </div>
         {locations.length === 0 && (
@@ -135,7 +157,7 @@ export default function MapView() {
             textAlign: 'center',
             zIndex: 1000,
           }}>
-            No businesses with coordinates yet. Add latitude/longitude to businesses to see them on the map.
+            No locations with coordinates yet. Locations are captured automatically when users register, agents register, or businesses are activated (with location permission).
           </div>
         )}
       </div>
