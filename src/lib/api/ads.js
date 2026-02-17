@@ -57,3 +57,28 @@ export async function getBoostAnalytics() {
   const { data } = await api.get('/ads/analytics');
   return data?.data ?? data;
 }
+
+/**
+ * Get active ads for display (feed, etc.)
+ * GET /api/v1/ads/active?type=FEED&limit=5
+ */
+export async function getActiveAds(params = {}) {
+  const { data } = await api.get('/ads/active', { params: { limit: 5, ...params } });
+  return data?.data ?? data ?? [];
+}
+
+/**
+ * Record ad impression
+ * POST /api/v1/ads/{adId}/impression
+ */
+export async function recordImpression(adId) {
+  await api.post(`/ads/${adId}/impression`);
+}
+
+/**
+ * Record ad click
+ * POST /api/v1/ads/{adId}/click
+ */
+export async function recordClick(adId) {
+  await api.post(`/ads/${adId}/click`);
+}

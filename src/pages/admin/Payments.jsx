@@ -148,6 +148,30 @@ export default function Payments() {
     return method.replace('_', ' ');
   };
 
+  const handleExportCSV = () => {
+    if (payments.length === 0) return;
+    const headers = ['Transaction ID', 'User ID', 'Type', 'Amount', 'Status', 'Method', 'Phone', 'Created', 'Paid At'];
+    const rows = payments.map((p) => [
+      p.transactionId || p.id || '',
+      p.userId || '',
+      p.type || '',
+      p.amount ?? '',
+      p.status || '',
+      formatPaymentMethod(p.method),
+      p.paymentPhone || '',
+      p.createdAt ? formatDate(p.createdAt) : '',
+      p.paidAt ? formatDate(p.paidAt) : '',
+    ]);
+    const csv = [headers.join(','), ...rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `payments-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // Calculate summary stats
   const totalAmount = payments
     .filter((p) => p.status === 'SUCCESS')
@@ -168,17 +192,41 @@ export default function Payments() {
               Monitor all payment transactions from agents, users, and businesses
             </p>
           </div>
-          <div style={{
-            width: '56px',
-            height: '56px',
-            borderRadius: '12px',
-            background: 'rgba(124, 58, 237, 0.2)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#7c3aed'
-          }}>
-            <CreditCardIcon size={28} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button
+              type="button"
+              onClick={handleExportCSV}
+              disabled={payments.length === 0}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 16px',
+                background: 'rgba(34, 197, 94, 0.2)',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
+                borderRadius: '8px',
+                color: '#22c55e',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                cursor: payments.length === 0 ? 'not-allowed' : 'pointer',
+                opacity: payments.length === 0 ? 0.6 : 1,
+              }}
+            >
+              <Download size={18} />
+              Export CSV
+            </button>
+            <div style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '12px',
+              background: 'rgba(124, 58, 237, 0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#7c3aed',
+            }}>
+              <CreditCardIcon size={28} />
+            </div>
           </div>
         </div>
 

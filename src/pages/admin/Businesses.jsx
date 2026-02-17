@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Building2 as Building2Icon, Search, Eye, Mail, Phone, Shield, CheckCircle, XCircle, MapPin, User, Star } from 'lucide-react';
-import { getAdminBusinesses, updateBusinessStatus, verifyBusiness } from '@/lib/api/admin';
+import { Building2 as Building2Icon, Search, Eye, Mail, Phone, Shield, CheckCircle, XCircle, MapPin, User, Star, Download } from 'lucide-react';
+import { getAdminBusinesses, updateBusinessStatus, verifyBusiness, exportBusinessesCsv } from '@/lib/api/admin';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 
 export default function Businesses() {
@@ -61,6 +61,14 @@ export default function Businesses() {
       loadBusinesses();
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to verify business'));
+    }
+  };
+
+  const handleExportCsv = async () => {
+    try {
+      await exportBusinessesCsv();
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Failed to export CSV'));
     }
   };
 
@@ -171,6 +179,15 @@ export default function Businesses() {
           >
             <Search size={18} />
             Search
+          </button>
+          <button
+            type="button"
+            className="admin-btn-secondary"
+            style={{ whiteSpace: 'nowrap' }}
+            onClick={handleExportCsv}
+          >
+            <Download size={18} />
+            Export CSV
           </button>
         </form>
 

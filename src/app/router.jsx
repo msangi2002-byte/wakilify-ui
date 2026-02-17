@@ -72,6 +72,7 @@ const Reports = lazy(() => import('@/pages/admin/Reports'));
 const AuditLogs = lazy(() => import('@/pages/admin/AuditLogs'));
 const AdminSettings = lazy(() => import('@/pages/admin/Settings'));
 const AgentPackages = lazy(() => import('@/pages/admin/AgentPackages'));
+const MapView = lazy(() => import('@/pages/admin/MapView'));
 
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
@@ -201,6 +202,7 @@ const router = createBrowserRouter([
           { path: 'withdrawals', element: <Suspense fallback={<Fallback />}><AdminWithdrawals /></Suspense> },
           { path: 'promotions', element: <Suspense fallback={<Fallback />}><Promotions /></Suspense> },
           { path: 'reports', element: <Suspense fallback={<Fallback />}><Reports /></Suspense> },
+          { path: 'map', element: <Suspense fallback={<Fallback />}><MapView /></Suspense> },
           { path: 'audit-logs', element: <Suspense fallback={<Fallback />}><AuditLogs /></Suspense> },
           { path: 'agent-packages', element: <Suspense fallback={<Fallback />}><AgentPackages /></Suspense> },
           { path: 'settings', element: <Suspense fallback={<Fallback />}><AdminSettings /></Suspense> },

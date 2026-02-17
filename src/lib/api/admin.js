@@ -27,6 +27,11 @@ export async function updateUserRole(userId, role, reason = '') {
   return data?.data ?? data;
 }
 
+export async function verifyUser(userId) {
+  const { data } = await api.post(`${base}/users/${userId}/verify`);
+  return data?.data ?? data;
+}
+
 export async function getAdminBusinesses(params = {}) {
   const { data } = await api.get(`${base}/businesses`, { params });
   return data?.data ?? data;
@@ -74,6 +79,12 @@ export async function processWithdrawal(withdrawalId, actionOrApprove, notes = '
 
 export async function getAdminReports(params = {}) {
   const { data } = await api.get(`${base}/reports`, { params });
+  return data?.data ?? data;
+}
+
+/** Get reports by type: POST, USER, BUSINESS, PRODUCT, COMMENT, etc. */
+export async function getAdminReportsByType(type, params = {}) {
+  const { data } = await api.get(`${base}/reports/type/${type}`, { params });
   return data?.data ?? data;
 }
 
@@ -142,4 +153,55 @@ export async function updateAdminSettings(payload) {
 export async function getAdminPayments(params = {}) {
   const { data } = await api.get(`${base}/payments`, { params });
   return data?.data ?? data;
+}
+
+// Charts
+export async function getAdminChartData(days = 30) {
+  const { data } = await api.get(`${base}/dashboard/charts`, { params: { days } });
+  return data?.data ?? data;
+}
+
+// Map locations
+export async function getMapLocations() {
+  const { data } = await api.get(`${base}/map/locations`);
+  return data?.data ?? data;
+}
+
+// Media stats
+export async function getMediaStats() {
+  const { data } = await api.get(`${base}/media-stats`);
+  return data?.data ?? data;
+}
+
+// Transaction reports
+export async function getTransactionReports() {
+  const { data } = await api.get(`${base}/transaction-reports`);
+  return data?.data ?? data;
+}
+
+// Analytics (DAU/MAU)
+export async function getAnalytics() {
+  const { data } = await api.get(`${base}/analytics`);
+  return data?.data ?? data;
+}
+
+// Export CSV (fetch with auth and trigger download)
+export async function exportUsersCsv() {
+  const { data } = await api.get(`${base}/users/export`, { responseType: 'blob' });
+  const url = URL.createObjectURL(new Blob([data], { type: 'text/csv' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'users_export.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export async function exportBusinessesCsv() {
+  const { data } = await api.get(`${base}/businesses/export`, { responseType: 'blob' });
+  const url = URL.createObjectURL(new Blob([data], { type: 'text/csv' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'businesses_export.csv';
+  a.click();
+  URL.revokeObjectURL(url);
 }

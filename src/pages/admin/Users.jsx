@@ -1,14 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Users as UsersIcon, Search, Eye, Mail, Phone, Shield, CheckCircle, XCircle } from 'lucide-react';
-import { getAdminUsers } from '@/lib/api/admin';
+import { Users as UsersIcon, Search, Eye, Mail, Phone, Shield, CheckCircle, XCircle, UserPlus, UserMinus, BadgeCheck, Ban, Download } from 'lucide-react';
+import { getAdminUsers, updateUserStatus, updateUserRole, verifyUser, exportUsersCsv } from '@/lib/api/admin';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
+
+const ROLES = ['USER', 'BUSINESS', 'AGENT', 'ADMIN', 'VISITOR'];
 
 export default function Users() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [page, setPage] = useState(0);
+  const [roleModal, setRoleModal] = useState(null);
   const [size] = useState(20);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
@@ -46,6 +50,65 @@ export default function Users() {
     e.preventDefault();
     setPage(0);
     loadUsers();
+  };
+
+  const handleStatusChange = async (user, newActive) => {
+    setError('');
+    setSuccess('');
+    try {
+      await updateUserStatus(user.id, newActive, 'Admin action');
+      setSuccess(newActive ? 'User activated' : 'User deactivated');
+      loadUsers();
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Failed to update status'));
+    }
+  };
+
+  const handleRoleChange = async (userId, newRole) => {
+    setError('');
+    setSuccess('');
+    try {
+      await updateUserRole(userId, newRole, 'Admin action');
+      setSuccess('Role updated');
+      setRoleModal(null);
+      loadUsers();
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Failed to update role'));
+    }
+  };
+
+  const handleVerify = async (user) => {
+    setError('');
+    setSuccess('');
+    try {
+      await verifyUser(user.id);
+      setSuccess('User verified (Blue Tick)');
+      loadUsers();
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Failed to verify user'));
+    }
+  };
+
+  const handleBan = async (user) => {
+    setError('');
+    setSuccess('');
+    try {
+      await updateUserStatus(user.id, false, 'Banned by admin');
+      setSuccess('User banned');
+      loadUsers();
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Failed to ban user'));
+    }
+  };
+
+  const handleExportCsv = async () => {
+    setError('');
+    try {
+      await exportUsersCsv();
+      setSuccess('CSV exported');
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Failed to export CSV'));
+    }
   };
 
   const getRoleBadgeColor = (role) => {
@@ -173,6 +236,15 @@ export default function Users() {
             <Search size={18} />
             Search
           </button>
+          <button
+            type="button"
+            className="admin-btn-secondary"
+            style={{ whiteSpace: 'nowrap' }}
+            onClick={handleExportCsv}
+          >
+            <Download size={18} />
+            Export CSV
+          </button>
         </form>
 
         {error && (
@@ -185,6 +257,18 @@ export default function Users() {
             marginBottom: '24px',
           }}>
             {error}
+          </div>
+        )}
+        {success && (
+          <div style={{
+            padding: '12px 16px',
+            background: 'rgba(34, 197, 94, 0.1)',
+            border: '1px solid rgba(34, 197, 94, 0.3)',
+            borderRadius: '8px',
+            color: '#22c55e',
+            marginBottom: '24px',
+          }}>
+            {success}
           </div>
         )}
       </div>
@@ -336,26 +420,64 @@ export default function Users() {
                         <td style={{ padding: '16px 12px', color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.875rem' }}>
                           {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
                         </td>
-                        <td style={{ padding: '16px 12px', textAlign: 'center' }}>
+                        <td style={{ padding: '16px 12px' }}>
                           {userId ? (
-                            <Link
-                              to={`/app/profile/${userId}`}
-                              className="admin-btn-ghost"
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                padding: '8px 16px',
-                                textDecoration: 'none',
-                              }}
-                            >
-                              <Eye size={16} />
-                              View
-                            </Link>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center', justifyContent: 'flex-end' }}>
+                              <Link
+                                to={`/app/profile/${userId}`}
+                                className="admin-btn-ghost"
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', textDecoration: 'none', fontSize: '0.8rem' }}
+                              >
+                                <Eye size={14} />
+                                View
+                              </Link>
+                              <button
+                                type="button"
+                                onClick={() => handleStatusChange(user, !user.isActive)}
+                                className="admin-btn-ghost"
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '0.8rem' }}
+                                title={user.isActive ? 'Deactivate' : 'Activate'}
+                              >
+                                {user.isActive ? <UserMinus size={14} /> : <UserPlus size={14} />}
+                                {user.isActive ? 'Deactivate' : 'Activate'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setRoleModal({ id: user.id, name: user.name, currentRole: user.role })}
+                                className="admin-btn-ghost"
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '0.8rem' }}
+                                title="Change Role"
+                              >
+                                <Shield size={14} />
+                                Role
+                              </button>
+                              {!user.isVerified && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleVerify(user)}
+                                  className="admin-btn-ghost"
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '0.8rem' }}
+                                  title="Verify (Blue Tick)"
+                                >
+                                  <BadgeCheck size={14} />
+                                  Verify
+                                </button>
+                              )}
+                              {user.isActive && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleBan(user)}
+                                  className="admin-btn-ghost"
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '0.8rem', color: '#ef4444' }}
+                                  title="Ban user"
+                                >
+                                  <Ban size={14} />
+                                  Ban
+                                </button>
+                              )}
+                            </div>
                           ) : (
-                            <span style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.875rem' }}>
-                              N/A
-                            </span>
+                            <span style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.875rem' }}>N/A</span>
                           )}
                         </td>
                       </tr>
@@ -399,6 +521,50 @@ export default function Users() {
           </>
         )}
       </div>
+
+      {roleModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => setRoleModal(null)}
+        >
+          <div
+            className="admin-card"
+            style={{ maxWidth: '400px', width: '90%' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: '0 0 16px 0', color: '#fff' }}>Change Role</h3>
+            <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: '16px', fontSize: '0.9rem' }}>
+              {roleModal.name} – current: {roleModal.currentRole}
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
+              {ROLES.filter((r) => r !== roleModal.currentRole).map((role) => (
+                <button
+                  key={role}
+                  type="button"
+                  onClick={() => handleRoleChange(roleModal.id, role)}
+                  className="admin-btn-primary"
+                  style={{ padding: '8px 16px', fontSize: '0.875rem' }}
+                >
+                  {role}
+                </button>
+              ))}
+            </div>
+            <button type="button" onClick={() => setRoleModal(null)} className="admin-btn-ghost" style={{ width: '100%' }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

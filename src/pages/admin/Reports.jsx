@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { FileText as FileTextIcon, Search, AlertTriangle, CheckCircle, XCircle, Shield } from 'lucide-react';
-import { getAdminReports, resolveReport, dismissReport } from '@/lib/api/admin';
+import { getAdminReports, getAdminReportsByType, resolveReport, dismissReport } from '@/lib/api/admin';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 
 export default function Reports() {
+  const [searchParams] = useSearchParams();
+  const urlStatus = searchParams.get('status') || 'PENDING';
+  const urlType = searchParams.get('type') || '';
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -12,7 +15,14 @@ export default function Reports() {
   const [size] = useState(20);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
-  const [statusFilter, setStatusFilter] = useState('PENDING');
+  const [statusFilter, setStatusFilter] = useState(urlStatus);
+  const [typeFilter, setTypeFilter] = useState(urlType);
+
+  useEffect(() => {
+    setStatusFilter(urlStatus);
+    setTypeFilter(urlType);
+    setPage(0);
+  }, [urlStatus, urlType]);
 
   const loadReports = useCallback(async () => {
     setLoading(true);
@@ -23,7 +33,9 @@ export default function Reports() {
         size,
         ...(statusFilter && { status: statusFilter }),
       };
-      const response = await getAdminReports(params);
+      const response = typeFilter
+        ? await getAdminReportsByType(typeFilter, params)
+        : await getAdminReports(params);
       setReports(response?.content || []);
       setTotalPages(response?.totalPages || 0);
       setTotalElements(response?.totalElements || 0);
@@ -32,24 +44,24 @@ export default function Reports() {
     } finally {
       setLoading(false);
     }
-  }, [page, size, statusFilter]);
+  }, [page, size, statusFilter, typeFilter]);
 
   useEffect(() => {
     loadReports();
   }, [loadReports]);
 
-  const handleResolve = async (reportId, action = 'DELETE_CONTENT') => {
+  const handleResolve = async (reportId, action = 'DELETE_CONTENT', notes = 'Content removed by admin') => {
     try {
-      await resolveReport(reportId, action, 'Content removed by admin');
+      await resolveReport(reportId, { notes, action });
       loadReports();
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to resolve report'));
     }
   };
 
-  const handleDismiss = async (reportId) => {
+  const handleDismiss = async (reportId, reason = 'Report dismissed - no violation found') => {
     try {
-      await dismissReport(reportId, 'Report dismissed - no violation found');
+      await dismissReport(reportId, reason);
       loadReports();
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to dismiss report'));
@@ -107,7 +119,32 @@ export default function Reports() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
+        <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
+          <select
+            value={typeFilter}
+            onChange={(e) => {
+              setTypeFilter(e.target.value);
+              setPage(0);
+            }}
+            style={{
+              padding: '12px 16px',
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '8px',
+              color: '#fff',
+              fontSize: '0.875rem',
+              outline: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            <option value="">All Types</option>
+            <option value="POST">Post</option>
+            <option value="USER">User</option>
+            <option value="BUSINESS">Business</option>
+            <option value="PRODUCT">Product</option>
+            <option value="COMMENT">Comment</option>
+            <option value="MESSAGE">Message</option>
+          </select>
           <select
             value={statusFilter}
             onChange={(e) => {
