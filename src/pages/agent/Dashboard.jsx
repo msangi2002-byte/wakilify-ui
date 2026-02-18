@@ -130,6 +130,8 @@ export default function Dashboard() {
     return items.slice(0, 15);
   }, [commissions.content, withdrawals.content]);
 
+  const isAgentNotFound = error && /agent not found|not found/i.test(error);
+
   if (loading && !dashboard) {
     return (
       <div className="agent-loading">
@@ -144,10 +146,27 @@ export default function Dashboard() {
       {error && (
         <div className="agent-dashboard-card agent-dashboard-card-error">
           <p className="agent-dashboard-card-error-text">{error}</p>
+          {isAgentNotFound && (
+            <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
+              <p style={{ margin: 0, fontSize: 14, opacity: 0.9 }}>
+                You don&apos;t have an agent profile yet. Register as an agent to access the dashboard and start earning commissions.
+              </p>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                <Link to="/app/register-agent" className="agent-dashboard-action-link agent-dashboard-action-primary">
+                  Register as agent
+                </Link>
+                <Link to="/app" className="agent-dashboard-action-link agent-dashboard-action-secondary">
+                  Back to App
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Stat cards row */}
+      {/* Stat cards row – hide when agent not found so CTA is the focus */}
+      {!isAgentNotFound && (
+      <>
       <div className="agent-dashboard-cards-row agent-dashboard-stats">
         <div className="agent-dashboard-card agent-dashboard-stat-card">
           <div className="agent-dashboard-stat-icon agent-dashboard-stat-icon-wallet">
@@ -389,6 +408,9 @@ export default function Dashboard() {
             No package assigned. Please contact admin to assign a package.
           </p>
         </div>
+      )}
+
+      </>
       )}
 
       {/* Payment Modal */}
