@@ -17,6 +17,12 @@ export async function getAdminUsers(params = {}) {
   return data?.data ?? data;
 }
 
+/** Full user details for admin (profile, location, engagements, communities). */
+export async function getAdminUserDetail(userId) {
+  const { data } = await api.get(`${base}/users/${userId}`);
+  return data?.data ?? data;
+}
+
 /** Create user (Super Admin only). Body: { name, phone, email?, password, role, adminRole? } */
 export async function createAdminUser(body) {
   const { data } = await api.post(`${base}/users`, body);
@@ -173,6 +179,23 @@ export async function getAdminAuditLogs(params = {}) {
   return data?.data ?? data;
 }
 
+export async function getAuditLogsByRange(startDate, endDate, page = 0, size = 50) {
+  const { data } = await api.get(`${base}/audit-logs/range`, {
+    params: { startDate, endDate, page, size },
+  });
+  return data?.data ?? data;
+}
+
+export async function getAuditLogsByUser(userId, page = 0, size = 50) {
+  const { data } = await api.get(`${base}/audit-logs/user/${userId}`, { params: { page, size } });
+  return data?.data ?? data;
+}
+
+export async function getAuditLogsByEntity(entityId, page = 0, size = 50) {
+  const { data } = await api.get(`${base}/audit-logs/entity/${entityId}`, { params: { page, size } });
+  return data?.data ?? data;
+}
+
 export async function getAgentPackages() {
   const { data } = await api.get(`${base}/agent-packages`);
   return data?.data ?? data;
@@ -210,6 +233,25 @@ export async function getAdminSettings() {
  */
 export async function updateAdminSettings(payload) {
   const { data } = await api.put(`${base}/settings`, payload);
+  return data?.data ?? data;
+}
+
+/**
+ * System info (app name, version, cache sizes)
+ * GET /api/v1/admin/system/info
+ */
+export async function getAdminSystemInfo() {
+  const { data } = await api.get(`${base}/system/info`);
+  return data?.data ?? data;
+}
+
+/**
+ * Clear an application cache
+ * POST /api/v1/admin/maintenance/clear-cache
+ * Body: { cache: 'geocode' }
+ */
+export async function clearAdminCache(payload) {
+  const { data } = await api.post(`${base}/maintenance/clear-cache`, payload);
   return data?.data ?? data;
 }
 

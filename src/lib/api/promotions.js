@@ -39,3 +39,33 @@ export async function getPromotionPackages(type) {
   const { data } = await api.get(`${base}/packages`, { params: type ? { type } : {} });
   return data?.data ?? data;
 }
+
+/** Get promotion by ID */
+export async function getPromotion(id) {
+  const { data } = await api.get(`${base}/${id}`);
+  return data?.data ?? data;
+}
+
+/** Get promotion stats (impressions, clicks, CTR, spent) */
+export async function getPromotionStats(id) {
+  const { data } = await api.get(`${base}/${id}/stats`);
+  return data?.data ?? data;
+}
+
+/** Pause promotion */
+export async function pausePromotion(id) {
+  const { data } = await api.post(`${base}/${id}/pause`);
+  return data?.data ?? data;
+}
+
+/** Resume promotion */
+export async function resumePromotion(id) {
+  const { data } = await api.post(`${base}/${id}/resume`);
+  return data?.data ?? data;
+}
+
+/** Cancel/delete promotion */
+export async function cancelPromotion(id) {
+  const { data } = await api.delete(`${base}/${id}`);
+  return data?.data ?? data;
+}

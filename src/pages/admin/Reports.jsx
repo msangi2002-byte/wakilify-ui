@@ -1,11 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { FileText as FileTextIcon, Search, AlertTriangle, CheckCircle, XCircle, Shield } from 'lucide-react';
+import { FileText as FileTextIcon, AlertTriangle, CheckCircle, XCircle, Shield, RefreshCw, Clock, CheckCircle2, Ban, Eye } from 'lucide-react';
 import { getAdminReports, getAdminReportsByType, resolveReport, dismissReport } from '@/lib/api/admin';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 
+const STATUS_TABS = [
+  { id: 'PENDING', label: 'Pending', icon: Clock },
+  { id: 'UNDER_REVIEW', label: 'Under review', icon: Eye },
+  { id: 'RESOLVED', label: 'Resolved', icon: CheckCircle2 },
+  { id: 'DISMISSED', label: 'Dismissed', icon: Ban },
+];
+
 export default function Reports() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const urlStatus = searchParams.get('status') || 'PENDING';
   const urlType = searchParams.get('type') || '';
   const [reports, setReports] = useState([]);
@@ -17,6 +24,30 @@ export default function Reports() {
   const [totalElements, setTotalElements] = useState(0);
   const [statusFilter, setStatusFilter] = useState(urlStatus);
   const [typeFilter, setTypeFilter] = useState(urlType);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const setStatus = (status) => {
+    setStatusFilter(status);
+    setPage(0);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('status', status);
+      if (!urlType && typeFilter) next.set('type', typeFilter);
+      return next;
+    });
+  };
+
+  const setType = (type) => {
+    setTypeFilter(type);
+    setPage(0);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('status', statusFilter);
+      if (type) next.set('type', type);
+      else next.delete('type');
+      return next;
+    });
+  };
 
   useEffect(() => {
     setStatusFilter(urlStatus);
@@ -24,14 +55,15 @@ export default function Reports() {
     setPage(0);
   }, [urlStatus, urlType]);
 
-  const loadReports = useCallback(async () => {
-    setLoading(true);
+  const loadReports = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
     setError('');
     try {
       const params = {
         page,
         size,
-        ...(statusFilter && { status: statusFilter }),
+        status: statusFilter || 'PENDING',
       };
       const response = typeFilter
         ? await getAdminReportsByType(typeFilter, params)
@@ -43,6 +75,7 @@ export default function Reports() {
       setError(getApiErrorMessage(err, 'Failed to load reports'));
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [page, size, statusFilter, typeFilter]);
 
@@ -72,6 +105,8 @@ export default function Reports() {
     switch (status) {
       case 'PENDING':
         return { bg: 'rgba(251, 191, 36, 0.2)', color: '#fbbf24' };
+      case 'UNDER_REVIEW':
+        return { bg: 'rgba(124, 58, 237, 0.2)', color: '#a78bfa' };
       case 'RESOLVED':
         return { bg: 'rgba(16, 185, 129, 0.2)', color: '#10b981' };
       case 'DISMISSED':
@@ -81,22 +116,22 @@ export default function Reports() {
     }
   };
 
-  const getReasonColor = (reason) => {
-    const colors = {
-      SPAM: '#ef4444',
-      HARASSMENT: '#f59e0b',
-      FALSE_INFO: '#3b82f6',
-      INAPPROPRIATE: '#ec4899',
-      SCAM: '#dc2626',
-      OTHER: '#6b7280',
+  const getReasonStyle = (reason) => {
+    const styles = {
+      SPAM: { color: '#ef4444', bg: 'rgba(239, 68, 68, 0.2)' },
+      HARASSMENT: { color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.2)' },
+      FALSE_INFO: { color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.2)' },
+      INAPPROPRIATE: { color: '#ec4899', bg: 'rgba(236, 72, 153, 0.2)' },
+      SCAM: { color: '#dc2626', bg: 'rgba(220, 38, 38, 0.2)' },
+      OTHER: { color: '#6b7280', bg: 'rgba(107, 114, 128, 0.2)' },
     };
-    return colors[reason] || '#6b7280';
+    return styles[reason] || { color: '#6b7280', bg: 'rgba(107, 114, 128, 0.2)' };
   };
 
   return (
     <div>
       <div className="admin-card" style={{ marginBottom: '32px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: 16 }}>
           <div>
             <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#fff', margin: '0 0 8px 0' }}>
               Reports Management
@@ -105,29 +140,54 @@ export default function Reports() {
               Review and manage user reports
             </p>
           </div>
-          <div style={{
-            width: '56px',
-            height: '56px',
-            borderRadius: '12px',
-            background: 'rgba(124, 58, 237, 0.2)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#7c3aed'
-          }}>
-            <FileTextIcon size={28} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button
+              type="button"
+              onClick={() => loadReports(true)}
+              disabled={refreshing}
+              className="admin-btn-secondary"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
+            >
+              <RefreshCw size={18} className={refreshing ? 'admin-icon-spin' : ''} />
+              {refreshing ? 'Refreshing...' : 'Refresh'}
+            </button>
+            <div style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '12px',
+              background: 'rgba(124, 58, 237, 0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#7c3aed'
+            }}>
+              <FileTextIcon size={28} />
+            </div>
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
+          {STATUS_TABS.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setStatus(id)}
+              className={statusFilter === id ? 'admin-btn-primary' : 'admin-btn-ghost'}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px' }}
+            >
+              <Icon size={18} />
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem' }}>Type:</span>
           <select
             value={typeFilter}
-            onChange={(e) => {
-              setTypeFilter(e.target.value);
-              setPage(0);
-            }}
+            onChange={(e) => setType(e.target.value)}
             style={{
-              padding: '12px 16px',
+              padding: '10px 16px',
               background: 'rgba(255, 255, 255, 0.05)',
               border: '1px solid rgba(255, 255, 255, 0.1)',
               borderRadius: '8px',
@@ -144,28 +204,6 @@ export default function Reports() {
             <option value="PRODUCT">Product</option>
             <option value="COMMENT">Comment</option>
             <option value="MESSAGE">Message</option>
-          </select>
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(0);
-            }}
-            style={{
-              padding: '12px 16px',
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '8px',
-              color: '#fff',
-              fontSize: '0.875rem',
-              outline: 'none',
-              cursor: 'pointer',
-            }}
-          >
-            <option value="">All Status</option>
-            <option value="PENDING">Pending</option>
-            <option value="RESOLVED">Resolved</option>
-            <option value="DISMISSED">Dismissed</option>
           </select>
         </div>
 
@@ -206,6 +244,7 @@ export default function Reports() {
                 const statusStyle = getStatusBadgeColor(report.status);
                 const reporterId = report?.reporter?.id ? String(report.reporter.id) : null;
                 
+                const reasonStyle = getReasonStyle(report.reason);
                 return (
                   <div
                     key={report.id}
@@ -219,17 +258,17 @@ export default function Reports() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '16px' }}>
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                          <AlertTriangle size={20} style={{ color: getReasonColor(report.reason) }} />
+                          <AlertTriangle size={20} style={{ color: reasonStyle.color }} />
                           <div>
                             <div style={{ color: '#fff', fontWeight: 600, marginBottom: '4px' }}>
-                              {report.targetType} Report
+                              {report.type || report.targetType} Report
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                               <span style={{
                                 padding: '4px 8px',
                                 borderRadius: '4px',
-                                background: `rgba(${getReasonColor(report.reason).replace('#', '')}, 0.2)`,
-                                color: getReasonColor(report.reason),
+                                background: reasonStyle.bg,
+                                color: reasonStyle.color,
                                 fontSize: '0.75rem',
                                 fontWeight: 600,
                               }}>
