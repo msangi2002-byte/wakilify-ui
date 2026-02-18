@@ -23,9 +23,15 @@ export async function createAdminUser(body) {
   return data?.data ?? data;
 }
 
-/** Role definitions (Super Admin only) */
+/** Role definitions (Super Admin only – requires ROLE_DEFINITIONS) */
 export async function getRoleDefinitions() {
   const { data } = await api.get(`${base}/role-definitions`);
+  return data?.data ?? data;
+}
+
+/** Current admin's allowed areas (any admin – no ROLE_DEFINITIONS needed). For nav/routing. */
+export async function getMyAllowedAreas() {
+  const { data } = await api.get(`${base}/me/allowed-areas`);
   return data?.data ?? data;
 }
 

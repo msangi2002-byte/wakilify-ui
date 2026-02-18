@@ -193,18 +193,19 @@ export default function AgentLayout() {
               {navGroups.map((group) => (
                 <div key={group.label}>
                   <div className="agent-sidebar-group">{group.label}</div>
-                  {group.items.map(({ to, end, icon: Icon, label }) => (
+                  {group.items.map(({ to, end, icon: Icon, label }) => {
+                    const isActive = location.pathname === to || (!end && location.pathname.startsWith(to));
+                    return (
                     <Link
                       key={to}
                       to={to}
-                      end={end}
-                      className={`agent-sidebar-link ${location.pathname === to || (!end && location.pathname.startsWith(to)) ? 'active' : ''}`}
+                      className={`agent-sidebar-link ${isActive ? 'active' : ''}`}
                       onClick={() => setSidebarOpen(false)}
                     >
                       <Icon size={18} />
                       <span>{label}</span>
                     </Link>
-                  ))}
+                  );})}
                 </div>
               ))}
               <div className="agent-sidebar-footer">
