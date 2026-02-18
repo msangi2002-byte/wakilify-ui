@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Package, Plus, Edit, Trash2, Image as ImageIcon, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
+import { Package, Plus, Edit, Trash2, Image as ImageIcon, AlertCircle, Loader2, RefreshCw, TrendingUp } from 'lucide-react';
+import PromoteModal from '@/components/business/PromoteModal';
 import { getBusinessProducts, deleteProduct } from '@/lib/api/business';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import '@/styles/business.css';
@@ -14,7 +15,7 @@ function formatCurrency(amount) {
   }).format(amount);
 }
 
-function ProductCard({ product, onDelete }) {
+function ProductCard({ product, onDelete, onPromote }) {
   const [deleting, setDeleting] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
@@ -116,6 +117,14 @@ function ProductCard({ product, onDelete }) {
           <button
             type="button"
             className="business-product-action-btn"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onPromote?.(product); }}
+            title="Promote product"
+          >
+            <TrendingUp size={16} />
+          </button>
+          <button
+            type="button"
+            className="business-product-action-btn"
             onClick={handleEdit}
             title="Edit product"
           >
@@ -164,6 +173,7 @@ export default function Products() {
   const [products, setProducts] = useState({ content: [], totalElements: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [promoteProduct, setPromoteProduct] = useState(null);
 
   const loadProducts = async () => {
     setLoading(true);
@@ -263,9 +273,24 @@ export default function Products() {
       ) : (
         <div className="business-products-grid">
           {products.content.map((product) => (
-            <ProductCard key={product.id} product={product} onDelete={handleProductDeleted} />
+            <ProductCard
+              key={product.id}
+              product={product}
+              onDelete={handleProductDeleted}
+              onPromote={setPromoteProduct}
+            />
           ))}
         </div>
+      )}
+
+      {promoteProduct && (
+        <PromoteModal
+          type="PRODUCT"
+          targetId={promoteProduct.id}
+          title={promoteProduct.name}
+          onClose={() => setPromoteProduct(null)}
+          onSuccess={() => {}}
+        />
       )}
     </div>
   );

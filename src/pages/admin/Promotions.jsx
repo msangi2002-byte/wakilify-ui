@@ -11,12 +11,14 @@ import {
   Filter,
   User,
   Zap,
+  CheckCircle,
 } from 'lucide-react';
 import {
   getAdminPromotions,
   getAdminPromotionsStats,
   adminPausePromotion,
   adminResumePromotion,
+  adminApprovePromotion,
   adminRejectPromotion,
 } from '@/lib/api/admin';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
@@ -41,6 +43,7 @@ function StatusBadge({ status }) {
   const styles = {
     ACTIVE: { bg: 'rgba(16, 185, 129, 0.2)', color: '#10b981' },
     PENDING: { bg: 'rgba(251, 191, 36, 0.2)', color: '#fbbf24' },
+    PENDING_APPROVAL: { bg: 'rgba(245, 158, 11, 0.2)', color: '#f59e0b' },
     PAUSED: { bg: 'rgba(107, 114, 128, 0.2)', color: '#6b7280' },
     COMPLETED: { bg: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6' },
     CANCELLED: { bg: 'rgba(107, 114, 128, 0.2)', color: '#6b7280' },
@@ -138,6 +141,17 @@ export default function Promotions() {
     }
   };
 
+  const handleApprove = async (id) => {
+    try {
+      await adminApprovePromotion(id);
+      showAdminToast('Promotion approved', 'success');
+      loadPromotions();
+      loadStats();
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Failed to approve'));
+    }
+  };
+
   const handleReject = async (id, reason = '') => {
     if (!window.confirm('Reject this promotion? User will be notified.')) return;
     try {
@@ -201,6 +215,7 @@ export default function Promotions() {
             { label: 'Total', value: stats.total, icon: MegaphoneIcon },
             { label: 'Active', value: stats.active, icon: Zap, color: '#10b981' },
             { label: 'Pending', value: stats.pending, icon: Target, color: '#fbbf24' },
+            { label: 'Awaiting approval', value: stats.pendingApproval ?? 0, icon: CheckCircle, color: '#f59e0b' },
             { label: 'Paused', value: stats.paused, icon: Pause, color: '#6b7280' },
             { label: 'Completed', value: stats.completed, icon: TrendingUp, color: '#3b82f6' },
           ].map(({ label, value, icon: Icon, color }) => (
@@ -230,6 +245,7 @@ export default function Promotions() {
             <option value="">All statuses</option>
             <option value="ACTIVE">Active</option>
             <option value="PENDING">Pending</option>
+            <option value="PENDING_APPROVAL">Pending approval</option>
             <option value="PAUSED">Paused</option>
             <option value="COMPLETED">Completed</option>
             <option value="REJECTED">Rejected</option>
@@ -320,6 +336,19 @@ export default function Promotions() {
                         )}
                       </td>
                       <td style={{ textAlign: 'right' }}>
+                        {p.status === 'PENDING_APPROVAL' && (
+                          <>
+                            <button
+                              type="button"
+                              className="admin-btn-ghost"
+                              style={{ padding: '6px 10px', fontSize: '0.8rem', marginRight: 4, color: '#10b981' }}
+                              onClick={() => handleApprove(p.id)}
+                              title="Approve (policy check passed)"
+                            >
+                              <CheckCircle size={14} /> Approve
+                            </button>
+                          </>
+                        )}
                         {p.status === 'ACTIVE' && (
                           <button
                             type="button"
@@ -342,7 +371,7 @@ export default function Promotions() {
                             <Play size={14} /> Resume
                           </button>
                         )}
-                        {(p.status === 'PENDING' || p.status === 'ACTIVE') && (
+                        {(p.status === 'PENDING' || p.status === 'PENDING_APPROVAL' || p.status === 'ACTIVE') && (
                           <button
                             type="button"
                             className="admin-btn-ghost"

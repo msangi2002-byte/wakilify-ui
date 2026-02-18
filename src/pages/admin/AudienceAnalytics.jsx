@@ -8,6 +8,8 @@ import {
   ShoppingCart,
   MessageCircle,
   ThumbsUp,
+  Download,
+  Calendar,
 } from 'lucide-react';
 import { getAudienceAnalytics } from '@/lib/api/admin';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
@@ -147,24 +149,81 @@ function BehaviorsPanel({ items }) {
   );
 }
 
+function toYMD(d) {
+  if (!d) return '';
+  const x = new Date(d);
+  return x.toISOString().slice(0, 10);
+}
+
+function csvEscape(s) {
+  if (s == null) return '';
+  const str = String(s);
+  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+    return '"' + str.replace(/"/g, '""') + '"';
+  }
+  return str;
+}
+
+function exportToCsv(data) {
+  const rows = [];
+  rows.push('Section,Label,Count');
+  if (data?.byInterests?.length) {
+    data.byInterests.forEach(({ interest, count }) => rows.push(`Interests,${csvEscape(interest)},${count}`));
+  }
+  if (data?.byCountry?.length) {
+    data.byCountry.forEach(({ name, count }) => rows.push(`Country,${csvEscape(name)},${count}`));
+  }
+  if (data?.byRegion?.length) {
+    data.byRegion.forEach(({ name, count }) => rows.push(`Region,${csvEscape(name)},${count}`));
+  }
+  if (data?.byCity?.length) {
+    data.byCity.forEach(({ name, count }) => rows.push(`City,${csvEscape(name)},${count}`));
+  }
+  if (data?.byAgeBand?.length) {
+    data.byAgeBand.forEach(({ bucket, count }) => rows.push(`Age,${csvEscape(bucket)},${count}`));
+  }
+  if (data?.byGender?.length) {
+    data.byGender.forEach(({ bucket, count }) => rows.push(`Gender,${csvEscape(bucket)},${count}`));
+  }
+  if (data?.byBehaviors?.length) {
+    data.byBehaviors.forEach(({ behavior, count }) => rows.push(`Behavior,${csvEscape(behavior)},${count}`));
+  }
+  const csv = rows.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `audience_analytics_${toYMD(new Date())}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function AudienceAnalytics() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('interests');
+  const today = toYMD(new Date());
+  const defaultFrom = new Date();
+  defaultFrom.setMonth(defaultFrom.getMonth() - 1);
+  const [fromDate, setFromDate] = useState(toYMD(defaultFrom));
+  const [toDate, setToDate] = useState(today);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const res = await getAudienceAnalytics();
+      const res = await getAudienceAnalytics({
+        fromDate: fromDate || undefined,
+        toDate: toDate || undefined,
+      });
       setData(res);
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to load audience analytics'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fromDate, toDate]);
 
   useEffect(() => {
     load();
@@ -202,6 +261,48 @@ export default function AudienceAnalytics() {
         <p className="admin-audience-subtitle">
           Insights for promotion targeting: interests, location, demographics, and behaviors.
         </p>
+        <div className="admin-audience-filters" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px', marginTop: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Calendar size={18} style={{ color: '#6b7280' }} />
+            <label>
+              <span style={{ marginRight: '6px', fontSize: '0.875rem', color: '#6b7280' }}>From</span>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.875rem' }}
+              />
+            </label>
+            <label>
+              <span style={{ marginLeft: '12px', marginRight: '6px', fontSize: '0.875rem', color: '#6b7280' }}>To</span>
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '0.875rem' }}
+              />
+            </label>
+          </div>
+          <button
+            type="button"
+            onClick={load}
+            disabled={loading}
+            className="admin-btn admin-btn-secondary"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            Apply
+          </button>
+          <button
+            type="button"
+            onClick={() => exportToCsv(data)}
+            disabled={!data}
+            className="admin-btn admin-btn-ghost"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <Download size={18} />
+            Export CSV
+          </button>
+        </div>
       </div>
 
       <div className="admin-audience-stats">

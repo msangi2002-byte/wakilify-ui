@@ -45,6 +45,7 @@ const UserSettings = lazy(() => import('@/pages/user/Settings'));
 const RegisterAgent = lazy(() => import('@/pages/user/RegisterAgent'));
 const Notifications = lazy(() => import('@/pages/user/Notifications'));
 const Onboarding = lazy(() => import('@/pages/user/Onboarding'));
+const Boost = lazy(() => import('@/pages/user/Boost'));
 
 const BusinessDashboard = lazy(() => import('@/pages/business/Dashboard'));
 const BusinessProducts = lazy(() => import('@/pages/business/Products'));
@@ -123,6 +124,7 @@ const router = createBrowserRouter([
           { path: 'shop', element: <Suspense fallback={<Fallback />}><Shop /></Suspense> },
           { path: 'shop/settings', element: <Navigate to="/app/settings#marketplace" replace /> },
           { path: 'shop/:id', element: <Suspense fallback={<Fallback />}><ProductDetails /></Suspense> },
+          { path: 'boost', element: <Suspense fallback={<Fallback />}><Boost /></Suspense> },
           { path: 'orders', element: <Suspense fallback={<Fallback />}><Orders /></Suspense> },
           { path: 'notifications', element: <Suspense fallback={<Fallback />}><Notifications /></Suspense> },
           { path: 'cart', element: <Suspense fallback={<Fallback />}><Cart /></Suspense> },

@@ -14,7 +14,6 @@ import {
   createBusinessRequest,
   getMe,
 } from '@/lib/api/users';
-import { getMyPostsForBoost, calculateAdPrice, boostPost, checkPaymentStatus, getBoostAnalytics } from '@/lib/api/ads';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import { ROLES } from '@/types/roles';
 import {
@@ -37,7 +36,6 @@ import {
   X,
   TrendingUp,
   Users,
-  BarChart3,
   MousePointerClick,
 } from 'lucide-react';
 
@@ -260,22 +258,6 @@ export default function Settings() {
   const [coverUploading, setCoverUploading] = useState(false);
   const [photoError, setPhotoError] = useState('');
   
-  // Post boost state
-  const [boostPosts, setBoostPosts] = useState([]);
-  const [boostLoading, setBoostLoading] = useState(false);
-  const [selectedPostId, setSelectedPostId] = useState('');
-  const [targetReach, setTargetReach] = useState(1000);
-  const [calculatedPrice, setCalculatedPrice] = useState(null);
-  const [priceLoading, setPriceLoading] = useState(false);
-  const [paymentPhone, setPaymentPhone] = useState(user?.phone || '');
-  const [boosting, setBoosting] = useState(false);
-  const [boostError, setBoostError] = useState('');
-  const [boostSuccess, setBoostSuccess] = useState('');
-  const [orderId, setOrderId] = useState(null);
-  
-  // Analytics state
-  const [analytics, setAnalytics] = useState(null);
-  const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -297,53 +279,8 @@ export default function Settings() {
         profileVisibility: user.profileVisibility ?? 'PUBLIC',
         followingListVisibility: user.followingListVisibility ?? 'PUBLIC',
       }));
-      setPaymentPhone(user.phone || '');
     }
   }, [user]);
-
-  // Load posts for boosting
-  useEffect(() => {
-    if (user?.id) {
-      setBoostLoading(true);
-      getMyPostsForBoost()
-        .then((posts) => {
-          setBoostPosts(posts || []);
-          if (posts && posts.length > 0 && !selectedPostId) {
-            setSelectedPostId(posts[0].id);
-          }
-        })
-        .catch(() => setBoostPosts([]))
-        .finally(() => setBoostLoading(false));
-    }
-  }, [user?.id]);
-
-  // Calculate price when target reach changes
-  useEffect(() => {
-    if (targetReach > 0) {
-      setPriceLoading(true);
-      calculateAdPrice(targetReach)
-        .then((result) => {
-          setCalculatedPrice(result);
-        })
-        .catch(() => setCalculatedPrice(null))
-        .finally(() => setPriceLoading(false));
-    } else {
-      setCalculatedPrice(null);
-    }
-  }, [targetReach]);
-
-  // Load analytics
-  useEffect(() => {
-    if (user?.id) {
-      setAnalyticsLoading(true);
-      getBoostAnalytics()
-        .then((data) => {
-          setAnalytics(data);
-        })
-        .catch(() => setAnalytics(null))
-        .finally(() => setAnalyticsLoading(false));
-    }
-  }, [user?.id]);
 
   const handleAvatarChange = async (e) => {
     const file = e.target.files?.[0];
@@ -654,244 +591,13 @@ export default function Settings() {
           <TrendingUp size={20} />
           Boost Your Posts
         </h2>
-        <p className="settings-row-desc" style={{ marginBottom: 16 }}>
-          Select a post to boost and choose how many people you want to reach. Pay via USSD to activate.
+        <p className="settings-row-desc" style={{ marginBottom: 12 }}>
+          Tangaza post yako kwa watu zaidi. Chagua objective, audience, na budget.
         </p>
-
-        <SettingRow label="Select Post" description="Choose which post to boost">
-          {boostLoading ? (
-            <p className="settings-row-desc">Loading posts...</p>
-          ) : boostPosts.length === 0 ? (
-            <p className="settings-row-desc">You don't have any posts yet. Create a post first!</p>
-          ) : (
-            <select
-              className="settings-input"
-              value={selectedPostId}
-              onChange={(e) => setSelectedPostId(e.target.value)}
-              aria-label="Select post"
-            >
-              {boostPosts.map((post) => (
-                <option key={post.id} value={post.id}>
-                  {post.caption ? (post.caption.length > 50 ? post.caption.substring(0, 50) + '...' : post.caption) : 'Post ' + post.id.substring(0, 8)}
-                </option>
-              ))}
-            </select>
-          )}
-        </SettingRow>
-
-        <SettingRow label="Target Reach" description="Number of people to reach">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <input
-              type="range"
-              min="100"
-              max="100000"
-              step="100"
-              value={targetReach}
-              onChange={(e) => setTargetReach(Number(e.target.value))}
-              className="settings-input"
-              style={{ width: '100%' }}
-              aria-label="Target reach"
-            />
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-              <span>100</span>
-              <span style={{ fontWeight: 600 }}>{targetReach.toLocaleString()} people</span>
-              <span>100,000</span>
-            </div>
-          </div>
-        </SettingRow>
-
-        {calculatedPrice && (
-          <SettingRow label="Price" description="Total cost for this boost">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <p style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                TZS {calculatedPrice.totalPrice?.toLocaleString() || '0'}
-              </p>
-              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                {calculatedPrice.pricePerPerson ? `TZS ${calculatedPrice.pricePerPerson} per person` : ''}
-              </p>
-            </div>
-          </SettingRow>
-        )}
-
-        <SettingRow label="Payment Phone" description="Phone number for USSD payment">
-          <input
-            type="tel"
-            className="settings-input"
-            value={paymentPhone}
-            onChange={(e) => setPaymentPhone(e.target.value)}
-            placeholder="+255712345678"
-            aria-label="Payment phone"
-          />
-        </SettingRow>
-
-        {boostError && (
-          <p className="settings-error" role="alert">{boostError}</p>
-        )}
-        {boostSuccess && (
-          <p className="settings-success" role="alert" style={{ color: 'var(--success)', marginTop: 8 }}>{boostSuccess}</p>
-        )}
-
-        <div className="settings-section-actions">
-          <button
-            type="button"
-            className="settings-btn settings-btn-primary"
-            onClick={async () => {
-              if (!selectedPostId) {
-                setBoostError('Please select a post');
-                return;
-              }
-              if (!paymentPhone.trim()) {
-                setBoostError('Payment phone number is required');
-                return;
-              }
-              if (targetReach < 100) {
-                setBoostError('Target reach must be at least 100 people');
-                return;
-              }
-              setBoosting(true);
-              setBoostError('');
-              setBoostSuccess('');
-              try {
-                const result = await boostPost(selectedPostId, targetReach, paymentPhone.trim());
-                setOrderId(result.orderId);
-                setBoostSuccess(result.message || 'USSD push imetumwa kwa simu yako. Fuata maelekezo kukamilisha malipo.');
-                
-                // Start polling for payment status
-                const interval = setInterval(async () => {
-                  try {
-                    const status = await checkPaymentStatus(result.orderId);
-                    if (status?.status === 'SUCCESS') {
-                      clearInterval(interval);
-                      setBoostSuccess('Payment completed! Your post boost is now active.');
-                      setTimeout(() => {
-                        setSelectedPostId('');
-                        setTargetReach(1000);
-                        setPaymentPhone(user?.phone || '');
-                        setOrderId(null);
-                        setBoostSuccess('');
-                        // Reload posts
-                        getMyPostsForBoost().then(setBoostPosts).catch(() => {});
-                      }, 3000);
-                    } else if (status?.status === 'FAILED' || status?.status === 'CANCELLED') {
-                      clearInterval(interval);
-                      setBoostError('Payment failed or was cancelled. Please try again.');
-                      setOrderId(null);
-                    }
-                  } catch (err) {
-                    // Continue polling on error
-                  }
-                }, 3000);
-                // Stop polling after 5 minutes
-                setTimeout(() => clearInterval(interval), 5 * 60 * 1000);
-              } catch (err) {
-                setBoostError(getApiErrorMessage(err, 'Failed to boost post'));
-              } finally {
-                setBoosting(false);
-              }
-            }}
-            disabled={boosting || !selectedPostId || !paymentPhone.trim() || !calculatedPrice}
-          >
-            {boosting ? 'Processing...' : 'Boost Post'}
-          </button>
-        </div>
-      </section>
-
-      <section className="user-app-card settings-section">
-        <h2 className="settings-section-title">
-          <BarChart3 size={20} />
-          Boost Analytics
-        </h2>
-        <p className="settings-row-desc" style={{ marginBottom: 16 }}>
-          View performance metrics for your boosted posts.
-        </p>
-
-        {analyticsLoading ? (
-          <p className="settings-row-desc">Loading analytics...</p>
-        ) : analytics ? (
-          <>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 16, marginBottom: 24 }}>
-              <div style={{ padding: 16, background: 'var(--card-bg)', borderRadius: 8, border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: 4 }}>Total Boosts</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 600 }}>{analytics.totalPromotions || 0}</div>
-              </div>
-              <div style={{ padding: 16, background: 'var(--card-bg)', borderRadius: 8, border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: 4 }}>Active</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--success)' }}>{analytics.activePromotions || 0}</div>
-              </div>
-              <div style={{ padding: 16, background: 'var(--card-bg)', borderRadius: 8, border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: 4 }}>Impressions</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 600 }}>{(analytics.totalImpressions || 0).toLocaleString()}</div>
-              </div>
-              <div style={{ padding: 16, background: 'var(--card-bg)', borderRadius: 8, border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: 4 }}>Clicks</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 600 }}>{(analytics.totalClicks || 0).toLocaleString()}</div>
-              </div>
-              <div style={{ padding: 16, background: 'var(--card-bg)', borderRadius: 8, border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: 4 }}>CTR</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 600 }}>{(analytics.overallCtr || 0).toFixed(2)}%</div>
-              </div>
-              <div style={{ padding: 16, background: 'var(--card-bg)', borderRadius: 8, border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: 4 }}>Total Spent</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 600 }}>TZS {(analytics.totalSpent || 0).toLocaleString()}</div>
-              </div>
-            </div>
-
-            {analytics.promotions && analytics.promotions.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: 8 }}>Individual Boost Performance</h3>
-                {analytics.promotions.map((promo) => (
-                  <div key={promo.id} style={{ padding: 16, background: 'var(--card-bg)', borderRadius: 8, border: '1px solid var(--border)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 12 }}>
-                      <div>
-                        <div style={{ fontWeight: 600, marginBottom: 4 }}>{promo.title || 'Boosted Post'}</div>
-                        <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                          Status: <span style={{ 
-                            color: promo.status === 'ACTIVE' ? 'var(--success)' : 
-                                   promo.status === 'PENDING' ? 'var(--warning)' : 'var(--text-secondary)' 
-                          }}>{promo.status}</span>
-                        </div>
-                      </div>
-                      <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                        {promo.startDate ? new Date(promo.startDate).toLocaleDateString() : ''}
-                        {promo.endDate ? ' - ' + new Date(promo.endDate).toLocaleDateString() : ''}
-                      </div>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 12, marginTop: 12 }}>
-                      <div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 4 }}>Target Reach</div>
-                        <div style={{ fontWeight: 600 }}>{(promo.targetReach || 0).toLocaleString()}</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 4 }}>Impressions</div>
-                        <div style={{ fontWeight: 600 }}>{(promo.impressions || 0).toLocaleString()}</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 4 }}>Clicks</div>
-                        <div style={{ fontWeight: 600 }}>{(promo.clicks || 0).toLocaleString()}</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 4 }}>CTR</div>
-                        <div style={{ fontWeight: 600 }}>{(promo.ctr || 0).toFixed(2)}%</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 4 }}>Spent</div>
-                        <div style={{ fontWeight: 600 }}>TZS {(promo.spentAmount || 0).toLocaleString()}</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 4 }}>Budget</div>
-                        <div style={{ fontWeight: 600 }}>TZS {(promo.budget || 0).toLocaleString()}</div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="settings-row-desc">No boost campaigns yet. Create your first boost above!</p>
-            )}
-          </>
-        ) : (
-          <p className="settings-row-desc">Failed to load analytics. Please try again.</p>
-        )}
+        <Link to="/app/boost" className="settings-btn settings-btn-primary" style={{ display: 'inline-flex' }}>
+          <TrendingUp size={18} style={{ marginRight: 8 }} />
+          Nenda kwenye Boost
+        </Link>
       </section>
 
       {String(user?.role ?? '').toLowerCase() === ROLES.BUSINESS && (
