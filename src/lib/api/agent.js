@@ -34,9 +34,18 @@ export async function getAgentByCode(agentCode) {
 }
 
 /**
- * Register as agent (authenticated user)
- * POST /api/v1/agent/register
- * Body: { nationalId, region, district, paymentPhone, ward?, street? }
+ * Get packages available for agent registration (authenticated, no AGENT role required).
+ * GET /api/v1/agent/registration-packages
+ */
+export async function getRegistrationPackages() {
+  const { data } = await api.get('/agent/registration-packages');
+  return data?.data ?? data;
+}
+
+/**
+ * Register as agent (authenticated user).
+ * If body.packageId is set: USSD push sent; returns { agent, orderId }. Poll GET /agent/me until status ACTIVE then redirect to /agent.
+ * Body: { packageId?, nationalId, region, district, paymentPhone, ward?, street?, latitude?, longitude? }
  */
 export async function registerAgent(body) {
   const { data } = await api.post('/agent/register', body);

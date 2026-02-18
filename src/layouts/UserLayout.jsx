@@ -126,8 +126,8 @@ export default function UserLayout() {
   const navItems = [
     ...leftNav,
     ...(String(user?.role ?? '').toLowerCase() === ROLES.AGENT
-      ? [{ to: '/agent', icon: Sparkles, label: 'Agent Dashboard' }]
-      : []),
+      ? [{ to: '/agent', icon: Building2, label: 'Agent Dashboard' }]
+      : [{ to: '/app/register-agent', icon: Sparkles, label: 'Become agent' }]),
   ];
   const filteredNavItems = navMenuSearch.trim()
     ? navItems.filter((item) => item.label.toLowerCase().includes(navMenuSearch.toLowerCase().trim()))
@@ -781,8 +781,8 @@ export default function UserLayout() {
               {[
                 ...leftNav,
                 ...(String(user?.role ?? '').toLowerCase() === ROLES.AGENT
-                  ? [{ to: '/agent', icon: Sparkles, label: 'Agent Dashboard' }]
-                  : []),
+                  ? [{ to: '/agent', icon: Building2, label: 'Agent Dashboard' }]
+                  : [{ to: '/app/register-agent', icon: Sparkles, label: 'Become agent' }]),
                 ...(String(user?.role ?? '').toLowerCase() === ROLES.ADMIN
                   ? [{ to: '/admin', icon: Shield, label: 'Admin Dashboard' }]
                   : []),

@@ -12,6 +12,9 @@ import {
   Shield,
   Info,
   Zap,
+  Smartphone,
+  ToggleLeft,
+  ToggleRight,
 } from 'lucide-react';
 import {
   getAdminSettings,
@@ -47,6 +50,7 @@ export default function Settings() {
     agentRegisterAmount: '',
     toBeBusinessAmount: '',
     adsPricePerPerson: '',
+    paymentDemoMode: false,
   });
   const [systemInfo, setSystemInfo] = useState(null);
   const [systemInfoLoading, setSystemInfoLoading] = useState(false);
@@ -61,6 +65,7 @@ export default function Settings() {
         agentRegisterAmount: settings?.agentRegisterAmount != null ? String(settings.agentRegisterAmount) : '20000',
         toBeBusinessAmount: settings?.toBeBusinessAmount != null ? String(settings.toBeBusinessAmount) : '10000',
         adsPricePerPerson: settings?.adsPricePerPerson != null ? String(settings.adsPricePerPerson) : '2',
+        paymentDemoMode: Boolean(settings?.paymentDemoMode),
       });
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to load settings'));
@@ -122,8 +127,9 @@ export default function Settings() {
         agentRegisterAmount: agentNum,
         toBeBusinessAmount: businessNum,
         adsPricePerPerson: adsNum,
+        paymentDemoMode: form.paymentDemoMode,
       });
-      showMessage('Settings saved. Fees and ads pricing updated.');
+      showMessage('Settings saved. Fees and demo mode updated.');
       loadSettings();
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to save settings'));
@@ -282,6 +288,42 @@ export default function Settings() {
                 />
                 <span style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 13, marginLeft: 8 }}>Price per person for ads.</span>
               </div>
+
+              <div style={{
+                marginBottom: 24,
+                padding: '20px',
+                background: 'rgba(124, 58, 237, 0.08)',
+                border: '1px solid rgba(124, 58, 237, 0.25)',
+                borderRadius: 12,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                  <Smartphone size={22} style={{ color: '#a78bfa' }} />
+                  <h3 style={{ color: '#fff', fontWeight: 600, margin: 0, fontSize: '1rem' }}>Payment demo mode</h3>
+                </div>
+                <p style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: 14, margin: '0 0 16px 0', lineHeight: 1.45 }}>
+                  When ON: no USSD push is sent. Agent registration and other payments are marked successful immediately so you can test the flow without real M-Pesa/Tigo Pesa. When OFF: normal USSD push is sent and user pays on their phone.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, paymentDemoMode: !f.paymentDemoMode }))}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '10px 18px',
+                    background: form.paymentDemoMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.06)',
+                    border: `1px solid ${form.paymentDemoMode ? 'rgba(16, 185, 129, 0.5)' : 'rgba(255, 255, 255, 0.15)'}`,
+                    borderRadius: 8,
+                    color: form.paymentDemoMode ? '#6ee7b7' : 'rgba(255, 255, 255, 0.8)',
+                    cursor: 'pointer',
+                    fontWeight: 500,
+                  }}
+                >
+                  {form.paymentDemoMode ? <ToggleRight size={24} /> : <ToggleLeft size={24} />}
+                  {form.paymentDemoMode ? 'Demo mode ON (no USSD)' : 'Demo mode OFF (real USSD)'}
+                </button>
+              </div>
+
               <button
                 type="submit"
                 disabled={saving}
