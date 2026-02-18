@@ -28,6 +28,7 @@ import { followUser, getMutualFollows } from '@/lib/api/friends';
 import { getActiveAds, recordImpression, recordClick } from '@/lib/api/ads';
 import { getAllCommunities } from '@/lib/api/communities';
 import { getUnreadCount as getNotificationUnreadCount } from '@/lib/api/notifications';
+import { getUnreadCount as getMessageUnreadCount } from '@/lib/api/messages';
 import IncomingCallModal from '@/components/call/IncomingCallModal';
 import { APP_NAME, LOGO_PNG, LOGO_ICON } from '@/lib/constants/brand';
 import { clearAuth } from '@/store/auth.store';
@@ -114,6 +115,7 @@ export default function UserLayout() {
   const [pymkLoading, setPymkLoading] = useState(false);
   const [followLoadingId, setFollowLoadingId] = useState(null);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
   const impressedAdIds = useRef(new Set());
   const menuRef = useRef(null);
   const navMenuRef = useRef(null);
@@ -164,6 +166,27 @@ export default function UserLayout() {
     const interval = setInterval(fetchUnreadCount, pollInterval);
     return () => clearInterval(interval);
   }, [user?.id, isNotificationsPage]);
+
+  // Fetch unread message count
+  const isMessagesPage = location.pathname === '/app/messages';
+  useEffect(() => {
+    if (!user?.id) {
+      setUnreadMessageCount(0);
+      return;
+    }
+    const fetchMessageUnread = async () => {
+      try {
+        const count = await getMessageUnreadCount();
+        setUnreadMessageCount(typeof count === 'number' ? count : (count?.count ?? 0));
+      } catch {
+        setUnreadMessageCount(0);
+      }
+    };
+    fetchMessageUnread();
+    const pollInterval = isMessagesPage ? 5000 : 30000;
+    const interval = setInterval(fetchMessageUnread, pollInterval);
+    return () => clearInterval(interval);
+  }, [user?.id, isMessagesPage]);
 
   const pollIncoming = useCallback(async () => {
     if (isOnCallPage) return;
@@ -603,8 +626,13 @@ export default function UserLayout() {
           <Link to="/app/shop" className="user-app-nav-item" aria-label="Marketplace">
             <ShoppingBag size={24} />
           </Link>
-          <Link to="/app/messages" className="user-app-nav-item" aria-label="Chat">
+          <Link to="/app/messages" className="user-app-nav-item user-app-nav-item-badge" aria-label="Chat">
             <MessageCircle size={24} />
+            {unreadMessageCount > 0 && (
+              <span className="badge">
+                {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
+              </span>
+            )}
           </Link>
         </nav>
 
@@ -797,9 +825,14 @@ export default function UserLayout() {
             <Users size={24} />
             <span>Groups</span>
           </Link>
-          <Link to="/app/messages" className="user-app-bottom-nav-item" aria-label="Messages">
+          <Link to="/app/messages" className="user-app-bottom-nav-item user-app-bottom-nav-item-badge" aria-label="Messages">
             <MessageCircle size={24} />
             <span>Chat</span>
+            {unreadMessageCount > 0 && (
+              <span className="badge">
+                {unreadMessageCount > 99 ? '99+' : unreadMessageCount}
+              </span>
+            )}
           </Link>
         </nav>
 

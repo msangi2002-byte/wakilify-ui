@@ -32,7 +32,8 @@ import { useAuthStore } from '@/store/auth.store';
 import { logout as logoutApi } from '@/lib/api/auth';
 import { clearAuth } from '@/store/auth.store';
 import GlobalSearch from '@/components/admin/GlobalSearch';
-import { getEffectiveAdminRole, filterNavGroupsByRole, canAccessPath, getAdminRoleLabel } from '@/lib/adminRoles';
+import { getEffectiveAdminRole, filterNavGroupsByRole, canAccessPath, getAdminRoleLabel, getFirstAllowedAdminPath, canAccessPathByAreas, getFirstAllowedAdminPathByAreas, filterNavGroupsByAreas } from '@/lib/adminRoles';
+import { getRoleDefinitions, getMyAllowedAreas } from '@/lib/api/admin';
 import '@/styles/admin.css';
 
 const navGroups = [
@@ -49,7 +50,12 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const adminRole = getEffectiveAdminRole(user);
-  const filteredNavGroups = filterNavGroupsByRole(navGroups, adminRole);
+  const [roleDefs, setRoleDefs] = useState([]);
+  const [myAllowedAreas, setMyAllowedAreas] = useState([]);
+  const useAreasFromApi = myAllowedAreas.length > 0;
+  const filteredNavGroups = useAreasFromApi
+    ? filterNavGroupsByAreas(navGroups, myAllowedAreas)
+    : filterNavGroupsByRole(navGroups, adminRole, roleDefs);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [adminMenuOpen, setAdminMenuOpen] = useState(false);
   const [alertCount, setAlertCount] = useState(0);
@@ -121,11 +127,27 @@ export default function AdminLayout() {
     setSidebarOpen(false);
   }, [location.pathname]);
 
-  // Route guard: redirect to /admin if current path is not allowed for this admin role
+  useEffect(() => {
+    getRoleDefinitions().then((list) => setRoleDefs(list || [])).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    getMyAllowedAreas().then((list) => setMyAllowedAreas(list || [])).catch(() => {});
+  }, []);
+
+  // Route guard: redirect to first allowed path if current path is not allowed
   useEffect(() => {
     if (!adminRole || !location.pathname.startsWith('/admin')) return;
-    if (!canAccessPath(adminRole, location.pathname)) navigate('/admin', { replace: true });
-  }, [adminRole, location.pathname, navigate]);
+    const canAccess = useAreasFromApi
+      ? canAccessPathByAreas(location.pathname, myAllowedAreas)
+      : canAccessPath(adminRole, location.pathname, roleDefs);
+    if (!canAccess) {
+      const target = useAreasFromApi
+        ? getFirstAllowedAdminPathByAreas(myAllowedAreas)
+        : getFirstAllowedAdminPath(adminRole, roleDefs);
+      navigate(target, { replace: true });
+    }
+  }, [adminRole, location.pathname, roleDefs, myAllowedAreas, useAreasFromApi, navigate]);
 
   useEffect(() => {
     let cancelled = false;
@@ -259,7 +281,7 @@ export default function AdminLayout() {
                     {displayEmail && <span className="admin-user-dropdown-email">{displayEmail}</span>}
                   </div>
                 </div>
-                <div className="admin-user-dropdown-role">{getAdminRoleLabel(adminRole)}</div>
+                <div className="admin-user-dropdown-role">{getAdminRoleLabel(adminRole, roleDefs)}</div>
                 <Link
                   to="/app/profile"
                   className="admin-user-dropdown-item"
@@ -329,12 +351,12 @@ export default function AdminLayout() {
                 <div className="admin-sidebar-group">{group.label}</div>
                 {group.items.map(({ to, end, icon: Icon, label, badgeKey }) => {
                   const count = badgeKey === 'pendingAgents' ? pendingAgents : 0;
+                  const isActive = location.pathname === to || (!end && location.pathname.startsWith(to));
                   return (
                     <Link
                       key={to}
                       to={to}
-                      end={end}
-                      className={`admin-sidebar-link ${location.pathname === to || (!end && location.pathname.startsWith(to)) ? 'active' : ''}`}
+                      className={`admin-sidebar-link ${isActive ? 'active' : ''}`}
                       onClick={() => setSidebarOpen(false)}
                     >
                       <Icon size={18} />

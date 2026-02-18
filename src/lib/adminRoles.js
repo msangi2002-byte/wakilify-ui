@@ -12,7 +12,11 @@ export const ADMIN_ROLE_LABELS = {
   FINANCE_MANAGER: 'Finance',
 };
 
-export function getAdminRoleLabel(adminRole) {
+export function getAdminRoleLabel(adminRole, roleDefs = null) {
+  if (roleDefs?.length) {
+    const def = roleDefs.find((r) => r.code === (adminRole || 'SUPER_ADMIN'));
+    if (def?.displayName) return def.displayName;
+  }
   return ADMIN_ROLE_LABELS[adminRole || 'SUPER_ADMIN'] || adminRole || 'Super Admin';
 }
 
@@ -33,7 +37,7 @@ export const PATH_TO_AREA = {
   'audit-logs': 'AUDIT_LOGS',
   'agent-packages': 'AGENT_PACKAGES',
   settings: 'SETTINGS',
-  roles: 'ROLES_ACCESS',
+  roles: 'ROLE_DEFINITIONS',  // Backend area; only Super Admin can manage roles
 };
 
 /** Human-readable labels for areas (for Roles & Access page). Must match backend AdminArea. */
@@ -100,12 +104,23 @@ export function canAccessArea(adminRole, area, roleDefs = null) {
   return allowed.includes(area);
 }
 
-export function canAccessPath(adminRole, pathname) {
+export function canAccessPath(adminRole, pathname, roleDefs = null) {
   if (!adminRole) return false;
   const base = pathname.replace(/^\/admin\/?/, '').split('/')[0] || '';
   const area = PATH_TO_AREA[base];
   if (!area) return true; // e.g. unknown path, allow and let backend decide
-  return canAccessArea(adminRole, area);
+  return canAccessArea(adminRole, area, roleDefs);
+}
+
+/** Returns first allowed admin path (e.g. /admin/map) for redirect when dashboard not allowed */
+export function getFirstAllowedAdminPath(adminRole, roleDefs = null) {
+  if (!adminRole || adminRole === 'SUPER_ADMIN') return '/admin';
+  const allowed = getAreasForRole(adminRole, roleDefs);
+  const areaToPath = Object.entries(PATH_TO_AREA);
+  for (const [pathSeg, area] of areaToPath) {
+    if (area && allowed.includes(area)) return pathSeg ? `/admin/${pathSeg}` : '/admin';
+  }
+  return '/admin';
 }
 
 /** Filter nav items to only those the role can access */
@@ -118,6 +133,40 @@ export function filterNavGroupsByRole(navGroups, adminRole, roleDefs = null) {
         const path = item.to.replace(/^\/admin\/?/, '').split('/')[0] || '';
         const area = PATH_TO_AREA[path];
         return area ? canAccessArea(adminRole, area, roleDefs) : true;
+      }),
+    }))
+    .filter((group) => group.items.length > 0);
+}
+
+/** Check if path is allowed given list of area names from GET /admin/me/allowed-areas */
+export function canAccessPathByAreas(pathname, allowedAreas = []) {
+  if (!allowedAreas || allowedAreas.length === 0) return false;
+  const base = pathname.replace(/^\/admin\/?/, '').split('/')[0] || '';
+  const area = PATH_TO_AREA[base];
+  if (!area) return true;
+  return allowedAreas.includes(area);
+}
+
+/** First allowed path given area list from API (for redirect) */
+export function getFirstAllowedAdminPathByAreas(allowedAreas = []) {
+  if (!allowedAreas || allowedAreas.length === 0) return '/admin';
+  const areaToPath = Object.entries(PATH_TO_AREA);
+  for (const [pathSeg, area] of areaToPath) {
+    if (area && allowedAreas.includes(area)) return pathSeg ? `/admin/${pathSeg}` : '/admin';
+  }
+  return '/admin';
+}
+
+/** Filter nav by allowed areas from API */
+export function filterNavGroupsByAreas(navGroups, allowedAreas = []) {
+  if (!allowedAreas || allowedAreas.length === 0) return navGroups;
+  return navGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => {
+        const path = item.to.replace(/^\/admin\/?/, '').split('/')[0] || '';
+        const area = PATH_TO_AREA[path];
+        return area ? allowedAreas.includes(area) : true;
       }),
     }))
     .filter((group) => group.items.length > 0);

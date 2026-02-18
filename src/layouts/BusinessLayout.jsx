@@ -51,17 +51,18 @@ export default function BusinessLayout() {
           </Link>
         </div>
         <nav className="business-topbar-nav">
-          {navItems.map(({ to, end, icon: Icon, label }) => (
+          {navItems.map(({ to, end, icon: Icon, label }) => {
+            const isActive = location.pathname === to || (!end && location.pathname.startsWith(to));
+            return (
             <Link
               key={to}
               to={to}
-              end={end}
-              className={`business-topbar-link ${location.pathname === to || (!end && location.pathname.startsWith(to)) ? 'active' : ''}`}
+              className={`business-topbar-link ${isActive ? 'active' : ''}`}
             >
               <Icon size={18} />
               {label}
             </Link>
-          ))}
+          );})}
           <Link
             to="/business/products/new"
             className="business-topbar-link business-topbar-link-primary"
@@ -88,18 +89,19 @@ export default function BusinessLayout() {
       <div className="business-layout-body">
         <aside className="business-sidebar">
           <nav className="business-sidebar-nav">
-            {navItems.map(({ to, end, icon: Icon, label }) => (
+            {navItems.map(({ to, end, icon: Icon, label }) => {
+              const isActive = location.pathname === to || (!end && location.pathname.startsWith(to));
+              return (
               <Link
                 key={to}
                 to={to}
-                end={end}
-                className={`business-sidebar-link ${location.pathname === to || (!end && location.pathname.startsWith(to)) ? 'active' : ''}`}
+                className={`business-sidebar-link ${isActive ? 'active' : ''}`}
                 onClick={() => setSidebarOpen(false)}
               >
                 <Icon size={20} />
                 {label}
               </Link>
-            ))}
+            );})}
             <div className="business-sidebar-divider" />
             <Link
               to="/business/products/new"
