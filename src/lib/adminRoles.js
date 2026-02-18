@@ -33,6 +33,7 @@ export const PATH_TO_AREA = {
   withdrawals: 'WITHDRAWALS',
   'user-withdrawals': 'USER_WITHDRAWALS',
   promotions: 'PROMOTIONS',
+  'audience-analytics': 'AUDIENCE_ANALYTICS',
   reports: 'REPORTS',
   'audit-logs': 'AUDIT_LOGS',
   'agent-packages': 'AGENT_PACKAGES',
@@ -48,6 +49,7 @@ export const AREA_LABELS = {
   MEDIA_STATS: 'Media Stats',
   TRANSACTION_REPORTS: 'Transaction Reports',
   ANALYTICS: 'Analytics',
+  AUDIENCE_ANALYTICS: 'Audience Analytics',
   EXPORT_USERS: 'Export Users',
   EXPORT_BUSINESSES: 'Export Businesses',
   USERS: 'Users',
@@ -80,7 +82,7 @@ export function getAreasForRole(adminRole, roleDefs = null) {
     const def = roleDefs.find((r) => r.code === adminRole);
     return def?.areas || [];
   }
-  const fallback = { MODERATOR: ['DASHBOARD', 'REPORTS', 'PROMOTIONS'], SUPPORT_AGENT: ['DASHBOARD', 'USERS', 'ORDERS', 'AGENTS', 'BUSINESSES', 'PRODUCTS'], FINANCE_MANAGER: ['DASHBOARD', 'PAYMENTS', 'WITHDRAWALS', 'USER_WITHDRAWALS'] };
+  const fallback = { MODERATOR: ['DASHBOARD', 'REPORTS', 'PROMOTIONS', 'AUDIENCE_ANALYTICS'], SUPPORT_AGENT: ['DASHBOARD', 'USERS', 'ORDERS', 'AGENTS', 'BUSINESSES', 'PRODUCTS'], FINANCE_MANAGER: ['DASHBOARD', 'PAYMENTS', 'WITHDRAWALS', 'USER_WITHDRAWALS', 'DASHBOARD_CHARTS', 'TRANSACTION_REPORTS', 'ANALYTICS', 'AUDIENCE_ANALYTICS'] };
   return fallback[adminRole] || [];
 }
 

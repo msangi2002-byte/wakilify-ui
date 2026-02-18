@@ -25,6 +25,7 @@ import {
   Search,
   LogOut,
   User,
+  Target,
 } from 'lucide-react';
 import { APP_NAME } from '@/lib/constants/brand';
 import { getAdminDashboard } from '@/lib/api/admin';
@@ -41,7 +42,7 @@ const navGroups = [
   { label: 'People', items: [{ to: '/admin/users', end: false, icon: Users, label: 'Users' }, { to: '/admin/agents', end: false, icon: UserCheck, label: 'Agents', badgeKey: 'pendingAgents' }] },
   { label: 'Business', items: [{ to: '/admin/businesses', end: false, icon: Building2, label: 'Businesses' }, { to: '/admin/products', end: false, icon: Package, label: 'Products' }, { to: '/admin/orders', end: false, icon: ShoppingBag, label: 'Orders' }] },
   { label: 'Financial', items: [{ to: '/admin/payments', end: false, icon: CreditCard, label: 'Payments' }, { to: '/admin/withdrawals', end: false, icon: Wallet, label: 'Withdrawals' }] },
-  { label: 'Content & Moderation', items: [{ to: '/admin/promotions', end: false, icon: Megaphone, label: 'Promotions' }, { to: '/admin/reports', end: false, icon: BarChart3, label: 'Reports' }, { to: '/admin/audit-logs', end: false, icon: FileText, label: 'Audit Logs' }] },
+  { label: 'Content & Moderation', items: [{ to: '/admin/promotions', end: false, icon: Megaphone, label: 'Promotions' }, { to: '/admin/audience-analytics', end: false, icon: Target, label: 'Audience Analytics' }, { to: '/admin/reports', end: false, icon: BarChart3, label: 'Reports' }, { to: '/admin/audit-logs', end: false, icon: FileText, label: 'Audit Logs' }] },
   { label: 'System', items: [{ to: '/admin/roles', end: false, icon: Shield, label: 'Roles & Access' }, { to: '/admin/agent-packages', end: false, icon: Box, label: 'Agent Packages' }, { to: '/admin/settings', end: false, icon: Settings, label: 'Settings' }] },
 ];
 
@@ -191,6 +192,7 @@ export default function AdminLayout() {
     payments: 'Payments',
     withdrawals: 'Withdrawals',
     promotions: 'Promotions',
+    'audience-analytics': 'Audience Analytics',
     reports: 'Reports',
     'audit-logs': 'Audit Logs',
     'agent-packages': 'Agent Packages',

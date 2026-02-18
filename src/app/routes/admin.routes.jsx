@@ -20,6 +20,7 @@ const Settings = lazy(() => import('@/pages/admin/Settings'));
 const AgentPackages = lazy(() => import('@/pages/admin/AgentPackages'));
 const AdminRoles = lazy(() => import('@/pages/admin/AdminRoles'));
 const MapView = lazy(() => import('@/pages/admin/MapView'));
+const AudienceAnalytics = lazy(() => import('@/pages/admin/AudienceAnalytics'));
 
 const SuspenseWrapper = ({ children }) => <Suspense fallback={null}>{children}</Suspense>;
 
@@ -35,6 +36,7 @@ export function AdminRoutes() {
       <Route path="payments" element={<SuspenseWrapper><Payments /></SuspenseWrapper>} />
       <Route path="withdrawals" element={<SuspenseWrapper><Withdrawals /></SuspenseWrapper>} />
       <Route path="promotions" element={<SuspenseWrapper><Promotions /></SuspenseWrapper>} />
+      <Route path="audience-analytics" element={<SuspenseWrapper><AudienceAnalytics /></SuspenseWrapper>} />
       <Route path="reports" element={<SuspenseWrapper><Reports /></SuspenseWrapper>} />
       <Route path="map" element={<SuspenseWrapper><MapView /></SuspenseWrapper>} />
       <Route path="audit-logs" element={<SuspenseWrapper><AuditLogs /></SuspenseWrapper>} />
