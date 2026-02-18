@@ -7,6 +7,12 @@ import {
   checkPaymentStatus,
   getBoostAnalytics,
 } from '@/lib/api/ads';
+import {
+  getPromotionStats,
+  pausePromotion,
+  resumePromotion,
+  cancelPromotion,
+} from '@/lib/api/promotions';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 
 const SWAHILI_ERRORS = {
@@ -28,7 +34,7 @@ function toSwahiliError(msg) {
   }
   return msg;
 }
-import { TrendingUp, ThumbsUp, MessageCircle, MousePointerClick, Users, MapPin, Zap } from 'lucide-react';
+import { TrendingUp, ThumbsUp, MessageCircle, MousePointerClick, Users, MapPin, Zap, Eye, Pause, Play, Trash2, X } from 'lucide-react';
 
 const OBJECTIVES = [
   { id: 'ENGAGEMENT', label: 'Engagement', desc: 'Likes, comments, shares', icon: ThumbsUp },
@@ -63,6 +69,9 @@ export default function Boost() {
   const [success, setSuccess] = useState('');
   const [analytics, setAnalytics] = useState(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [viewPromo, setViewPromo] = useState(null);
+  const [viewPromoStats, setViewPromoStats] = useState(null);
+  const [actionLoading, setActionLoading] = useState(null);
 
   useEffect(() => {
     if (user?.id) {
@@ -103,6 +112,64 @@ export default function Boost() {
   useEffect(() => {
     if (user?.phone) setPaymentPhone(user.phone);
   }, [user?.phone]);
+
+  const loadAnalytics = () => {
+    getBoostAnalytics().then(setAnalytics).catch(() => {});
+  };
+
+  const handleViewPromo = async (promo) => {
+    setViewPromo(promo);
+    setViewPromoStats(null);
+    try {
+      const stats = await getPromotionStats(promo.id);
+      setViewPromoStats(stats);
+    } catch {
+      setViewPromoStats({ totalImpressions: promo.impressions ?? 0, totalClicks: promo.clicks ?? 0, totalSpent: promo.spentAmount ?? 0, averageCtr: promo.ctr ?? 0 });
+    }
+  };
+
+  const handlePause = async (id) => {
+    setActionLoading(id);
+    try {
+      await pausePromotion(id);
+      loadAnalytics();
+      setSuccess('Kampeni imesimamishwa.');
+      if (viewPromo?.id === id) setViewPromo(null);
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Imeshindwa kusimamisha'));
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleResume = async (id) => {
+    setActionLoading(id);
+    try {
+      await resumePromotion(id);
+      loadAnalytics();
+      setSuccess('Kampeni imeendelea.');
+      if (viewPromo?.id === id) setViewPromo(null);
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Imeshindwa kuendeleza'));
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleCancelPromo = async (id) => {
+    if (!window.confirm('Una uhakika unataka kufuta kampeni hii?')) return;
+    setActionLoading(id);
+    try {
+      await cancelPromotion(id);
+      loadAnalytics();
+      setSuccess('Kampeni imefutwa.');
+      setViewPromo(null);
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Imeshindwa kufuta'));
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   const handleRegionToggle = (r) => {
     setTargetRegions((prev) =>
@@ -148,7 +215,7 @@ export default function Boost() {
             setSuccess('Malipo yametumwa! Tangazo lako linaanza kuonyeshwa.');
             setSelectedPostId(posts[0]?.id || '');
             setTargetReach(1000);
-            getBoostAnalytics().then(setAnalytics).catch(() => {});
+            loadAnalytics();
           } else if (status?.status === 'FAILED' || status?.status === 'CANCELLED') {
             clearInterval(interval);
             setError('Malipo yameshindwa au yameghairiwa.');
@@ -165,27 +232,27 @@ export default function Boost() {
   };
 
   return (
-    <div className="user-app">
-      <div className="user-app-body" style={{ gridTemplateColumns: '1fr minmax(0, 720px) 1fr' }}>
+    <div className="user-app boost-app">
+      <div className="user-app-body boost-body" style={{ gridTemplateColumns: '1fr minmax(0, 640px) 1fr' }}>
         <div className="user-app-sidebar" aria-hidden="true" />
         <main className="user-app-main boost-page">
-          <div className="user-app-card boost-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <div className="boost-icon-wrap">
-                <TrendingUp size={32} />
-              </div>
-              <div>
-                <h1 className="boost-title">Boost Post</h1>
-                <p className="boost-subtitle">
-                  Tangaza post yako kwa watu zaidi. Chagua objective, audience, na budget. System inaoptimize delivery kwa engagement bora.
-                </p>
-              </div>
+          {/* Hero Header */}
+          <div className="boost-hero">
+            <div className="boost-hero-icon">
+              <TrendingUp size={40} strokeWidth={2} />
             </div>
+            <h1 className="boost-hero-title">Boost Post yako</h1>
+            <p className="boost-hero-subtitle">
+              Tangaza post kwa watu zaidi. Chagua lengo, hadhira, na budget. Mfumo utaoptimize delivery kwa matokeo bora.
+            </p>
           </div>
 
           {/* Step 1: Select Post */}
-          <section className="user-app-card boost-section">
-            <h2 className="boost-section-title">1. Chagua Post</h2>
+          <section className="boost-card">
+            <div className="boost-step-header">
+              <span className="boost-step-num">1</span>
+              <h2 className="boost-section-title">Chagua Post</h2>
+            </div>
             {loading ? (
               <p className="boost-muted">Inapakia posts...</p>
             ) : posts.length === 0 ? (
@@ -207,8 +274,11 @@ export default function Boost() {
           </section>
 
           {/* Step 2: Objective */}
-          <section className="user-app-card boost-section">
-            <h2 className="boost-section-title">2. Objective (System inaoptimize kwa hii)</h2>
+          <section className="boost-card">
+            <div className="boost-step-header">
+              <span className="boost-step-num">2</span>
+              <h2 className="boost-section-title">Lengo (System inaoptimize kwa hii)</h2>
+            </div>
             <div className="boost-options">
               {OBJECTIVES.map((o) => (
                 <button
@@ -228,8 +298,11 @@ export default function Boost() {
           </section>
 
           {/* Step 3: Audience */}
-          <section className="user-app-card boost-section">
-            <h2 className="boost-section-title">3. Audience</h2>
+          <section className="boost-card">
+            <div className="boost-step-header">
+              <span className="boost-step-num">3</span>
+              <h2 className="boost-section-title">Hadhira</h2>
+            </div>
             <div className="boost-options">
               {AUDIENCE_TYPES.map((a) => (
                 <button
@@ -304,9 +377,12 @@ export default function Boost() {
           </section>
 
           {/* Step 4: Budget */}
-          <section className="user-app-card boost-section">
-            <h2 className="boost-section-title">4. Budget – Watu wangapi uwatimize?</h2>
-            <div style={{ marginBottom: 12 }}>
+          <section className="boost-card boost-card-budget">
+            <div className="boost-step-header">
+              <span className="boost-step-num">4</span>
+              <h2 className="boost-section-title">Budget – Watu wangapi uwatimize?</h2>
+            </div>
+            <div className="boost-slider-wrap">
               <input
                 type="range"
                 min={100}
@@ -317,33 +393,35 @@ export default function Boost() {
                 className="boost-slider"
                 aria-label="Target reach"
               />
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+              <div className="boost-slider-labels">
                 <span>100</span>
-                <span style={{ fontWeight: 600 }}>{targetReach.toLocaleString()} watu</span>
+                <span className="boost-slider-value">{targetReach.toLocaleString()} watu</span>
                 <span>100,000</span>
               </div>
             </div>
             {priceLoading ? (
               <p className="boost-muted">Inahesabu bei...</p>
             ) : calculatedPrice && (
-              <div className="boost-price">
-                <span className="boost-price-value">TZS {calculatedPrice.totalPrice?.toLocaleString() || '0'}</span>
-                <span className="boost-price-per">TZS {calculatedPrice.pricePerPerson || '2'} per person</span>
+              <div className="boost-price-box">
+                <div className="boost-price-value">TZS {calculatedPrice.totalPrice?.toLocaleString() || '0'}</div>
+                <div className="boost-price-per">TZS {calculatedPrice.pricePerPerson || '2'} kwa mtu</div>
               </div>
             )}
           </section>
 
           {/* Step 5: Payment */}
-          <section className="user-app-card boost-section">
-            <h2 className="boost-section-title">5. Malipo (USSD)</h2>
+          <section className="boost-card boost-card-cta">
+            <div className="boost-step-header">
+              <span className="boost-step-num">5</span>
+              <h2 className="boost-section-title">Malipo (USSD)</h2>
+            </div>
             <input
               type="tel"
-              className="boost-input"
+              className="boost-input boost-input-phone"
               value={paymentPhone}
               onChange={(e) => setPaymentPhone(e.target.value)}
               placeholder="+255712345678"
               aria-label="Namba ya simu"
-              style={{ maxWidth: 280 }}
             />
             {error && <p className="boost-error" role="alert">{error}</p>}
             {success && <p className="boost-success" role="status">{success}</p>}
@@ -359,10 +437,11 @@ export default function Boost() {
 
           {/* Analytics */}
           {analytics && (
-            <section className="user-app-card boost-section">
-              <h2 className="boost-section-title">
-                <Users size={20} /> Tangazo Analytics
-              </h2>
+            <section className="boost-card boost-card-analytics">
+              <div className="boost-step-header">
+                <span className="boost-step-num boost-step-num-sm"><Users size={18} /></span>
+                <h2 className="boost-section-title">Tangazo Analytics</h2>
+              </div>
               {analyticsLoading ? (
                 <p className="boost-muted">Inapakia...</p>
               ) : (
@@ -390,7 +469,52 @@ export default function Boost() {
                       <h4 className="boost-section-subtitle">Kampeni zako</h4>
                       {analytics.promotions.map((promo) => (
                         <div key={promo.id} className="boost-promo-card">
-                          <div className="boost-promo-title">{promo.title || 'Boost'}</div>
+                          <div className="boost-promo-header">
+                            <div className="boost-promo-title">{promo.title || 'Boost'}</div>
+                            <div className="boost-promo-actions">
+                              <button
+                                type="button"
+                                className="boost-promo-btn boost-promo-btn-view"
+                                onClick={() => handleViewPromo(promo)}
+                                title="Angalia maelezo"
+                              >
+                                <Eye size={16} />
+                              </button>
+                              {promo.status === 'ACTIVE' && (
+                                <button
+                                  type="button"
+                                  className="boost-promo-btn boost-promo-btn-pause"
+                                  onClick={() => handlePause(promo.id)}
+                                  disabled={actionLoading === promo.id}
+                                  title="Simamisha"
+                                >
+                                  {actionLoading === promo.id ? <Zap size={16} className="icon-spin" /> : <Pause size={16} />}
+                                </button>
+                              )}
+                              {promo.status === 'PAUSED' && (
+                                <button
+                                  type="button"
+                                  className="boost-promo-btn boost-promo-btn-resume"
+                                  onClick={() => handleResume(promo.id)}
+                                  disabled={actionLoading === promo.id}
+                                  title="Endeleza"
+                                >
+                                  {actionLoading === promo.id ? <Zap size={16} className="icon-spin" /> : <Play size={16} />}
+                                </button>
+                              )}
+                              {['PENDING', 'PAUSED', 'PENDING_APPROVAL', 'ACTIVE'].includes(promo.status) && (
+                                <button
+                                  type="button"
+                                  className="boost-promo-btn boost-promo-btn-delete"
+                                  onClick={() => handleCancelPromo(promo.id)}
+                                  disabled={actionLoading === promo.id}
+                                  title="Futa"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
                           <div className="boost-promo-meta">
                             <span className={`boost-status-${promo.status?.toLowerCase()}`}>{promo.status}</span>
                             {promo.isInLearningPhase && (
@@ -398,6 +522,9 @@ export default function Boost() {
                                 <Zap size={14} /> Learning: {promo.learningPhaseConversions ?? 0}/50
                               </span>
                             )}
+                            <span className="boost-promo-stats-inline">
+                              {promo.impressions?.toLocaleString() ?? 0} views · {promo.clicks?.toLocaleString() ?? 0} clicks
+                            </span>
                           </div>
                           <p className="boost-learning-desc">
                             {promo.isInLearningPhase
@@ -411,6 +538,103 @@ export default function Boost() {
                 </>
               )}
             </section>
+          )}
+
+          {/* View Kampeni Modal */}
+          {viewPromo && (
+            <div className="boost-view-modal-backdrop" onClick={() => setViewPromo(null)}>
+              <div className="boost-view-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="boost-view-modal-header">
+                  <h3>{viewPromo.title || 'Kampeni'}</h3>
+                  <button type="button" className="boost-view-modal-close" onClick={() => setViewPromo(null)} aria-label="Funga">
+                    <X size={20} />
+                  </button>
+                </div>
+                <div className="boost-view-modal-body">
+                  <div className="boost-view-status-row">
+                    <span className={`boost-status-${viewPromo.status?.toLowerCase()}`}>{viewPromo.status}</span>
+                    {viewPromo.isInLearningPhase && (
+                      <span className="boost-learning-badge">
+                        <Zap size={14} /> Learning: {viewPromo.learningPhaseConversions ?? 0}/50
+                      </span>
+                    )}
+                  </div>
+                  <div className="boost-view-trends">
+                    <h4>Maelezo & Trends</h4>
+                    <div className="boost-view-stats-grid">
+                      <div className="boost-view-stat">
+                        <span className="boost-view-stat-value">
+                          {(viewPromoStats?.totalImpressions ?? viewPromo.impressions ?? 0).toLocaleString()}
+                        </span>
+                        <span className="boost-view-stat-label">Impressions / Views</span>
+                      </div>
+                      <div className="boost-view-stat">
+                        <span className="boost-view-stat-value">
+                          {(viewPromoStats?.totalClicks ?? viewPromo.clicks ?? 0).toLocaleString()}
+                        </span>
+                        <span className="boost-view-stat-label">Clicks</span>
+                      </div>
+                      <div className="boost-view-stat">
+                        <span className="boost-view-stat-value">
+                          {((viewPromoStats?.averageCtr ?? viewPromo.ctr) ?? 0).toFixed(2)}%
+                        </span>
+                        <span className="boost-view-stat-label">CTR</span>
+                      </div>
+                      <div className="boost-view-stat">
+                        <span className="boost-view-stat-value">
+                          TZS {(viewPromoStats?.totalSpent ?? viewPromo.spentAmount ?? 0).toLocaleString()}
+                        </span>
+                        <span className="boost-view-stat-label">Imetumika</span>
+                      </div>
+                      <div className="boost-view-stat">
+                        <span className="boost-view-stat-value">
+                          TZS {(viewPromo.budget ?? 0).toLocaleString()}
+                        </span>
+                        <span className="boost-view-stat-label">Budget</span>
+                      </div>
+                      <div className="boost-view-stat">
+                        <span className="boost-view-stat-value">
+                          TZS {(viewPromo.remainingBudget ?? (Number(viewPromo.budget || 0) - Number(viewPromo.spentAmount || 0))).toLocaleString()}
+                        </span>
+                        <span className="boost-view-stat-label">Kosakabili</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="boost-view-modal-actions">
+                    {viewPromo.status === 'ACTIVE' && (
+                      <button
+                        type="button"
+                        className="boost-promo-btn-full boost-promo-btn-pause"
+                        onClick={() => handlePause(viewPromo.id)}
+                        disabled={actionLoading === viewPromo.id}
+                      >
+                        <Pause size={18} /> Simamisha
+                      </button>
+                    )}
+                    {viewPromo.status === 'PAUSED' && (
+                      <button
+                        type="button"
+                        className="boost-promo-btn-full boost-promo-btn-resume"
+                        onClick={() => handleResume(viewPromo.id)}
+                        disabled={actionLoading === viewPromo.id}
+                      >
+                        <Play size={18} /> Endeleza
+                      </button>
+                    )}
+                    {['PENDING', 'PAUSED', 'PENDING_APPROVAL', 'ACTIVE'].includes(viewPromo.status) && (
+                      <button
+                        type="button"
+                        className="boost-promo-btn-full boost-promo-btn-delete"
+                        onClick={() => handleCancelPromo(viewPromo.id)}
+                        disabled={actionLoading === viewPromo.id}
+                      >
+                        <Trash2 size={18} /> Futa Kampeni
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
         </main>
         <div className="user-app-sidebar" aria-hidden="true" />

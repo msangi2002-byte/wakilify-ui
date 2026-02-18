@@ -42,15 +42,26 @@ export default function AgentPackages() {
     setError('');
     setSuccess('');
 
+    const priceNum = parseFloat(formData.price);
+    const businessesNum = parseInt(formData.numberOfBusinesses, 10);
+    if (Number.isNaN(priceNum) || priceNum < 0) {
+      setError('Please enter a valid price (number ≥ 0).');
+      return;
+    }
+    if (Number.isNaN(businessesNum) || businessesNum < 1) {
+      setError('Number of businesses must be at least 1.');
+      return;
+    }
+
     try {
       const data = {
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
-        price: parseFloat(formData.price),
-        numberOfBusinesses: parseInt(formData.numberOfBusinesses),
+        price: priceNum,
+        numberOfBusinesses: businessesNum,
         isActive: formData.isActive,
         isPopular: formData.isPopular,
-        sortOrder: parseInt(formData.sortOrder) || 0,
+        sortOrder: parseInt(formData.sortOrder, 10) || 0,
       };
 
       if (editingPackage) {
@@ -79,6 +90,8 @@ export default function AgentPackages() {
   };
 
   const handleEdit = (pkg) => {
+    setSuccess('');
+    setError('');
     setEditingPackage(pkg);
     setFormData({
       name: pkg.name || '',
@@ -145,7 +158,7 @@ export default function AgentPackages() {
 
         {!showForm && (
           <button
-            onClick={() => setShowForm(true)}
+            onClick={() => { setSuccess(''); setError(''); setShowForm(true); }}
             className="admin-btn-primary"
             style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
           >
