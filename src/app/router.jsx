@@ -75,6 +75,7 @@ const AdminSettings = lazy(() => import('@/pages/admin/Settings'));
 const AgentPackages = lazy(() => import('@/pages/admin/AgentPackages'));
 const AdminRoles = lazy(() => import('@/pages/admin/AdminRoles'));
 const MapView = lazy(() => import('@/pages/admin/MapView'));
+const AudienceAnalytics = lazy(() => import('@/pages/admin/AudienceAnalytics'));
 
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
@@ -204,6 +205,7 @@ const router = createBrowserRouter([
           { path: 'payments', element: <Suspense fallback={<Fallback />}><Payments /></Suspense> },
           { path: 'withdrawals', element: <Suspense fallback={<Fallback />}><AdminWithdrawals /></Suspense> },
           { path: 'promotions', element: <Suspense fallback={<Fallback />}><Promotions /></Suspense> },
+          { path: 'audience-analytics', element: <Suspense fallback={<Fallback />}><AudienceAnalytics /></Suspense> },
           { path: 'reports', element: <Suspense fallback={<Fallback />}><Reports /></Suspense> },
           { path: 'map', element: <Suspense fallback={<Fallback />}><MapView /></Suspense> },
           { path: 'audit-logs', element: <Suspense fallback={<Fallback />}><AuditLogs /></Suspense> },
