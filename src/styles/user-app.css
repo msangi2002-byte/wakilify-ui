@@ -11915,3 +11915,362 @@
     height: 50px !important;
   }
 }
+
+/* ==================== BOOST PAGE ==================== */
+.boost-page {
+  padding-bottom: 32px;
+}
+
+.boost-header {
+  margin-bottom: 20px;
+}
+
+.boost-icon-wrap {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.boost-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary, #050505);
+  margin: 0 0 4px 0;
+}
+
+.boost-subtitle {
+  font-size: 0.95rem;
+  color: var(--text-secondary, #65676b);
+  margin: 0;
+}
+
+.boost-section {
+  margin-bottom: 20px;
+}
+
+.boost-section-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary, #050505);
+  margin: 0 0 16px 0;
+}
+
+.boost-muted {
+  color: var(--text-secondary, #65676b);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.boost-select,
+.boost-input {
+  width: 100%;
+  max-width: 400px;
+  padding: 12px 16px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 10px;
+  font-size: 0.95rem;
+  background: #fff;
+  color: var(--text-primary, #050505);
+}
+
+.boost-select:focus,
+.boost-input:focus {
+  outline: none;
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2);
+}
+
+.boost-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.boost-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 16px;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.boost-option:hover {
+  border-color: rgba(124, 58, 237, 0.4);
+}
+
+.boost-option.active {
+  border-color: #7c3aed;
+  background: rgba(124, 58, 237, 0.06);
+}
+
+.boost-option svg {
+  color: #7c3aed;
+}
+
+.boost-option-wide {
+  grid-column: span 1;
+}
+
+.boost-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.boost-option-label {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-primary, #050505);
+}
+
+.boost-option-desc {
+  font-size: 0.8rem;
+  color: var(--text-secondary, #65676b);
+}
+
+.boost-local-extra {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.boost-regions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.boost-region-btn {
+  padding: 8px 14px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  background: #fff;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.boost-region-btn:hover {
+  border-color: rgba(124, 58, 237, 0.5);
+}
+
+.boost-region-btn.active {
+  border-color: #7c3aed;
+  background: rgba(124, 58, 237, 0.1);
+  color: #7c3aed;
+}
+
+.boost-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.boost-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-secondary, #65676b);
+  margin-bottom: 6px;
+}
+
+.boost-slider {
+  width: 100%;
+  height: 8px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+}
+
+.boost-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #7c3aed;
+  cursor: pointer;
+}
+
+.boost-price {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.boost-price-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary, #050505);
+}
+
+.boost-price-per {
+  font-size: 0.9rem;
+  color: var(--text-secondary, #65676b);
+}
+
+.boost-error {
+  color: #dc2626;
+  font-size: 0.9rem;
+  margin: 8px 0 0 0;
+}
+
+.boost-success {
+  color: #16a34a;
+  font-size: 0.9rem;
+  margin: 8px 0 0 0;
+}
+
+.boost-submit {
+  margin-top: 16px;
+  padding: 14px 28px;
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.boost-submit:hover:not(:disabled) {
+  opacity: 0.92;
+}
+
+.boost-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.boost-analytics {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 16px;
+}
+
+.boost-stat {
+  padding: 16px;
+  background: rgba(124, 58, 237, 0.06);
+  border-radius: 10px;
+  text-align: center;
+}
+
+.boost-stat-value {
+  display: block;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary, #050505);
+}
+
+.boost-stat-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary, #65676b);
+}
+
+.boost-learning-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.boost-section-subtitle {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+  color: var(--text-primary, #050505);
+}
+
+.boost-promo-card {
+  padding: 14px 16px;
+  background: rgba(124, 58, 237, 0.05);
+  border: 1px solid rgba(124, 58, 237, 0.15);
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+
+.boost-promo-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-bottom: 6px;
+}
+
+.boost-promo-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+}
+
+.boost-status-active { color: #16a34a; }
+.boost-status-pending { color: #f59e0b; }
+.boost-status-paused { color: #6b7280; }
+
+.boost-learning-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: rgba(251, 191, 36, 0.2);
+  border-radius: 6px;
+  color: #b45309;
+  font-size: 0.8rem;
+}
+
+/* Boost page – mobile layout */
+@media (max-width: 600px) {
+  .boost-page .user-app-card {
+    padding: 14px;
+  }
+  .boost-options {
+    grid-template-columns: 1fr;
+  }
+  .boost-option-wide {
+    grid-column: 1;
+  }
+  .boost-regions {
+    justify-content: flex-start;
+  }
+  .boost-region-btn {
+    flex: 1;
+    min-width: calc(50% - 4px);
+  }
+  .boost-row {
+    flex-direction: column;
+  }
+  .boost-row > div {
+    width: 100%;
+  }
+  .boost-slider {
+    width: 100%;
+    min-width: 0;
+  }
+  .boost-input,
+  .boost-select {
+    max-width: 100%;
+  }
+  .boost-analytics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .boost-submit {
+    width: 100%;
+  }
+}
+
+.boost-learning-desc {
+  font-size: 0.85rem;
+  color: var(--text-secondary, #65676b);
+  margin: 0;
+}

@@ -18,6 +18,7 @@ import {
   LayoutGrid,
   X,
   Shield,
+  TrendingUp,
 } from 'lucide-react';
 import { ROLES } from '@/types/roles';
 import { useAuthStore } from '@/store/auth.store';
@@ -49,6 +50,7 @@ const leftNav = [
   { to: '/app/live', icon: Radio, label: 'Live' },
   { to: '/app/groups', icon: Users, label: 'Groups' },
   { to: '/app/shop', icon: ShoppingBag, label: 'Marketplace' },
+  { to: '/app/boost', icon: TrendingUp, label: 'Boost' },
   { to: '/app/orders', icon: Package, label: 'My Orders' },
   { to: '/app/notifications', icon: Bell, label: 'Notifications' },
   { to: '/app/settings', icon: Settings, label: 'Settings' },

@@ -2255,6 +2255,40 @@
   margin: 0 0 12px 0;
 }
 
+/* Audience Analytics – mobile layout */
+@media (max-width: 600px) {
+  .admin-audience-filters {
+    flex-direction: column;
+    align-items: stretch !important;
+  }
+  .admin-audience-filters label {
+    flex: 1;
+  }
+  .admin-audience-filters input[type="date"] {
+    width: 100%;
+  }
+  .admin-audience-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+  .admin-audience-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+  .admin-audience-tab {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .admin-audience-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .admin-audience-tile {
+    padding: 12px;
+    font-size: 0.9rem;
+  }
+}
+
 .admin-loading-placeholder {
   padding: 48px;
   text-align: center;

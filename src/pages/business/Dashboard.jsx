@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Package, ShoppingBag, TrendingUp, DollarSign, Plus } from 'lucide-react';
-import { getBusinessDashboard } from '@/lib/api/business';
+import { getBusinessDashboard, getBusinessMe } from '@/lib/api/business';
+import PromoteModal from '@/components/business/PromoteModal';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 
 function formatCurrency(amount) {
@@ -15,16 +16,21 @@ function formatCurrency(amount) {
 
 export default function Dashboard() {
   const [dashboard, setDashboard] = useState(null);
+  const [business, setBusiness] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showPromoteBusiness, setShowPromoteBusiness] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError('');
-    getBusinessDashboard()
-      .then((data) => {
-        if (!cancelled) setDashboard(data ?? null);
+    Promise.all([getBusinessDashboard(), getBusinessMe()])
+      .then(([dashData, bizData]) => {
+        if (!cancelled) {
+          setDashboard(dashData ?? null);
+          setBusiness(bizData ?? null);
+        }
       })
       .catch((err) => {
         if (!cancelled) setError(getApiErrorMessage(err, 'Failed to load dashboard'));
@@ -138,6 +144,16 @@ export default function Dashboard() {
             <Plus size={20} />
             Post New Product
           </Link>
+          {business?.id && (
+            <button
+              type="button"
+              className="business-btn-secondary"
+              onClick={() => setShowPromoteBusiness(true)}
+            >
+              <TrendingUp size={20} />
+              Promote My Business
+            </button>
+          )}
           <Link to="/business/products" className="business-btn-secondary">
             <Package size={20} />
             Manage Products
@@ -152,6 +168,16 @@ export default function Dashboard() {
           </Link>
         </div>
       </div>
+
+      {showPromoteBusiness && business?.id && (
+        <PromoteModal
+          type="BUSINESS"
+          targetId={business.id}
+          title={business.name || 'Biashara yangu'}
+          onClose={() => setShowPromoteBusiness(false)}
+          onSuccess={() => {}}
+        />
+      )}
     </div>
   );
 }

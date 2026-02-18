@@ -142,6 +142,11 @@ export async function adminResumePromotion(promotionId) {
   return data?.data ?? data;
 }
 
+export async function adminApprovePromotion(promotionId) {
+  const { data } = await api.post(`${base}/promotions/${promotionId}/approve`);
+  return data?.data ?? data;
+}
+
 export async function adminRejectPromotion(promotionId, reason = '') {
   const { data } = await api.post(`${base}/promotions/${promotionId}/reject`, { reason });
   return data?.data ?? data;
@@ -257,8 +262,10 @@ export async function getAnalytics() {
 }
 
 // Audience analytics (by interests, location, demographics, behaviors)
-export async function getAudienceAnalytics() {
-  const { data } = await api.get(`${base}/audience-analytics`);
+export async function getAudienceAnalytics(params = {}) {
+  const { data } = await api.get(`${base}/audience-analytics`, {
+    params: { fromDate: params.fromDate, toDate: params.toDate },
+  });
   return data?.data ?? data;
 }
 
