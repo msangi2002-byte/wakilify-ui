@@ -120,6 +120,33 @@ export async function getAdminReports(params = {}) {
   return data?.data ?? data;
 }
 
+// ==================== PROMOTIONS ====================
+
+export async function getAdminPromotions(params = {}) {
+  const { data } = await api.get(`${base}/promotions`, { params });
+  return data?.data ?? data;
+}
+
+export async function getAdminPromotionsStats() {
+  const { data } = await api.get(`${base}/promotions/stats`);
+  return data?.data ?? data;
+}
+
+export async function adminPausePromotion(promotionId) {
+  const { data } = await api.post(`${base}/promotions/${promotionId}/pause`);
+  return data?.data ?? data;
+}
+
+export async function adminResumePromotion(promotionId) {
+  const { data } = await api.post(`${base}/promotions/${promotionId}/resume`);
+  return data?.data ?? data;
+}
+
+export async function adminRejectPromotion(promotionId, reason = '') {
+  const { data } = await api.post(`${base}/promotions/${promotionId}/reject`, { reason });
+  return data?.data ?? data;
+}
+
 /** Get reports by type: POST, USER, BUSINESS, PRODUCT, COMMENT, etc. */
 export async function getAdminReportsByType(type, params = {}) {
   const { data } = await api.get(`${base}/reports/type/${type}`, { params });
@@ -226,6 +253,12 @@ export async function getTransactionReports() {
 // Analytics (DAU/MAU)
 export async function getAnalytics() {
   const { data } = await api.get(`${base}/analytics`);
+  return data?.data ?? data;
+}
+
+// Audience analytics (by interests, location, demographics, behaviors)
+export async function getAudienceAnalytics() {
+  const { data } = await api.get(`${base}/audience-analytics`);
   return data?.data ?? data;
 }
 

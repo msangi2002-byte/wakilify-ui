@@ -2046,3 +2046,217 @@
   font-weight: 600;
   text-align: right;
 }
+
+/* ==================== AUDIENCE ANALYTICS ==================== */
+.admin-audience-page {
+  padding: 0;
+}
+
+.admin-audience-header {
+  margin-bottom: 24px;
+}
+
+.admin-audience-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.admin-audience-title h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+
+.admin-audience-title svg {
+  color: var(--admin-violet);
+}
+
+.admin-audience-subtitle {
+  color: rgba(255, 255, 255, 0.65);
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.admin-audience-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.admin-audience-stat-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+}
+
+.admin-audience-stat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: rgba(124, 58, 237, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--admin-violet);
+}
+
+.admin-audience-stat-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-audience-stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.admin-audience-stat-label {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.admin-audience-stat-sub {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.admin-audience-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.admin-audience-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.admin-audience-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.admin-audience-tab:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+.admin-audience-tab.active {
+  background: rgba(124, 58, 237, 0.2);
+  color: var(--admin-violet);
+}
+
+.admin-audience-content {
+  padding: 24px;
+}
+
+.admin-audience-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.admin-audience-grid-sm {
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+}
+
+.admin-audience-tile {
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+}
+
+.admin-audience-tile-behavior {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-audience-tile-behavior .admin-audience-behavior-icon {
+  color: var(--admin-violet);
+  margin-bottom: 4px;
+}
+
+.admin-audience-tile-label {
+  display: block;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.admin-audience-tile-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.admin-audience-empty {
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0;
+}
+
+.admin-audience-location .admin-audience-tabs-inline {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.admin-audience-tab-btn {
+  padding: 8px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.875rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.admin-audience-tab-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.admin-audience-tab-btn.active {
+  background: rgba(124, 58, 237, 0.25);
+  border-color: var(--admin-violet);
+  color: #fff;
+}
+
+.admin-audience-demographics .admin-audience-section {
+  margin-bottom: 24px;
+}
+
+.admin-audience-demographics .admin-audience-section:last-child {
+  margin-bottom: 0;
+}
+
+.admin-audience-demographics h4 {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0 0 12px 0;
+}
+
+.admin-loading-placeholder {
+  padding: 48px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+}
