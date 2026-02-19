@@ -7,11 +7,14 @@ import '@/styles/business.css';
 
 export default function ProductNew() {
   const navigate = useNavigate();
-  const fileInputRef = useRef(null);
+  const coverInputRef = useRef(null);
+  const galleryInputRef = useRef(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [images, setImages] = useState([]);
-  const [imagePreviews, setImagePreviews] = useState([]);
+  const [coverImage, setCoverImage] = useState(null);
+  const [coverPreview, setCoverPreview] = useState(null);
+  const [galleryImages, setGalleryImages] = useState([]);
+  const [galleryPreviews, setGalleryPreviews] = useState([]);
   const [formData, setFormData] = useState({
     name: '',
     price: '',
@@ -29,29 +32,38 @@ export default function ProductNew() {
     setError('');
   };
 
-  const handleImageChange = (e) => {
-    const chosen = Array.from(e.target.files || []);
-    if (chosen.length === 0) return;
-    
-    // Limit to 10 images
-    const maxImages = 10;
-    const newImages = [...images, ...chosen].slice(0, maxImages);
-    setImages(newImages);
-    
-    // Create previews
-    const newPreviews = [...imagePreviews];
-    chosen.slice(0, maxImages - imagePreviews.length).forEach((file) => {
-      const url = URL.createObjectURL(file);
-      newPreviews.push(url);
-    });
-    setImagePreviews(newPreviews.slice(0, maxImages));
-    
+  const handleCoverChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (coverPreview) URL.revokeObjectURL(coverPreview);
+    setCoverImage(file);
+    setCoverPreview(URL.createObjectURL(file));
     e.target.value = '';
   };
 
-  const removeImage = (index) => {
-    setImages((prev) => prev.filter((_, i) => i !== index));
-    setImagePreviews((prev) => {
+  const removeCover = () => {
+    if (coverPreview) URL.revokeObjectURL(coverPreview);
+    setCoverImage(null);
+    setCoverPreview(null);
+  };
+
+  const handleGalleryChange = (e) => {
+    const chosen = Array.from(e.target.files || []);
+    if (chosen.length === 0) return;
+    const maxGallery = 9;
+    const newImages = [...galleryImages, ...chosen].slice(0, maxGallery);
+    setGalleryImages(newImages);
+    const newPreviews = [...galleryPreviews];
+    chosen.slice(0, maxGallery - galleryPreviews.length).forEach((file) => {
+      newPreviews.push(URL.createObjectURL(file));
+    });
+    setGalleryPreviews(newPreviews.slice(0, maxGallery));
+    e.target.value = '';
+  };
+
+  const removeGalleryImage = (index) => {
+    setGalleryImages((prev) => prev.filter((_, i) => i !== index));
+    setGalleryPreviews((prev) => {
       URL.revokeObjectURL(prev[index]);
       return prev.filter((_, i) => i !== index);
     });
@@ -60,9 +72,8 @@ export default function ProductNew() {
   // Cleanup image previews on unmount
   useEffect(() => {
     return () => {
-      imagePreviews.forEach((url) => {
-        if (url) URL.revokeObjectURL(url);
-      });
+      if (coverPreview) URL.revokeObjectURL(coverPreview);
+      galleryPreviews.forEach((url) => { if (url) URL.revokeObjectURL(url); });
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -106,7 +117,9 @@ export default function ProductNew() {
         }
       }
 
-      await createProduct(payload, images);
+      // Send cover first (thumbnail), then gallery images
+      const allImages = coverImage ? [coverImage, ...galleryImages] : galleryImages;
+      await createProduct(payload, allImages);
       navigate('/business/products');
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to create product'));
@@ -263,32 +276,122 @@ export default function ProductNew() {
           </p>
         </div>
 
+        {/* Cover image – used as thumbnail and main image in product details */}
         <div style={{ marginBottom: '24px' }}>
           <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#111827' }}>
-            Product Images
+            Cover image
           </label>
+          <p style={{ marginBottom: '10px', fontSize: '0.875rem', color: '#6b7280' }}>
+            Used as thumbnail in listings and as the main image on the product details page.
+          </p>
           <input
-            ref={fileInputRef}
+            ref={coverInputRef}
             type="file"
             accept="image/*"
-            multiple
-            onChange={handleImageChange}
+            onChange={handleCoverChange}
             style={{ display: 'none' }}
             disabled={submitting}
           />
           <button
             type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={submitting || images.length >= 10}
+            onClick={() => coverInputRef.current?.click()}
+            disabled={submitting}
+            className="business-btn-ghost"
+            style={{ width: '100%', justifyContent: 'center', marginBottom: '12px' }}
+          >
+            <Camera size={18} />
+            {coverPreview ? 'Change cover image' : 'Choose cover image'}
+          </button>
+          {coverPreview && (
+            <div
+              style={{
+                position: 'relative',
+                maxWidth: '280px',
+                aspectRatio: '1',
+                borderRadius: '8px',
+                overflow: 'hidden',
+                border: '1px solid #e5e7eb',
+                background: '#f9fafb',
+              }}
+            >
+              <img
+                src={coverPreview}
+                alt="Cover"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '6px',
+                  left: '6px',
+                  background: 'rgba(59, 130, 246, 0.9)',
+                  color: '#fff',
+                  padding: '2px 8px',
+                  borderRadius: '4px',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                }}
+              >
+                Thumbnail &amp; main image
+              </div>
+              <button
+                type="button"
+                onClick={removeCover}
+                disabled={submitting}
+                style={{
+                  position: 'absolute',
+                  top: '6px',
+                  right: '6px',
+                  background: 'rgba(239, 68, 68, 0.9)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '24px',
+                  height: '24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  padding: 0,
+                }}
+                aria-label="Remove cover"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Other images – gallery on product details */}
+        <div style={{ marginBottom: '24px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#111827' }}>
+            Gallery images
+          </label>
+          <p style={{ marginBottom: '10px', fontSize: '0.875rem', color: '#6b7280' }}>
+            Additional images shown on the product details page (up to 9).
+          </p>
+          <input
+            ref={galleryInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleGalleryChange}
+            style={{ display: 'none' }}
+            disabled={submitting}
+          />
+          <button
+            type="button"
+            onClick={() => galleryInputRef.current?.click()}
+            disabled={submitting || galleryImages.length >= 9}
             className="business-btn-ghost"
             style={{ width: '100%', justifyContent: 'center', marginBottom: '12px' }}
           >
             <ImagePlus size={18} />
-            {images.length >= 10 ? 'Maximum 10 images' : `Add Images (${images.length}/10)`}
+            {galleryImages.length >= 9 ? 'Maximum 9 images' : `Add gallery images (${galleryImages.length}/9)`}
           </button>
-          {imagePreviews.length > 0 && (
+          {galleryPreviews.length > 0 && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '12px', marginTop: '12px' }}>
-              {imagePreviews.map((preview, index) => (
+              {galleryPreviews.map((preview, index) => (
                 <div
                   key={index}
                   style={{
@@ -303,7 +406,7 @@ export default function ProductNew() {
                 >
                   <img
                     src={preview}
-                    alt={`Preview ${index + 1}`}
+                    alt={`Gallery ${index + 1}`}
                     style={{
                       position: 'absolute',
                       top: 0,
@@ -313,26 +416,9 @@ export default function ProductNew() {
                       objectFit: 'cover',
                     }}
                   />
-                  {index === 0 && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: '4px',
-                        left: '4px',
-                        background: 'rgba(59, 130, 246, 0.9)',
-                        color: '#fff',
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        fontSize: '0.75rem',
-                        fontWeight: 600,
-                      }}
-                    >
-                      Primary
-                    </div>
-                  )}
                   <button
                     type="button"
-                    onClick={() => removeImage(index)}
+                    onClick={() => removeGalleryImage(index)}
                     disabled={submitting}
                     style={{
                       position: 'absolute',
@@ -358,9 +444,6 @@ export default function ProductNew() {
               ))}
             </div>
           )}
-          <p style={{ marginTop: '8px', fontSize: '0.875rem', color: '#6b7280' }}>
-            Add up to 10 images. The first image will be used as the primary/thumbnail.
-          </p>
         </div>
 
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '32px' }}>

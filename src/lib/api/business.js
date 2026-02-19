@@ -82,10 +82,31 @@ export async function createProduct(productData, images = []) {
 }
 
 /**
- * Update a product
+ * Update a product (JSON only, or multipart when coverImage/images provided)
  * PUT /api/v1/business/products/:id
+ * @param {string} id - Product ID
+ * @param {Object} body - Product fields
+ * @param {File|null} coverImage - Optional new cover image (thumbnail)
+ * @param {File[]} images - Optional new gallery images
  */
-export async function updateProduct(id, body) {
+export async function updateProduct(id, body, coverImage = null, images = []) {
+  const hasFiles = (coverImage && coverImage instanceof File) || (images && images.length > 0);
+  if (hasFiles) {
+    const formData = new FormData();
+    formData.append('product', new Blob([JSON.stringify(body)], { type: 'application/json' }));
+    if (coverImage && coverImage instanceof File) {
+      formData.append('coverImage', coverImage);
+    }
+    if (images && images.length > 0) {
+      images.forEach((file) => {
+        if (file instanceof File) formData.append('images', file);
+      });
+    }
+    const { data } = await api.put(`/business/products/${id}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data?.data ?? data;
+  }
   const { data } = await api.put(`/business/products/${id}`, body);
   return data?.data ?? data;
 }
