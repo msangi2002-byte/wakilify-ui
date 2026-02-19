@@ -36,6 +36,7 @@ import {
   X,
   TrendingUp,
   Users,
+  BarChart3,
   MousePointerClick,
 } from 'lucide-react';
 

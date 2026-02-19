@@ -66,11 +66,13 @@ export async function getBoostAnalytics() {
 }
 
 /**
- * Get active ads for display (feed, etc.)
+ * Get active ads
  * GET /api/v1/ads/active?type=FEED&limit=5
  */
 export async function getActiveAds(params = {}) {
-  const { data } = await api.get('/ads/active', { params: { limit: 5, ...params } });
+  const { data } = await api.get('/ads/active', {
+    params: { type: 'FEED', limit: 5, ...params },
+  });
   return data?.data ?? data ?? [];
 }
 
@@ -79,7 +81,12 @@ export async function getActiveAds(params = {}) {
  * POST /api/v1/ads/{adId}/impression
  */
 export async function recordImpression(adId) {
-  await api.post(`/ads/${adId}/impression`);
+  if (!adId) return;
+  try {
+    await api.post(`/ads/${adId}/impression`);
+  } catch (error) {
+    // Silently fail
+  }
 }
 
 /**
@@ -87,5 +94,10 @@ export async function recordImpression(adId) {
  * POST /api/v1/ads/{adId}/click
  */
 export async function recordClick(adId) {
-  await api.post(`/ads/${adId}/click`);
+  if (!adId) return;
+  try {
+    await api.post(`/ads/${adId}/click`);
+  } catch (error) {
+    // Silently fail
+  }
 }
