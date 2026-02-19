@@ -37,6 +37,7 @@ export const PATH_TO_AREA = {
   reports: 'REPORTS',
   'audit-logs': 'AUDIT_LOGS',
   'agent-packages': 'AGENT_PACKAGES',
+  'business-registration-plans': 'BUSINESS_REGISTRATION_PLANS',
   settings: 'SETTINGS',
   roles: 'ROLE_DEFINITIONS',  // Backend area; only Super Admin can manage roles
 };
@@ -65,6 +66,7 @@ export const AREA_LABELS = {
   AUDIT_LOGS: 'Audit Logs',
   SETTINGS: 'Settings',
   AGENT_PACKAGES: 'Agent Packages',
+  BUSINESS_REGISTRATION_PLANS: 'Business Registration Plans',
   IMPERSONATE: 'Impersonate',
   ROLE_DEFINITIONS: 'Role Definitions',
   ROLES_ACCESS: 'Roles & Access',

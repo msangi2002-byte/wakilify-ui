@@ -61,6 +61,7 @@ const AgentRequests = lazy(() => import('@/pages/agent/Requests'));
 const Activate = lazy(() => import('@/pages/agent/Activate'));
 const Commissions = lazy(() => import('@/pages/agent/Commissions'));
 const AgentWithdrawals = lazy(() => import('@/pages/agent/Withdrawals'));
+const AgentRequestDetail = lazy(() => import('@/pages/agent/RequestDetail'));
 
 const AdminDashboard = lazy(() => import('@/pages/admin/Dashboard'));
 const Users = lazy(() => import('@/pages/admin/Users'));
@@ -75,6 +76,7 @@ const Reports = lazy(() => import('@/pages/admin/Reports'));
 const AuditLogs = lazy(() => import('@/pages/admin/AuditLogs'));
 const AdminSettings = lazy(() => import('@/pages/admin/Settings'));
 const AgentPackages = lazy(() => import('@/pages/admin/AgentPackages'));
+const BusinessRegistrationPlans = lazy(() => import('@/pages/admin/BusinessRegistrationPlans'));
 const AdminRoles = lazy(() => import('@/pages/admin/AdminRoles'));
 const MapView = lazy(() => import('@/pages/admin/MapView'));
 const AudienceAnalytics = lazy(() => import('@/pages/admin/AudienceAnalytics'));
@@ -185,6 +187,7 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <Suspense fallback={<Fallback />}><AgentDashboard /></Suspense> },
           { path: 'requests', element: <Suspense fallback={<Fallback />}><AgentRequests /></Suspense> },
+          { path: 'requests/:id', element: <Suspense fallback={<Fallback />}><AgentRequestDetail /></Suspense> },
           { path: 'activate', element: <Suspense fallback={<Fallback />}><Activate /></Suspense> },
           { path: 'commissions', element: <Suspense fallback={<Fallback />}><Commissions /></Suspense> },
           { path: 'withdrawals', element: <Suspense fallback={<Fallback />}><AgentWithdrawals /></Suspense> },
@@ -214,6 +217,7 @@ const router = createBrowserRouter([
           { path: 'map', element: <Suspense fallback={<Fallback />}><MapView /></Suspense> },
           { path: 'audit-logs', element: <Suspense fallback={<Fallback />}><AuditLogs /></Suspense> },
           { path: 'agent-packages', element: <Suspense fallback={<Fallback />}><AgentPackages /></Suspense> },
+          { path: 'business-registration-plans', element: <Suspense fallback={<Fallback />}><BusinessRegistrationPlans /></Suspense> },
           { path: 'roles', element: <Suspense fallback={<Fallback />}><AdminRoles /></Suspense> },
           { path: 'settings', element: <Suspense fallback={<Fallback />}><AdminSettings /></Suspense> },
         ],

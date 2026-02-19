@@ -18,6 +18,7 @@ const Reports = lazy(() => import('@/pages/admin/Reports'));
 const AuditLogs = lazy(() => import('@/pages/admin/AuditLogs'));
 const Settings = lazy(() => import('@/pages/admin/Settings'));
 const AgentPackages = lazy(() => import('@/pages/admin/AgentPackages'));
+const BusinessRegistrationPlans = lazy(() => import('@/pages/admin/BusinessRegistrationPlans'));
 const AdminRoles = lazy(() => import('@/pages/admin/AdminRoles'));
 const MapView = lazy(() => import('@/pages/admin/MapView'));
 const AudienceAnalytics = lazy(() => import('@/pages/admin/AudienceAnalytics'));
@@ -41,6 +42,7 @@ export function AdminRoutes() {
       <Route path="map" element={<SuspenseWrapper><MapView /></SuspenseWrapper>} />
       <Route path="audit-logs" element={<SuspenseWrapper><AuditLogs /></SuspenseWrapper>} />
       <Route path="agent-packages" element={<SuspenseWrapper><AgentPackages /></SuspenseWrapper>} />
+      <Route path="business-registration-plans" element={<SuspenseWrapper><BusinessRegistrationPlans /></SuspenseWrapper>} />
       <Route path="roles" element={<SuspenseWrapper><AdminRoles /></SuspenseWrapper>} />
       <Route path="settings" element={<SuspenseWrapper><Settings /></SuspenseWrapper>} />
     </Route>

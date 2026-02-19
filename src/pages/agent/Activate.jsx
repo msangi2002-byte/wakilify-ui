@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Building2, CheckCircle2, Clock, RefreshCw, AlertCircle, XCircle, ShieldCheck } from 'lucide-react';
-import { getAgentBusinesses, approveBusinessRequest, cancelBusinessRequest } from '@/lib/api/agent';
+import { getAgentBusinesses, approveBusiness, cancelBusinessRequest } from '@/lib/api/agent';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import '@/styles/agent.css';
 
@@ -55,7 +55,7 @@ export default function Activate() {
     setError('');
     setSuccess('');
     try {
-      await approveBusinessRequest(businessId);
+      await approveBusiness(businessId);
       setSuccess('Business verified and approved successfully!');
       await loadBusinesses();
       setTimeout(() => setSuccess(''), 5000);

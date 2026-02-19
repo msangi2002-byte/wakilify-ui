@@ -82,10 +82,37 @@ export async function getAgentBusinessRequests(params = {}) {
 }
 
 /**
- * Approve/Verify a business activation manually
+ * Get one business request detail (map, distance, user details, documents).
+ * GET /api/v1/agent/business-requests/:id
+ */
+export async function getAgentBusinessRequestById(id) {
+  const { data } = await api.get(`/agent/business-requests/${id}`);
+  return data?.data ?? data;
+}
+
+/**
+ * Agent updates document/details for a business request (NIDA, TIN, company, ID doc URLs).
+ * PATCH /api/v1/agent/business-requests/:id
+ */
+export async function updateBusinessRequestDetails(id, body) {
+  const { data } = await api.patch(`/agent/business-requests/${id}`, body);
+  return data?.data ?? data;
+}
+
+/**
+ * Agent approves the request after visit: creates business, user becomes BUSINESS (request must be PAID).
+ * POST /api/v1/agent/business-requests/:id/approve
+ */
+export async function approveBusinessRequest(id) {
+  const { data } = await api.post(`/agent/business-requests/${id}/approve`);
+  return data?.data ?? data;
+}
+
+/**
+ * Approve/Verify a business activation manually (business entity, not request).
  * POST /api/v1/agent/businesses/:id/approve
  */
-export async function approveBusinessRequest(businessId) {
+export async function approveBusiness(businessId) {
   const { data } = await api.post(`/agent/businesses/${businessId}/approve`);
   return data?.data ?? data;
 }

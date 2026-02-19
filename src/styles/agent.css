@@ -851,6 +851,18 @@
   max-width: 720px;
 }
 
+.agent-request-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 768px) {
+  .agent-request-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .agent-requests-form-cols {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1438,6 +1450,11 @@
 .agent-request-status-pending {
   background: rgba(240, 144, 104, 0.25);
   color: #F09068;
+}
+
+.agent-request-status-paid {
+  background: rgba(251, 191, 36, 0.25);
+  color: #fbbf24;
 }
 
 .agent-request-status-approved,

@@ -215,6 +215,44 @@ export async function deleteAgentPackage(packageId) {
   await api.delete(`${base}/agent-packages/${packageId}`);
 }
 
+// ==================== BUSINESS REGISTRATION PLANS ====================
+
+/**
+ * Get all business registration plans (admin).
+ * GET /api/v1/admin/business-registration-plans
+ */
+export async function getBusinessRegistrationPlansAdmin() {
+  const { data } = await api.get(`${base}/business-registration-plans`);
+  return data?.data ?? data ?? [];
+}
+
+/**
+ * Create business registration plan.
+ * POST /api/v1/admin/business-registration-plans
+ * Body: { name, description?, price, sortOrder?, isActive? }
+ */
+export async function createBusinessRegistrationPlan(body) {
+  const { data } = await api.post(`${base}/business-registration-plans`, body);
+  return data?.data ?? data;
+}
+
+/**
+ * Update business registration plan.
+ * PUT /api/v1/admin/business-registration-plans/:id
+ */
+export async function updateBusinessRegistrationPlan(id, body) {
+  const { data } = await api.put(`${base}/business-registration-plans/${id}`, body);
+  return data?.data ?? data;
+}
+
+/**
+ * Delete business registration plan.
+ * DELETE /api/v1/admin/business-registration-plans/:id
+ */
+export async function deleteBusinessRegistrationPlan(id) {
+  await api.delete(`${base}/business-registration-plans/${id}`);
+}
+
 // ==================== SETTINGS ====================
 
 /**
