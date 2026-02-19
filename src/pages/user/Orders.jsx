@@ -89,44 +89,35 @@ function OrderCard({ order, onOrderUpdate }) {
   const orderData = orderDetails || order;
 
   return (
-    <div className="user-app-card" style={{ marginBottom: '16px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', flexWrap: 'wrap' }}>
-            <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 600 }}>
+    <div className="orders-card">
+      <div className="orders-card-header">
+        <div className="orders-card-header-left">
+          <div className="orders-card-title-row">
+            <h3 className="orders-card-title">
               {order.orderNumber || `Order #${order.id?.substring(0, 8)}`}
             </h3>
-            <span
-              style={{
-                padding: '4px 12px',
-                borderRadius: '12px',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                background: statusInfo.bg,
-                color: statusInfo.color,
-              }}
-            >
+            <span className="orders-card-status" style={{ background: statusInfo.bg, color: statusInfo.color }}>
               {statusInfo.label}
             </span>
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '0.875rem', color: '#65676b', marginBottom: '8px' }}>
+          <div className="orders-card-meta">
             {order.createdAt && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span>
                 <Calendar size={14} />
                 {formatDate(order.createdAt)}
-              </div>
+              </span>
             )}
             {orderData.business && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span>
                 <Building2 size={14} />
                 {orderData.business.name || 'Business'}
-              </div>
+              </span>
             )}
             {orderData.total && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600, color: '#7c3aed' }}>
+              <span style={{ fontWeight: 600, color: '#7c3aed' }}>
                 <ShoppingBag size={14} />
                 {formatCurrency(orderData.total)}
-              </div>
+              </span>
             )}
           </div>
           {orderData.items && orderData.items.length > 0 && !expanded && (
@@ -135,45 +126,20 @@ function OrderCard({ order, onOrderUpdate }) {
             </div>
           )}
         </div>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div className="orders-card-actions">
           {canCancel && (
-            <button
-              type="button"
-              onClick={() => setShowCancelModal(true)}
-              style={{
-                padding: '6px 12px',
-                fontSize: '0.875rem',
-                background: 'none',
-                border: '1px solid #e4e6eb',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                color: '#ef4444',
-              }}
-            >
+            <button type="button" onClick={() => setShowCancelModal(true)} className="orders-card-btn orders-card-btn-outline">
               Cancel
             </button>
           )}
-          <button
-            type="button"
-            onClick={handleExpand}
-            style={{
-              padding: '6px 12px',
-              fontSize: '0.875rem',
-              background: '#7c3aed',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              color: '#fff',
-            }}
-          >
+          <button type="button" onClick={handleExpand} className="orders-card-btn orders-card-btn-primary">
             {expanded ? 'Hide' : 'Details'}
           </button>
         </div>
       </div>
 
-      {/* Expanded Details */}
       {expanded && (
-        <div style={{ paddingTop: '16px', borderTop: '1px solid #e4e6eb' }}>
+        <div className="orders-card-expanded">
           {loadingDetails ? (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', gap: '8px' }}>
               <Loader2 size={20} className="icon-spin" />
@@ -181,22 +147,12 @@ function OrderCard({ order, onOrderUpdate }) {
             </div>
           ) : (
             <>
-              {/* Order Items */}
               {orderData.items && orderData.items.length > 0 && (
-                <div style={{ marginBottom: '16px' }}>
-                  <h4 style={{ margin: '0 0 12px', fontSize: '0.9375rem', fontWeight: 600 }}>Items</h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div className="orders-card-section">
+                  <h4 className="orders-card-section-title">Items</h4>
+                  <div>
                     {orderData.items.map((item, idx) => (
-                      <div
-                        key={item.id || idx}
-                        style={{
-                          display: 'flex',
-                          gap: '12px',
-                          padding: '12px',
-                          background: '#f9fafb',
-                          borderRadius: '8px',
-                        }}
-                      >
+                      <div key={item.id || idx} className="orders-item-row">
                         {item.productImage && (
                           <img
                             src={item.productImage}
@@ -227,10 +183,9 @@ function OrderCard({ order, onOrderUpdate }) {
                 </div>
               )}
 
-              {/* Seller Contact Information */}
               {orderData.business && (
-                <div style={{ marginBottom: '16px', padding: '12px', background: '#f0f9ff', borderRadius: '8px', border: '1px solid #bae6fd' }}>
-                  <h4 style={{ margin: '0 0 12px', fontSize: '0.9375rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div className="orders-card-section orders-seller-box">
+                  <h4 className="orders-card-section-title">
                     <Building2 size={18} style={{ color: '#0284c7' }} />
                     Seller Contact
                   </h4>
@@ -325,10 +280,9 @@ function OrderCard({ order, onOrderUpdate }) {
                 </div>
               )}
 
-              {/* Seller Contact Information */}
               {orderData.business && (
-                <div style={{ marginBottom: '16px', padding: '12px', background: '#f0f9ff', borderRadius: '8px', border: '1px solid #bae6fd' }}>
-                  <h4 style={{ margin: '0 0 12px', fontSize: '0.9375rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div className="orders-card-section orders-seller-box">
+                  <h4 className="orders-card-section-title">
                     <Building2 size={18} style={{ color: '#0284c7' }} />
                     Seller Contact
                   </h4>
@@ -447,10 +401,9 @@ function OrderCard({ order, onOrderUpdate }) {
                 </div>
               )}
 
-              {/* Delivery Information */}
               {(orderData.deliveryName || orderData.deliveryAddress || orderData.deliveryPhone) && (
-                <div style={{ marginBottom: '16px', padding: '12px', background: '#f9fafb', borderRadius: '8px' }}>
-                  <h4 style={{ margin: '0 0 12px', fontSize: '0.9375rem', fontWeight: 600 }}>Delivery Information</h4>
+                <div className="orders-card-section orders-delivery-box">
+                  <h4 className="orders-card-section-title">Delivery Information</h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.875rem' }}>
                     {orderData.deliveryName && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -479,9 +432,8 @@ function OrderCard({ order, onOrderUpdate }) {
                 </div>
               )}
 
-              {/* Order Summary */}
-              <div style={{ marginBottom: '16px', padding: '12px', background: '#f9fafb', borderRadius: '8px' }}>
-                <h4 style={{ margin: '0 0 12px', fontSize: '0.9375rem', fontWeight: 600 }}>Order Summary</h4>
+              <div className="orders-card-section orders-summary-box">
+                <h4 className="orders-card-section-title">Order Summary</h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.875rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span>Subtotal</span>
@@ -515,9 +467,8 @@ function OrderCard({ order, onOrderUpdate }) {
                 </div>
               </div>
 
-              {/* Tracking Information */}
               {orderData.trackingNumber && (
-                <div style={{ marginBottom: '16px', padding: '12px', background: '#f0f9ff', borderRadius: '8px', border: '1px solid #bae6fd' }}>
+                <div className="orders-card-section orders-seller-box">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.875rem' }}>
                     <Truck size={16} style={{ color: '#0284c7' }} />
                     <span style={{ fontWeight: 600 }}>Tracking Number:</span>
@@ -526,9 +477,8 @@ function OrderCard({ order, onOrderUpdate }) {
                 </div>
               )}
 
-              {/* Status Timeline */}
-              <div style={{ marginBottom: '16px', padding: '12px', background: '#f9fafb', borderRadius: '8px' }}>
-                <h4 style={{ margin: '0 0 12px', fontSize: '0.9375rem', fontWeight: 600 }}>Status Timeline</h4>
+              <div className="orders-card-section orders-timeline-box">
+                <h4 className="orders-card-section-title">Status Timeline</h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.875rem' }}>
                   {orderData.createdAt && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -566,16 +516,15 @@ function OrderCard({ order, onOrderUpdate }) {
                 </div>
               </div>
 
-              {/* Notes */}
               {orderData.customerNotes && (
-                <div style={{ marginBottom: '16px', padding: '12px', background: '#f9fafb', borderRadius: '8px' }}>
-                  <h4 style={{ margin: '0 0 8px', fontSize: '0.9375rem', fontWeight: 600 }}>Your Notes</h4>
+                <div className="orders-card-section orders-notes-box">
+                  <h4 className="orders-card-section-title">Your Notes</h4>
                   <p style={{ margin: 0, fontSize: '0.875rem', color: '#65676b' }}>{orderData.customerNotes}</p>
                 </div>
               )}
               {orderData.sellerNotes && (
-                <div style={{ marginBottom: '16px', padding: '12px', background: '#f0f9ff', borderRadius: '8px', border: '1px solid #bae6fd' }}>
-                  <h4 style={{ margin: '0 0 8px', fontSize: '0.9375rem', fontWeight: 600 }}>Seller Notes</h4>
+                <div className="orders-card-section orders-notes-box seller">
+                  <h4 className="orders-card-section-title">Seller Notes</h4>
                   <p style={{ margin: 0, fontSize: '0.875rem', color: '#65676b' }}>{orderData.sellerNotes}</p>
                 </div>
               )}
@@ -584,30 +533,11 @@ function OrderCard({ order, onOrderUpdate }) {
         </div>
       )}
 
-      {/* Cancel Modal */}
       {showCancelModal && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
-          onClick={() => setShowCancelModal(false)}
-        >
-          <div
-            className="user-app-card"
-            style={{ maxWidth: '500px', width: '90%', margin: '16px' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 style={{ margin: '0 0 16px', fontSize: '1.25rem', fontWeight: 600 }}>Cancel Order</h3>
-            <p style={{ margin: '0 0 16px', color: '#65676b' }}>
+        <div className="orders-cancel-modal-backdrop" onClick={() => setShowCancelModal(false)}>
+          <div className="orders-cancel-modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3 className="orders-cancel-modal-title">Cancel Order</h3>
+            <p className="orders-cancel-modal-desc">
               Are you sure you want to cancel this order? Please provide a reason.
             </p>
             <textarea
@@ -615,49 +545,24 @@ function OrderCard({ order, onOrderUpdate }) {
               onChange={(e) => setCancelReason(e.target.value)}
               placeholder="Enter cancellation reason..."
               rows={4}
-              style={{
-                width: '100%',
-                padding: '12px',
-                border: '1px solid #e4e6eb',
-                borderRadius: '8px',
-                fontSize: '0.9375rem',
-                fontFamily: 'inherit',
-                marginBottom: '16px',
-                resize: 'vertical',
-              }}
+              className="orders-cancel-modal-textarea"
             />
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <div className="orders-cancel-modal-actions">
               <button
                 type="button"
+                className="orders-cancel-keep"
                 onClick={() => {
                   setShowCancelModal(false);
                   setCancelReason('');
-                }}
-                style={{
-                  padding: '10px 20px',
-                  background: 'none',
-                  border: '1px solid #e4e6eb',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '0.9375rem',
                 }}
               >
                 Keep Order
               </button>
               <button
                 type="button"
+                className="orders-cancel-submit"
                 onClick={handleCancel}
                 disabled={!cancelReason.trim() || cancelling}
-                style={{
-                  padding: '10px 20px',
-                  background: cancelling || !cancelReason.trim() ? '#d1d5db' : '#ef4444',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: cancelling || !cancelReason.trim() ? 'not-allowed' : 'pointer',
-                  color: '#fff',
-                  fontSize: '0.9375rem',
-                  fontWeight: 600,
-                }}
               >
                 {cancelling ? (
                   <>
@@ -715,153 +620,76 @@ export default function Orders() {
 
   if (loading) {
     return (
-      <div className="user-app-card" style={{ padding: '48px', textAlign: 'center' }}>
-        <Loader2 size={48} className="icon-spin" style={{ color: '#7c3aed', margin: '0 auto 16px' }} />
-        <p style={{ color: '#65676b' }}>Loading orders...</p>
+      <div className="orders-container">
+        <div className="orders-loading">
+          <Loader2 size={48} className="icon-spin orders-loading-spinner" />
+          <p className="orders-loading-text">Loading orders...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }} className="orders-container">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+    <div className="orders-container">
+      <div className="orders-header">
         <div>
-          <h1 style={{ margin: 0, marginBottom: '4px', fontSize: '1.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <h1 className="orders-header-title">
             <Package size={32} />
             My Orders
           </h1>
-          <p style={{ color: '#65676b', fontSize: '0.9375rem', margin: 0 }}>
+          <p className="orders-header-sub">
             {orders.totalElements} {orders.totalElements === 1 ? 'order' : 'orders'}
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button
-            type="button"
-            onClick={() => navigate('/app/shop')}
-            style={{
-              padding: '10px 20px',
-              background: '#7c3aed',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '0.9375rem',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
+        <div className="orders-header-actions">
+          <button type="button" onClick={() => navigate('/app/shop')} className="orders-btn orders-btn-primary">
             <ShoppingBag size={18} />
             Shop Now
           </button>
-          <button
-            type="button"
-            onClick={loadOrders}
-            disabled={loading}
-            style={{
-              padding: '10px 20px',
-              background: '#fff',
-              color: '#050505',
-              border: '1px solid #e4e6eb',
-              borderRadius: '8px',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              fontSize: '0.9375rem',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
+          <button type="button" onClick={loadOrders} disabled={loading} className="orders-btn orders-btn-secondary">
             <RefreshCw size={18} className={loading ? 'icon-spin' : ''} />
             Refresh
           </button>
         </div>
       </div>
 
-      {/* Status Filter */}
-      <div style={{ marginBottom: '24px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+      <div className="orders-filters">
         <button
           type="button"
           onClick={() => setStatusFilter('all')}
-          style={{
-            padding: '8px 16px',
-            fontSize: '0.875rem',
-            background: statusFilter === 'all' ? '#7c3aed' : '#fff',
-            color: statusFilter === 'all' ? '#fff' : '#050505',
-            border: '1px solid #e4e6eb',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontWeight: statusFilter === 'all' ? 600 : 400,
-          }}
+          className={`orders-filter-btn ${statusFilter === 'all' ? 'active' : ''}`}
         >
           All
         </button>
-        {Object.entries(ORDER_STATUSES).map(([status, info]) => (
+        {Object.entries(ORDER_STATUSES).map(([status]) => (
           <button
             key={status}
             type="button"
             onClick={() => setStatusFilter(status)}
-            style={{
-              padding: '8px 16px',
-              fontSize: '0.875rem',
-              background: statusFilter === status ? '#7c3aed' : '#fff',
-              color: statusFilter === status ? '#fff' : '#050505',
-              border: '1px solid #e4e6eb',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontWeight: statusFilter === status ? 600 : 400,
-            }}
+            className={`orders-filter-btn ${statusFilter === status ? 'active' : ''}`}
           >
-            {info.label}
+            {ORDER_STATUSES[status].label}
           </button>
         ))}
       </div>
 
       {error && (
-        <div
-          className="user-app-card"
-          style={{
-            marginBottom: '24px',
-            background: 'rgba(239, 68, 68, 0.1)',
-            border: '1px solid #ef4444',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ef4444' }}>
-            <AlertCircle size={20} />
-            <p style={{ margin: 0, fontWeight: 500 }}>{error}</p>
-          </div>
+        <div className="orders-error-card">
+          <AlertCircle size={20} />
+          <p>{error}</p>
         </div>
       )}
 
       {orders.content.length === 0 ? (
-        <div className="user-app-card" style={{ textAlign: 'center', padding: '48px 24px' }}>
-          <Package size={64} style={{ color: '#d1d5db', marginBottom: '16px' }} />
-          <h2 style={{ margin: '0 0 8px', fontSize: '1.25rem', fontWeight: 600, color: '#050505' }}>
-            No orders yet
-          </h2>
-          <p style={{ margin: '0 0 24px', color: '#65676b' }}>
+        <div className="orders-empty-card">
+          <Package size={64} className="orders-empty-icon" />
+          <h2 className="orders-empty-title">No orders yet</h2>
+          <p className="orders-empty-desc">
             {statusFilter !== 'all'
               ? `No orders with status "${ORDER_STATUSES[statusFilter]?.label}"`
               : 'Start shopping to see your orders here'}
           </p>
-          <button
-            type="button"
-            onClick={() => navigate('/app/shop')}
-            style={{
-              padding: '12px 24px',
-              background: '#7c3aed',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '1rem',
-              fontWeight: 600,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
+          <button type="button" onClick={() => navigate('/app/shop')} className="orders-empty-btn">
             <ShoppingBag size={20} />
             Browse Marketplace
           </button>

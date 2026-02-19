@@ -26,6 +26,7 @@ const Stories = lazy(() => import('@/pages/user/Stories'));
 const StoryCreate = lazy(() => import('@/pages/user/StoryCreate'));
 const StoryViewer = lazy(() => import('@/pages/user/StoryViewer'));
 const Shop = lazy(() => import('@/pages/user/Shop'));
+const ShopBusiness = lazy(() => import('@/pages/user/ShopBusiness'));
 const ProductDetails = lazy(() => import('@/pages/user/ProductDetails'));
 const Cart = lazy(() => import('@/pages/user/Cart'));
 const Checkout = lazy(() => import('@/pages/user/Checkout'));
@@ -123,6 +124,7 @@ const router = createBrowserRouter([
           { path: 'stories/view/:userId', element: <Suspense fallback={<Fallback />}><StoryViewer /></Suspense> },
           { path: 'shop', element: <Suspense fallback={<Fallback />}><Shop /></Suspense> },
           { path: 'shop/settings', element: <Navigate to="/app/settings#marketplace" replace /> },
+          { path: 'shop/business/:id', element: <Suspense fallback={<Fallback />}><ShopBusiness /></Suspense> },
           { path: 'shop/:id', element: <Suspense fallback={<Fallback />}><ProductDetails /></Suspense> },
           { path: 'boost', element: <Suspense fallback={<Fallback />}><Boost /></Suspense> },
           { path: 'orders', element: <Suspense fallback={<Fallback />}><Orders /></Suspense> },

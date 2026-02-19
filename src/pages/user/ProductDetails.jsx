@@ -133,36 +133,32 @@ export default function ProductDetails() {
 
   if (loading) {
     return (
-      <div className="user-app-card" style={{ padding: '48px', textAlign: 'center' }}>
-        <Loader2 size={48} className="icon-spin" style={{ color: '#7c3aed', margin: '0 auto 16px' }} />
-        <p style={{ color: '#65676b' }}>Loading product...</p>
+      <div className="product-details-container">
+        <div className="product-details-loading">
+          <Loader2 size={48} className="icon-spin product-details-spinner" />
+          <p className="product-details-loading-text">Loading product...</p>
+        </div>
       </div>
     );
   }
 
   if (error || !product) {
     return (
-      <div className="user-app-card" style={{ padding: '24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center' }}
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 600 }}>Product</h1>
-        </div>
-        <div style={{ padding: '24px', textAlign: 'center', color: '#ef4444' }}>
-          <AlertCircle size={48} style={{ margin: '0 auto 16px', color: '#ef4444' }} />
-          <p style={{ margin: 0, fontSize: '1.125rem', fontWeight: 600 }}>{error || 'Product not found'}</p>
-          <button
-            type="button"
-            onClick={() => navigate('/app/shop')}
-            style={{ marginTop: '16px', padding: '10px 20px', background: '#7c3aed', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}
-          >
-            Back to Marketplace
-          </button>
+      <div className="product-details-container">
+        <div className="product-details-error-card">
+          <div className="product-details-error-header">
+            <button type="button" onClick={() => navigate(-1)} className="product-details-back">
+              <ArrowLeft size={20} />
+            </button>
+            <h1 className="product-details-error-title">Product</h1>
+          </div>
+          <div className="product-details-error-body">
+            <AlertCircle size={48} className="product-details-error-icon" />
+            <p className="product-details-error-message">{error || 'Product not found'}</p>
+            <button type="button" onClick={() => navigate('/app/shop')} className="product-details-error-btn">
+              Back to Marketplace
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -185,39 +181,21 @@ export default function ProductDetails() {
   const maxQuantity = product.stockQuantity !== null && product.stockQuantity !== undefined ? product.stockQuantity : 999;
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }} className="product-details-container">
+    <div className="product-details-container">
       {/* Back button */}
       <button
         type="button"
         onClick={() => navigate(-1)}
-        style={{
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          padding: '8px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          color: '#65676b',
-          marginBottom: '16px',
-          fontSize: '0.9375rem',
-        }}
+        className="product-details-back"
       >
         <ArrowLeft size={20} />
         Back
       </button>
 
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: '1fr',
-        gap: '24px',
-        marginBottom: '32px',
-      }}
-      className="product-details-grid"
-      >
+      <div className="product-details-grid">
         {/* Product Images */}
-        <div>
-          <div className="user-app-card" style={{ padding: 0, overflow: 'hidden', marginBottom: '16px' }}>
+        <div className="product-details-images-col">
+          <div className="product-details-image-card">
             <div style={{ width: '100%', aspectRatio: 1, background: '#f0f2f5', position: 'relative' }}>
               {mainImage ? (
                 <img
@@ -233,7 +211,7 @@ export default function ProductDetails() {
             </div>
           </div>
           {allImages.length > 1 && (
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', overflowX: 'auto', paddingBottom: '4px', WebkitOverflowScrolling: 'touch' }} className="product-thumbnails">
+            <div className="product-thumbnails">
               {allImages.map((img, index) => (
                 <button
                   key={index}
@@ -263,17 +241,15 @@ export default function ProductDetails() {
         </div>
 
         {/* Product Info */}
-        <div>
-          <div className="user-app-card" style={{ marginBottom: '16px' }}>
-            <h1 style={{ margin: '0 0 8px', fontSize: '1.75rem', fontWeight: 700, color: '#050505' }} className="product-title">
+        <div className="product-details-info-col">
+          <div className="product-details-info-card">
+            <h1 className="product-title">
               {product.name}
             </h1>
             {product.category && (
-              <span style={{ display: 'inline-block', padding: '4px 12px', background: '#f0f2f5', borderRadius: '12px', fontSize: '0.875rem', color: '#65676b', marginBottom: '16px' }}>
-                {product.category}
-              </span>
+              <span className="product-details-category">{product.category}</span>
             )}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }} className="product-price">
+            <div className="product-price">
               <span style={{ fontSize: '2rem', fontWeight: 700, color: '#7c3aed' }}>
                 {formatCurrency(product.price)}
               </span>
@@ -284,7 +260,7 @@ export default function ProductDetails() {
               )}
             </div>
             {product.rating && product.rating > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+              <div className="product-details-rating">
                 <Star size={20} style={{ fill: '#fbbf24', color: '#fbbf24' }} />
                 <span style={{ fontWeight: 600 }}>{product.rating.toFixed(1)}</span>
                 {product.reviewsCount > 0 && (
@@ -295,15 +271,13 @@ export default function ProductDetails() {
               </div>
             )}
             {product.description && (
-              <div style={{ marginBottom: '16px', paddingTop: '16px', borderTop: '1px solid #e4e6eb' }}>
-                <h3 style={{ margin: '0 0 8px', fontSize: '1rem', fontWeight: 600 }}>Description</h3>
-                <p style={{ margin: 0, color: '#65676b', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-                  {product.description}
-                </p>
+              <div className="product-details-block">
+                <h3 className="product-details-block-title">Description</h3>
+                <p className="product-details-desc">{product.description}</p>
               </div>
             )}
             {product.stockQuantity !== null && product.stockQuantity !== undefined && (
-              <div style={{ marginBottom: '16px', paddingTop: '16px', borderTop: '1px solid #e4e6eb' }}>
+              <div className="product-details-block">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Package size={20} style={{ color: isOutOfStock ? '#ef4444' : '#22c55e' }} />
                   <span style={{ fontWeight: 600, color: isOutOfStock ? '#ef4444' : '#22c55e' }}>
@@ -313,8 +287,8 @@ export default function ProductDetails() {
               </div>
             )}
             {product.business && (
-              <div style={{ marginBottom: '16px', paddingTop: '16px', borderTop: '1px solid #e4e6eb' }}>
-                <h3 style={{ margin: '0 0 8px', fontSize: '1rem', fontWeight: 600 }}>Seller</h3>
+              <div className="product-details-block">
+                <h3 className="product-details-block-title">Seller</h3>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   {product.business.logo && (
                     <img
@@ -338,8 +312,8 @@ export default function ProductDetails() {
 
           {/* Order Form */}
           {!orderSuccess ? (
-            <form onSubmit={handleOrderSubmit} className="user-app-card">
-              <h2 style={{ margin: '0 0 16px', fontSize: '1.25rem', fontWeight: 600 }}>Place Order</h2>
+            <form onSubmit={handleOrderSubmit} className="product-details-order-card">
+              <h2 className="product-details-order-title">Place Order</h2>
               
               {orderError && (
                 <div style={{ padding: '12px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', borderRadius: '8px', marginBottom: '16px', color: '#ef4444' }}>
@@ -543,7 +517,7 @@ export default function ProductDetails() {
               </button>
             </form>
           ) : (
-            <div className="user-app-card" style={{ textAlign: 'center', padding: '32px' }}>
+            <div className="product-details-success-card">
               <CheckCircle size={64} style={{ color: '#22c55e', margin: '0 auto 16px' }} />
               <h2 style={{ margin: '0 0 8px', fontSize: '1.5rem', fontWeight: 600 }}>Order Placed Successfully!</h2>
               <p style={{ margin: '0 0 24px', color: '#65676b' }}>Redirecting to your orders...</p>

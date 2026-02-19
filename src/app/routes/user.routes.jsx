@@ -9,6 +9,7 @@ const Create = lazy(() => import('@/pages/user/Create'));
 const Reels = lazy(() => import('@/pages/user/Reels'));
 const Stories = lazy(() => import('@/pages/user/Stories'));
 const Shop = lazy(() => import('@/pages/user/Shop'));
+const ShopBusiness = lazy(() => import('@/pages/user/ShopBusiness'));
 const ProductDetails = lazy(() => import('@/pages/user/ProductDetails'));
 const Cart = lazy(() => import('@/pages/user/Cart'));
 const Checkout = lazy(() => import('@/pages/user/Checkout'));
@@ -31,6 +32,7 @@ export function UserRoutes() {
       <Route path="reels" element={<SuspenseWrapper><Reels /></SuspenseWrapper>} />
       <Route path="stories" element={<SuspenseWrapper><Stories /></SuspenseWrapper>} />
       <Route path="shop" element={<SuspenseWrapper><Shop /></SuspenseWrapper>} />
+      <Route path="shop/business/:id" element={<SuspenseWrapper><ShopBusiness /></SuspenseWrapper>} />
       <Route path="shop/:id" element={<SuspenseWrapper><ProductDetails /></SuspenseWrapper>} />
       <Route path="cart" element={<SuspenseWrapper><Cart /></SuspenseWrapper>} />
       <Route path="checkout" element={<SuspenseWrapper><Checkout /></SuspenseWrapper>} />
