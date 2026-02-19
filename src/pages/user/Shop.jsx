@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, Settings, ShoppingBag, Loader2, Image as ImageIcon, Plus, ChevronDown, MapPin } from 'lucide-react';
+import { Search, Settings, ShoppingBag, Loader2, Image as ImageIcon, Plus, ChevronDown, MapPin, Store } from 'lucide-react';
 import { getProducts, searchProducts, getProductsByCategory, getTrendingProducts } from '@/lib/api/products';
+import { searchBusinesses } from '@/lib/api/businesses';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import { useAuthStore } from '@/store/auth.store';
 import { ROLES } from '@/types/roles';
@@ -85,6 +86,20 @@ function ProductCard({ product, size = 'normal' }) {
   );
 }
 
+/** Group products by business for search results (show shop info + products per shop) */
+function groupProductsByBusiness(products) {
+  const byBusiness = new Map();
+  for (const p of products) {
+    const biz = p.business;
+    const key = biz?.id ?? 'unknown';
+    if (!byBusiness.has(key)) {
+      byBusiness.set(key, { business: biz || { name: 'Shop', id: key }, products: [] });
+    }
+    byBusiness.get(key).products.push(p);
+  }
+  return Array.from(byBusiness.values());
+}
+
 export default function Shop() {
   const { user } = useAuthStore();
   const isBusiness = String(user?.role ?? '').toLowerCase() === ROLES.BUSINESS;
@@ -92,6 +107,7 @@ export default function Shop() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
   const [products, setProducts] = useState([]);
+  const [matchingShops, setMatchingShops] = useState([]);
   const [trending, setTrending] = useState([]);
   const [loading, setLoading] = useState(true);
   const [trendingLoading, setTrendingLoading] = useState(true);
@@ -102,20 +118,31 @@ export default function Shop() {
   const loadProducts = useCallback(async () => {
     setLoading(true);
     setError('');
+    setMatchingShops([]);
     try {
-      let data;
-      if (search.trim()) {
-        data = await searchProducts(search.trim(), { page: 0, size: 60 });
+      const query = search.trim();
+      if (query) {
+        const [productsData, businessesData] = await Promise.all([
+          searchProducts(query, { page: 0, size: 60 }),
+          searchBusinesses(query, { page: 0, size: 10 }),
+        ]);
+        const list = Array.isArray(productsData?.content) ? productsData.content : Array.isArray(productsData) ? productsData : [];
+        setProducts(list);
+        const shops = Array.isArray(businessesData?.content) ? businessesData.content : Array.isArray(businessesData) ? businessesData : [];
+        setMatchingShops(shops);
       } else if (category !== 'all') {
-        data = await getProductsByCategory(category, { page: 0, size: 60 });
+        const data = await getProductsByCategory(category, { page: 0, size: 60 });
+        const list = Array.isArray(data?.content) ? data.content : Array.isArray(data) ? data : [];
+        setProducts(list);
       } else {
-        data = await getProducts({ page: 0, size: 60 });
+        const data = await getProducts({ page: 0, size: 60 });
+        const list = Array.isArray(data?.content) ? data.content : Array.isArray(data) ? data : [];
+        setProducts(list);
       }
-      const list = Array.isArray(data?.content) ? data.content : Array.isArray(data) ? data : [];
-      setProducts(list);
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to load products'));
       setProducts([]);
+      setMatchingShops([]);
     } finally {
       setLoading(false);
     }
@@ -192,7 +219,7 @@ export default function Shop() {
             <input
               type="search"
               className="shop-mp-search-input"
-              placeholder="Search for products"
+              placeholder="Search for products or shop names"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               aria-label="Search marketplace"
@@ -299,6 +326,85 @@ export default function Shop() {
                 </button>
               )}
             </div>
+          ) : search.trim() ? (
+            (() => {
+              const byShop = groupProductsByBusiness(sortedProducts);
+              return (
+                <div className="shop-mp-search-by-shop">
+                  {matchingShops.length > 0 && (
+                    <div className="shop-mp-shop-block">
+                      <h3 className="shop-mp-section-title" style={{ marginBottom: '12px' }}>Shops</h3>
+                      <div className="shop-mp-shops-row">
+                        {matchingShops.map((biz) => (
+                          <Link
+                            key={biz.id}
+                            to={`/app/shop/business/${biz.id}`}
+                            className="shop-mp-shop-card-link"
+                          >
+                            <div className="shop-mp-shop-header shop-mp-shop-card">
+                              {biz.logo ? (
+                                <img src={biz.logo} alt="" className="shop-mp-shop-logo" />
+                              ) : (
+                                <div className="shop-mp-shop-logo-placeholder">
+                                  <Store size={24} />
+                                </div>
+                              )}
+                              <div className="shop-mp-shop-info">
+                                <span className="shop-mp-shop-name">{biz.name || 'Shop'}</span>
+                                {(biz.region || biz.district) && (
+                                  <span className="shop-mp-shop-location">
+                                    <MapPin size={14} />
+                                    {[biz.district, biz.region].filter(Boolean).join(', ')}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {byShop.length > 0 && (
+                    <h3 className="shop-mp-section-title" style={{ marginBottom: '12px', marginTop: matchingShops.length > 0 ? '24px' : 0 }}>
+                      Products by shop
+                    </h3>
+                  )}
+                  {byShop.map(({ business, products: shopProducts }) => (
+                    <div key={business?.id ?? 'shop'} className="shop-mp-shop-block">
+                      <div className="shop-mp-shop-header">
+                        {business?.logo ? (
+                          <img src={business.logo} alt="" className="shop-mp-shop-logo" />
+                        ) : (
+                          <div className="shop-mp-shop-logo-placeholder">
+                            <Store size={24} />
+                          </div>
+                        )}
+                        <div className="shop-mp-shop-info">
+                          <Link
+                            to={`/app/shop/business/${business?.id}`}
+                            className="shop-mp-shop-name-link"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <span className="shop-mp-shop-name">{business?.name || 'Shop'}</span>
+                          </Link>
+                          {(business?.region || business?.district) && (
+                            <span className="shop-mp-shop-location">
+                              <MapPin size={14} />
+                              {[business?.district, business?.region].filter(Boolean).join(', ')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="shop-mp-grid shop-mp-shop-grid">
+                        {shopProducts.map((product) => (
+                          <ProductCard key={product.id} product={product} />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()
           ) : (
             <div className="shop-mp-grid">
               {sortedProducts.map((product) => (

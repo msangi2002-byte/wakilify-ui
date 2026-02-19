@@ -118,6 +118,23 @@ export async function searchAgents(q, params = {}) {
 }
 
 /**
+ * List agents for "Become a business" (authenticated).
+ * sort: 'popularity' | 'rating' | 'nearby'. For nearby pass lat, lng.
+ * GET /api/v1/agent/for-business-request?sort=...&lat=...&lng=...&page=0&size=20
+ * Returns { content: AgentResponse[], page, size, totalElements, totalPages, last, first }
+ */
+export async function getAgentsForBusinessRequest(params = {}) {
+  const { sort = 'popularity', lat, lng, page = 0, size = 20 } = params;
+  const query = { sort, page, size };
+  if (sort === 'nearby' && lat != null && lng != null) {
+    query.lat = lat;
+    query.lng = lng;
+  }
+  const { data } = await api.get('/agent/for-business-request', { params: query });
+  return data?.data ?? data;
+}
+
+/**
  * Request withdrawal
  * POST /api/v1/agent/withdrawals
  * Body: { amount, phone }

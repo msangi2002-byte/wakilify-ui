@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingBag as ShoppingBagIcon, Search, Eye } from 'lucide-react';
+import { ShoppingBag as ShoppingBagIcon, Search, Eye, Building2, Phone, Mail, Globe, MapPin } from 'lucide-react';
 import { getAdminOrders, getAdminOrderById, updateOrderStatus } from '@/lib/api/admin';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import AdminPageHeader from '@/components/admin/AdminPageHeader';
@@ -223,7 +223,7 @@ export default function Orders() {
             <h3 style={{ margin: '0 0 16px 0', color: '#fff' }}>Order {detailModal.orderNumber}</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: '0.875rem' }}>
               <div><strong>Status:</strong> <span style={{ color: getStatusColor(detailModal.status) }}>{detailModal.status}</span></div>
-              <div><strong>Buyer:</strong> {detailModal.buyer?.name} ({detailModal.buyer?.phone})</div>
+              <div><strong>Buyer:</strong> {detailModal.buyer?.name} {detailModal.buyer?.phone && `(${detailModal.buyer.phone})`}</div>
               <div><strong>Business:</strong> {detailModal.business?.name}</div>
               <div><strong>Total:</strong> {formatCurrency(detailModal.total)}</div>
               {detailModal.items?.length > 0 && (
@@ -237,7 +237,39 @@ export default function Orders() {
                 </div>
               )}
               <div><strong>Delivery:</strong> {detailModal.deliveryName}, {detailModal.deliveryPhone}</div>
-              {detailModal.deliveryAddress && <div>{detailModal.deliveryAddress}, {detailModal.deliveryRegion}</div>}
+              {detailModal.deliveryAddress && <div>{detailModal.deliveryAddress}{detailModal.deliveryRegion ? `, ${detailModal.deliveryRegion}` : ''}</div>}
+
+              {detailModal.business && (detailModal.business.phone || detailModal.business.email || detailModal.business.website || detailModal.business.region) && (
+                <div style={{ marginTop: 8, padding: 12, background: 'rgba(255,255,255,0.06)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, color: '#e2e8f0' }}>
+                    <Building2 size={18} />
+                    <strong>Seller contact</strong>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {detailModal.business.name && <div>{detailModal.business.name}</div>}
+                    {detailModal.business.phone && (
+                      <a href={`tel:${detailModal.business.phone}`} style={{ color: '#93c5fd', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <Phone size={14} /> {detailModal.business.phone}
+                      </a>
+                    )}
+                    {detailModal.business.email && (
+                      <a href={`mailto:${detailModal.business.email}`} style={{ color: '#93c5fd', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <Mail size={14} /> {detailModal.business.email}
+                      </a>
+                    )}
+                    {detailModal.business.website && (
+                      <a href={detailModal.business.website.startsWith('http') ? detailModal.business.website : `https://${detailModal.business.website}`} target="_blank" rel="noopener noreferrer" style={{ color: '#93c5fd', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <Globe size={14} /> {detailModal.business.website}
+                      </a>
+                    )}
+                    {(detailModal.business.region || detailModal.business.district) && (
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'rgba(255,255,255,0.7)' }}>
+                        <MapPin size={14} /> {[detailModal.business.region, detailModal.business.district].filter(Boolean).join(', ')}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
             <div style={{ marginTop: 20, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {['CONFIRMED', 'SHIPPED', 'DELIVERED', 'CANCELLED'].filter((s) => s !== detailModal.status).map((s) => (

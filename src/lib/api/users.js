@@ -3,11 +3,20 @@ import { api } from './client';
 /**
  * Request to become a business (user selects an agent; agent sees request in dashboard).
  * POST /api/v1/users/me/business-requests
- * Body: { businessName, ownerPhone, category?, region?, district?, ward?, street?, description?, agentCode }
+ * Body: { businessName, ownerPhone, category?, region?, district?, ward?, street?, description?, agentCode? }
  */
 export async function createBusinessRequest(body) {
   const { data } = await api.post('/users/me/business-requests', body);
   return data?.data ?? data;
+}
+
+/**
+ * Rate the agent who activated your business (after becoming a business).
+ * POST /api/v1/users/me/rate-agent
+ * Body: { agentId, rating (1-5), comment? }
+ */
+export async function rateAgent(agentId, rating, comment) {
+  await api.post('/users/me/rate-agent', { agentId, rating, comment: comment || undefined });
 }
 
 /**

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Package, Loader2, RefreshCw, CheckCircle, Truck, MapPin, User, Calendar, AlertCircle, ChevronDown, X } from 'lucide-react';
+import { Package, Loader2, RefreshCw, CheckCircle, Truck, MapPin, User, Calendar, AlertCircle, ChevronDown, X, Building2, Phone, Mail, Globe } from 'lucide-react';
 import { getBusinessOrders, updateOrderStatus, confirmOrder, shipOrder, deliverOrder } from '@/lib/api/business';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import '@/styles/business.css';
@@ -101,10 +101,10 @@ function OrderCard({ order, onStatusUpdate }) {
 
   return (
     <div className="business-card" style={{ marginBottom: '16px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+      <div className="business-orders-card-header">
         <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-            <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 600 }}>
+          <div className="business-orders-card-title-row">
+            <h3 className="business-orders-card-title">
               {order.orderNumber || `Order #${order.id?.substring(0, 8)}`}
             </h3>
             <span
@@ -155,41 +155,14 @@ function OrderCard({ order, onStatusUpdate }) {
           )}
           {statusMenuOpen && (
             <div
-              style={{
-                position: 'absolute',
-                top: '100%',
-                right: 0,
-                marginTop: '8px',
-                background: '#fff',
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                zIndex: 100,
-                minWidth: '180px',
-                padding: '8px',
-              }}
+              className="business-orders-status-dropdown"
             >
               {nextStatuses.map((status) => (
                 <button
                   key={status}
                   type="button"
                   onClick={() => handleStatusChange(status)}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    textAlign: 'left',
-                    border: 'none',
-                    background: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '0.875rem',
-                    color: '#111827',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = '#f3f4f6')}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
+                  className="business-orders-status-dropdown-btn"
                 >
                   {status === 'CONFIRMED' && <CheckCircle size={16} style={{ color: ORDER_STATUSES.CONFIRMED.color }} />}
                   {status === 'SHIPPED' && <Truck size={16} style={{ color: ORDER_STATUSES.SHIPPED.color }} />}
@@ -200,9 +173,48 @@ function OrderCard({ order, onStatusUpdate }) {
             </div>
           )}
           {updating && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#6b7280' }}>
+            <div className="business-orders-updating">
               <Loader2 size={16} className="icon-spin" />
-              <span style={{ fontSize: '0.875rem' }}>Updating...</span>
+              <span>Updating...</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Client information */}
+      <div className="business-orders-block">
+        <h4 className="business-orders-block-title">
+          <User size={18} />
+          Client information
+        </h4>
+        <div className="business-orders-block-content">
+          <div className="business-orders-row">
+            <span className="business-orders-label">Name:</span>
+            <span className="business-orders-value">{order.deliveryName || order.buyer?.name || '—'}</span>
+          </div>
+          <div className="business-orders-row">
+            <span className="business-orders-label">Phone:</span>
+            {(order.deliveryPhone || order.buyer?.phone) ? (
+              <a href={`tel:${order.deliveryPhone || order.buyer?.phone}`} className="business-orders-link">
+                <Phone size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                {order.deliveryPhone || order.buyer?.phone}
+              </a>
+            ) : (
+              <span className="business-orders-muted">—</span>
+            )}
+          </div>
+          {order.deliveryAddress && (
+            <div className="business-orders-row business-orders-row-col">
+              <span className="business-orders-label">Address:</span>
+              <span className="business-orders-value business-orders-address">
+                <MapPin size={14} style={{ flexShrink: 0 }} />
+                {order.deliveryAddress}
+                {(order.deliveryRegion || order.deliveryDistrict) && (
+                  <span className="business-orders-muted">
+                    {order.deliveryDistrict && `${order.deliveryDistrict}, `}{order.deliveryRegion}
+                  </span>
+                )}
+              </span>
             </div>
           )}
         </div>
@@ -210,10 +222,8 @@ function OrderCard({ order, onStatusUpdate }) {
 
       {/* Tracking Number Input */}
       {showTrackingInput && (
-        <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px', marginBottom: '12px' }}>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, fontSize: '0.875rem' }}>
-            Tracking Number
-          </label>
+        <div className="business-orders-input-block">
+          <label className="business-orders-input-label">Tracking Number</label>
           <div style={{ display: 'flex', gap: '8px' }}>
             <input
               type="text"
@@ -247,10 +257,8 @@ function OrderCard({ order, onStatusUpdate }) {
 
       {/* Seller Notes Input */}
       {showNotesInput && (
-        <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '8px', marginBottom: '12px' }}>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, fontSize: '0.875rem' }}>
-            Seller Notes (Optional)
-          </label>
+        <div className="business-orders-input-block">
+          <label className="business-orders-input-label">Seller Notes (Optional)</label>
           <div style={{ display: 'flex', gap: '8px' }}>
             <textarea
               value={sellerNotes}
@@ -276,30 +284,18 @@ function OrderCard({ order, onStatusUpdate }) {
 
       {/* Order Items */}
       {order.items && order.items.length > 0 && (
-        <div style={{ marginBottom: '16px', paddingTop: '16px', borderTop: '1px solid #e5e7eb' }}>
-          <h4 style={{ margin: '0 0 12px', fontSize: '0.9375rem', fontWeight: 600 }}>Items</h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div className="business-orders-section">
+          <h4 className="business-orders-section-title">Items</h4>
+          <div className="business-orders-items">
             {order.items.map((item, idx) => (
-              <div
-                key={idx}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '8px',
-                  background: '#f9fafb',
-                  borderRadius: '6px',
-                }}
-              >
+              <div key={idx} className="business-orders-item-row">
                 <div style={{ flex: 1 }}>
-                  <p style={{ margin: 0, fontWeight: 600, fontSize: '0.9375rem' }}>
-                    {item.productName || 'Product'}
-                  </p>
-                  <p style={{ margin: '4px 0 0', fontSize: '0.875rem', color: '#6b7280' }}>
+                  <p className="business-orders-item-name">{item.productName || 'Product'}</p>
+                  <p className="business-orders-item-meta">
                     Qty: {item.quantity} × {formatCurrency(item.unitPrice || item.unitPrice)}
                   </p>
                 </div>
-                <span style={{ fontWeight: 600, fontSize: '0.9375rem' }}>
+                <span className="business-orders-item-total">
                   {formatCurrency(item.total || (item.unitPrice * item.quantity))}
                 </span>
               </div>
@@ -309,46 +305,68 @@ function OrderCard({ order, onStatusUpdate }) {
       )}
 
       {/* Order Summary */}
-      <div style={{ paddingTop: '16px', borderTop: '1px solid #e5e7eb' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.875rem' }}>
+      <div className="business-orders-summary">
+        <div className="business-orders-summary-row">
           <span>Subtotal</span>
           <span>{formatCurrency(order.subtotal || order.total)}</span>
         </div>
         {order.deliveryFee && order.deliveryFee > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.875rem' }}>
+          <div className="business-orders-summary-row">
             <span>Delivery Fee</span>
             <span>{formatCurrency(order.deliveryFee)}</span>
           </div>
         )}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            paddingTop: '8px',
-            borderTop: '1px solid #e5e7eb',
-            fontSize: '1.125rem',
-            fontWeight: 700,
-          }}
-        >
+        <div className="business-orders-summary-total">
           <span>Total</span>
-          <span style={{ color: '#3b82f6' }}>{formatCurrency(order.total)}</span>
+          <span className="business-orders-total-amount">{formatCurrency(order.total)}</span>
         </div>
       </div>
 
+      {/* Seller (your business) contact */}
+      {order.business && (order.business.phone || order.business.email || order.business.website || order.business.region) && (
+        <div className="business-orders-section">
+          <h4 className="business-orders-block-title">
+            <Building2 size={18} className="business-orders-icon-primary" />
+            Seller contact
+          </h4>
+          <div className="business-orders-seller-block">
+            {order.business.name && <div className="business-orders-seller-name">{order.business.name}</div>}
+            {order.business.phone && (
+              <a href={`tel:${order.business.phone}`} className="business-orders-link">
+                <Phone size={14} /> {order.business.phone}
+              </a>
+            )}
+            {order.business.email && (
+              <a href={`mailto:${order.business.email}`} className="business-orders-link">
+                <Mail size={14} /> {order.business.email}
+              </a>
+            )}
+            {order.business.website && (
+              <a href={order.business.website.startsWith('http') ? order.business.website : `https://${order.business.website}`} target="_blank" rel="noopener noreferrer" className="business-orders-link">
+                <Globe size={14} /> {order.business.website}
+              </a>
+            )}
+            {(order.business.region || order.business.district) && (
+              <div className="business-orders-muted business-orders-row" style={{ alignItems: 'center', gap: '6px' }}>
+                <MapPin size={14} /> {[order.business.region, order.business.district].filter(Boolean).join(', ')}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Additional Info */}
       {order.trackingNumber && (
-        <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb', fontSize: '0.875rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#6b7280' }}>
+        <div className="business-orders-extra">
+          <div className="business-orders-muted business-orders-row" style={{ alignItems: 'center', gap: '8px' }}>
             <Truck size={16} />
-            <span>
-              <strong>Tracking:</strong> {order.trackingNumber}
-            </span>
+            <span><strong>Tracking:</strong> {order.trackingNumber}</span>
           </div>
         </div>
       )}
       {order.sellerNotes && (
-        <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb', fontSize: '0.875rem' }}>
-          <p style={{ margin: 0, color: '#6b7280' }}>
+        <div className="business-orders-extra">
+          <p className="business-orders-muted" style={{ margin: 0 }}>
             <strong>Notes:</strong> {order.sellerNotes}
           </p>
         </div>
@@ -406,7 +424,7 @@ export default function Orders() {
             <Package size={28} />
             Orders
           </h1>
-          <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: 0 }}>
+          <p className="business-orders-subtitle">
             {orders.totalElements} {orders.totalElements === 1 ? 'order' : 'orders'}
           </p>
         </div>
@@ -447,30 +465,21 @@ export default function Orders() {
       </div>
 
       {error && (
-        <div
-          className="business-card"
-          style={{
-            marginBottom: '24px',
-            background: 'rgba(239, 68, 68, 0.1)',
-            borderColor: '#ef4444',
-            borderWidth: '1px',
-            borderStyle: 'solid',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ef4444' }}>
+        <div className="business-card business-orders-error-card">
+          <div className="business-orders-error-content">
             <AlertCircle size={20} />
-            <p style={{ margin: 0, fontWeight: 500 }}>{error}</p>
+            <p>{error}</p>
           </div>
         </div>
       )}
 
       {orders.content.length === 0 ? (
-        <div className="business-card" style={{ textAlign: 'center', padding: '48px 24px' }}>
-          <Package size={64} style={{ color: '#d1d5db', marginBottom: '16px' }} />
-          <h2 style={{ margin: '0 0 8px', fontSize: '1.25rem', fontWeight: 600, color: '#111827' }}>
+        <div className="business-card business-orders-empty-card">
+          <Package size={64} className="business-orders-empty-icon" />
+          <h2 className="business-orders-empty-title">
             No orders yet
           </h2>
-          <p style={{ margin: 0, color: '#6b7280' }}>
+          <p className="business-orders-empty-desc">
             {statusFilter !== 'all' ? `No orders with status "${ORDER_STATUSES[statusFilter]?.label}"` : 'Orders will appear here when customers place them'}
           </p>
         </div>

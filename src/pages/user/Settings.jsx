@@ -13,7 +13,9 @@ import {
   getLoginActivity,
   createBusinessRequest,
   getMe,
+  rateAgent,
 } from '@/lib/api/users';
+import { getAgentsForBusinessRequest } from '@/lib/api/agent';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import { ROLES } from '@/types/roles';
 import {
@@ -38,7 +40,12 @@ import {
   Users,
   BarChart3,
   MousePointerClick,
+  Star,
+  List,
 } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 function SettingRow({ label, description, children }) {
   return (
@@ -109,10 +116,73 @@ export default function Settings() {
   const setMarketplace = (key, value) => setMarketplacePref((s) => ({ ...s, [key]: value }));
 
   const [businessRequestOpen, setBusinessRequestOpen] = useState(false);
+  const [businessRequestStep, setBusinessRequestStep] = useState('agent'); // 'agent' | 'form'
+  const [selectedAgent, setSelectedAgent] = useState(null);
+  const [agentViewTab, setAgentViewTab] = useState('map'); // 'map' | 'list'
+  const [agentsList, setAgentsList] = useState([]);
+  const [agentsSort, setAgentsSort] = useState('popularity');
+  const [agentsLoading, setAgentsLoading] = useState(false);
+  const [agentsPage, setAgentsPage] = useState(0);
+  const [agentsTotalPages, setAgentsTotalPages] = useState(0);
+  const [userCoords, setUserCoords] = useState(null);
   const [businessRequestForm, setBusinessRequestForm] = useState({ businessName: '', ownerPhone: '', category: '', region: '' });
   const [businessRequestLoading, setBusinessRequestLoading] = useState(false);
   const [businessRequestError, setBusinessRequestError] = useState('');
   const [businessRequestSuccess, setBusinessRequestSuccess] = useState('');
+  const [ratePopupAgent, setRatePopupAgent] = useState(null);
+  const [rateRating, setRateRating] = useState(0);
+  const [rateComment, setRateComment] = useState('');
+  const [rateLoading, setRateLoading] = useState(false);
+
+  // Load agents for "Become a business" when modal opens (step agent)
+  useEffect(() => {
+    if (!businessRequestOpen || businessRequestStep !== 'agent') return;
+    let cancelled = false;
+    setAgentsLoading(true);
+    getAgentsForBusinessRequest({
+      sort: agentsSort,
+      lat: userCoords?.lat,
+      lng: userCoords?.lng,
+      page: agentsPage,
+      size: 20,
+    })
+      .then((res) => {
+        if (!cancelled && res?.content) {
+          setAgentsList(res.content);
+          setAgentsTotalPages(res.totalPages ?? 0);
+        }
+      })
+      .catch(() => { if (!cancelled) setAgentsList([]); })
+      .finally(() => { if (!cancelled) setAgentsLoading(false); });
+    return () => { cancelled = true; };
+  }, [businessRequestOpen, businessRequestStep, agentsSort, agentsPage, userCoords?.lat, userCoords?.lng]);
+
+  // Get user location once when opening agent step (for "nearby" sort)
+  useEffect(() => {
+    if (!businessRequestOpen || businessRequestStep !== 'agent' || userCoords) return;
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => {},
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 300000 }
+    );
+  }, [businessRequestOpen, businessRequestStep]);
+
+  const openBusinessRequestModal = () => {
+    setBusinessRequestStep('agent');
+    setSelectedAgent(null);
+    setBusinessRequestError('');
+    setBusinessRequestSuccess('');
+    setBusinessRequestOpen(true);
+  };
+
+  const closeBusinessRequestModal = () => {
+    setBusinessRequestOpen(false);
+    setBusinessRequestStep('agent');
+    setSelectedAgent(null);
+    setBusinessRequestError('');
+    setBusinessRequestSuccess('');
+  };
 
   const handleSubmitBusinessRequest = async (e) => {
     e.preventDefault();
@@ -129,17 +199,41 @@ export default function Settings() {
         ownerPhone: businessRequestForm.ownerPhone.trim(),
         category: businessRequestForm.category?.trim() || undefined,
         region: businessRequestForm.region?.trim() || undefined,
+        agentCode: selectedAgent?.agentCode || undefined,
       });
       setBusinessRequestSuccess('USSD payment push sent to your phone. Complete the payment to activate your business.');
       setBusinessRequestForm({ businessName: '', ownerPhone: '', category: '', region: '' });
       getMe().then((me) => {
         if (me) setAuth(me, getToken(), getRefreshToken());
       }).catch(() => {});
-      setTimeout(() => { setBusinessRequestOpen(false); setBusinessRequestSuccess(''); }, 3000);
+      if (selectedAgent) {
+        setRatePopupAgent(selectedAgent);
+        setRateRating(0);
+        setRateComment('');
+      }
+      setTimeout(() => {
+        closeBusinessRequestModal();
+        if (!selectedAgent) setBusinessRequestSuccess('');
+      }, 2000);
     } catch (err) {
       setBusinessRequestError(getApiErrorMessage(err, 'Failed to submit request'));
     } finally {
       setBusinessRequestLoading(false);
+    }
+  };
+
+  const handleSubmitRate = async (e) => {
+    e.preventDefault();
+    if (!ratePopupAgent || rateRating < 1 || rateRating > 5) return;
+    setRateLoading(true);
+    try {
+      await rateAgent(ratePopupAgent.id, rateRating, rateComment.trim() || undefined);
+      setRatePopupAgent(null);
+      setRateRating(0);
+      setRateComment('');
+    } catch (_) {}
+    finally {
+      setRateLoading(false);
     }
   };
 
@@ -636,7 +730,7 @@ export default function Settings() {
             <button
               type="button"
               className="settings-btn settings-btn-primary"
-              onClick={() => setBusinessRequestOpen(true)}
+              onClick={openBusinessRequestModal}
             >
               <Sparkles size={20} />
               Request to become a business
@@ -896,80 +990,281 @@ export default function Settings() {
 
       {businessRequestOpen && (
         <div className="settings-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="business-request-title">
-          <div className="settings-modal-card">
+          <div className="settings-modal-card" style={{ maxWidth: businessRequestStep === 'agent' ? 720 : 440 }}>
             <div className="settings-modal-header">
               <h2 id="business-request-title" className="settings-modal-title">
                 <Building2 size={22} />
-                Request to become a business
+                {businessRequestStep === 'agent' ? 'Choose an agent (optional)' : 'Request to become a business'}
               </h2>
+              <button type="button" className="settings-modal-close" onClick={closeBusinessRequestModal} aria-label="Close">
+                <X size={22} />
+              </button>
+            </div>
+
+            {businessRequestStep === 'agent' && (
+              <div className="settings-modal-body">
+                <p className="settings-row-desc" style={{ marginBottom: 12 }}>
+                  Select an agent to handle your business activation, or continue without one.
+                </p>
+                <div className="settings-agent-select-wrap" style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                  <button
+                    type="button"
+                    className={`settings-btn ${agentViewTab === 'map' ? 'settings-btn-primary' : 'settings-btn-secondary'}`}
+                    onClick={() => setAgentViewTab('map')}
+                  >
+                    <MapPin size={18} /> Map
+                  </button>
+                  <button
+                    type="button"
+                    className={`settings-btn ${agentViewTab === 'list' ? 'settings-btn-primary' : 'settings-btn-secondary'}`}
+                    onClick={() => setAgentViewTab('list')}
+                  >
+                    <List size={18} /> List
+                  </button>
+                </div>
+
+                {agentViewTab === 'list' && (
+                  <div className="settings-agent-search-row" style={{ marginBottom: 12 }}>
+                    <label className="settings-row-desc" style={{ marginRight: 8 }}>Sort by:</label>
+                    <select
+                      className="settings-select"
+                      value={agentsSort}
+                      onChange={(e) => { setAgentsSort(e.target.value); setAgentsPage(0); }}
+                      style={{ minWidth: 140 }}
+                    >
+                      <option value="popularity">Popularity</option>
+                      <option value="rating">Rating</option>
+                      <option value="nearby">Nearby</option>
+                    </select>
+                  </div>
+                )}
+
+                {agentsLoading ? (
+                  <p className="settings-agent-search-loading">Loading agents…</p>
+                ) : agentViewTab === 'map' ? (
+                  <div style={{ height: 320, borderRadius: 8, overflow: 'hidden', marginBottom: 12 }}>
+                    <MapContainer
+                      center={userCoords || [-6.369, 34.8888]}
+                      zoom={userCoords ? 10 : 6}
+                      style={{ height: '100%', width: '100%' }}
+                    >
+                      <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      />
+                      {agentsList.filter((a) => a.latitude != null && a.longitude != null).map((a) => (
+                        <Marker
+                          key={a.id}
+                          position={[a.latitude, a.longitude]}
+                          icon={L.divIcon({
+                            className: 'agent-marker',
+                            html: `<div style="width:24px;height:24px;border-radius:50%;background:#8b5cf6;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.3);">A</div>`,
+                            iconSize: [24, 24],
+                            iconAnchor: [12, 12],
+                          })}
+                        >
+                          <Popup>
+                            <div style={{ minWidth: 160 }}>
+                              <strong>{a.name ?? 'Agent'}</strong>
+                              <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+                                Code: {a.agentCode}
+                                {a.averageRating != null && (
+                                  <span style={{ display: 'block' }}>★ {Number(a.averageRating).toFixed(1)} ({a.ratingCount ?? 0} reviews)</span>
+                                )}
+                                <span style={{ display: 'block' }}>{a.businessesActivated ?? 0} businesses activated</span>
+                                {a.isOnline && <span style={{ color: '#10b981' }}>• Online</span>}
+                              </div>
+                              <button
+                                type="button"
+                                className="settings-btn settings-btn-primary"
+                                style={{ marginTop: 8, width: '100%' }}
+                                onClick={() => { setSelectedAgent(a); setBusinessRequestStep('form'); }}
+                              >
+                                Request with this agent
+                              </button>
+                            </div>
+                          </Popup>
+                        </Marker>
+                      ))}
+                    </MapContainer>
+                  </div>
+                ) : (
+                  <div className="settings-agent-results" style={{ maxHeight: 320, overflowY: 'auto', marginBottom: 12 }}>
+                    {agentsList.length === 0 ? (
+                      <p className="settings-agent-no-results">No agents found.</p>
+                    ) : (
+                      agentsList.map((a) => (
+                        <div
+                          key={a.id}
+                          className={`settings-agent-result-item ${selectedAgent?.id === a.id ? 'selected' : ''}`}
+                          style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 10, borderRadius: 8, marginBottom: 6, border: '1px solid #e5e7eb' }}
+                        >
+                          {a.profilePic ? (
+                            <img src={a.profilePic} alt="" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
+                          ) : (
+                            <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#8b5cf6', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+                              {a.name?.charAt(0) ?? 'A'}
+                            </div>
+                          )}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 600 }}>{a.name ?? 'Agent'}</div>
+                            <div style={{ fontSize: 12, color: '#6b7280' }}>
+                              {a.agentCode}
+                              {a.averageRating != null && ` • ★ ${Number(a.averageRating).toFixed(1)} (${a.ratingCount ?? 0})`}
+                              {' • '}{a.businessesActivated ?? 0} businesses
+                              {a.isOnline && <span style={{ color: '#10b981' }}> • Online</span>}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            className="settings-btn settings-btn-primary"
+                            onClick={() => { setSelectedAgent(a); setBusinessRequestStep('form'); }}
+                          >
+                            Select
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+
+                <div className="settings-modal-actions" style={{ flexWrap: 'wrap', gap: 8 }}>
+                  <button
+                    type="button"
+                    className="settings-btn settings-btn-secondary"
+                    onClick={() => { setSelectedAgent(null); setBusinessRequestStep('form'); }}
+                  >
+                    Continue without agent
+                  </button>
+                  <button type="button" className="settings-btn settings-btn-secondary" onClick={closeBusinessRequestModal}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {businessRequestStep === 'form' && (
+              <form onSubmit={handleSubmitBusinessRequest} className="settings-modal-body">
+                {selectedAgent && (
+                  <p className="settings-row-desc" style={{ marginBottom: 12, padding: 8, background: '#f0fdf4', borderRadius: 8 }}>
+                    Agent: <strong>{selectedAgent.name}</strong> ({selectedAgent.agentCode})
+                    <button type="button" className="settings-btn settings-btn-secondary" style={{ marginLeft: 8 }} onClick={() => setBusinessRequestStep('agent')}>
+                      Change
+                    </button>
+                  </p>
+                )}
+                <SettingRow label="Business name" description="Required">
+                  <input
+                    type="text"
+                    className="settings-input"
+                    placeholder="e.g. Mama Ntilie Food"
+                    value={businessRequestForm.businessName}
+                    onChange={(e) => setBusinessRequestForm((f) => ({ ...f, businessName: e.target.value }))}
+                    required
+                  />
+                </SettingRow>
+                <SettingRow label="Your phone" description="Contact for activation">
+                  <input
+                    type="tel"
+                    className="settings-input"
+                    placeholder="+255787654321"
+                    value={businessRequestForm.ownerPhone}
+                    onChange={(e) => setBusinessRequestForm((f) => ({ ...f, ownerPhone: e.target.value }))}
+                    required
+                  />
+                </SettingRow>
+                <SettingRow label="Category" description="Optional">
+                  <input
+                    type="text"
+                    className="settings-input"
+                    placeholder="e.g. Food & Beverage"
+                    value={businessRequestForm.category}
+                    onChange={(e) => setBusinessRequestForm((f) => ({ ...f, category: e.target.value }))}
+                  />
+                </SettingRow>
+                <SettingRow label="Region" description="Optional">
+                  <input
+                    type="text"
+                    className="settings-input"
+                    placeholder="e.g. Dar es Salaam"
+                    value={businessRequestForm.region}
+                    onChange={(e) => setBusinessRequestForm((f) => ({ ...f, region: e.target.value }))}
+                  />
+                </SettingRow>
+                {businessRequestError && (
+                  <p className="settings-error" role="alert">{businessRequestError}</p>
+                )}
+                {businessRequestSuccess && (
+                  <p className="settings-success" role="status">{businessRequestSuccess}</p>
+                )}
+                <div className="settings-modal-actions">
+                  <button type="button" className="settings-btn settings-btn-secondary" onClick={() => setBusinessRequestStep('agent')}>
+                    Back
+                  </button>
+                  <button type="button" className="settings-btn settings-btn-secondary" onClick={closeBusinessRequestModal}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="settings-btn settings-btn-primary" disabled={businessRequestLoading}>
+                    {businessRequestLoading ? 'Submitting…' : 'Submit request'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {ratePopupAgent && (
+        <div className="settings-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="rate-agent-title">
+          <div className="settings-modal-card" style={{ maxWidth: 400 }}>
+            <div className="settings-modal-header">
+              <h2 id="rate-agent-title" className="settings-modal-title">Rate your agent</h2>
               <button
                 type="button"
                 className="settings-modal-close"
-                onClick={() => { setBusinessRequestOpen(false); setBusinessRequestError(''); setBusinessRequestSuccess(''); }}
+                onClick={() => { setRatePopupAgent(null); setRateRating(0); setRateComment(''); }}
                 aria-label="Close"
               >
                 <X size={22} />
               </button>
             </div>
-            <form onSubmit={handleSubmitBusinessRequest} className="settings-modal-body">
-              <SettingRow label="Business name" description="Required">
-                <input
-                  type="text"
+            <form onSubmit={handleSubmitRate} className="settings-modal-body">
+              <p className="settings-row-desc" style={{ marginBottom: 12 }}>
+                How was your experience with <strong>{ratePopupAgent.name}</strong>?
+              </p>
+              <div style={{ display: 'flex', gap: 4, marginBottom: 16, justifyContent: 'center' }}>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setRateRating(n)}
+                    style={{ background: 'none', border: 'none', padding: 4, cursor: 'pointer' }}
+                    aria-label={`${n} star${n > 1 ? 's' : ''}`}
+                  >
+                    <Star size={28} fill={rateRating >= n ? '#f59e0b' : 'none'} stroke="#f59e0b" />
+                  </button>
+                ))}
+              </div>
+              <SettingRow label="Comment" description="Optional">
+                <textarea
                   className="settings-input"
-                  placeholder="e.g. Mama Ntilie Food"
-                  value={businessRequestForm.businessName}
-                  onChange={(e) => setBusinessRequestForm((f) => ({ ...f, businessName: e.target.value }))}
-                  required
+                  placeholder="Share your experience…"
+                  value={rateComment}
+                  onChange={(e) => setRateComment(e.target.value)}
+                  rows={3}
+                  style={{ resize: 'vertical' }}
                 />
               </SettingRow>
-              <SettingRow label="Your phone" description="Contact for activation">
-                <input
-                  type="tel"
-                  className="settings-input"
-                  placeholder="+255787654321"
-                  value={businessRequestForm.ownerPhone}
-                  onChange={(e) => setBusinessRequestForm((f) => ({ ...f, ownerPhone: e.target.value }))}
-                  required
-                />
-              </SettingRow>
-              <SettingRow label="Category" description="Optional">
-                <input
-                  type="text"
-                  className="settings-input"
-                  placeholder="e.g. Food & Beverage"
-                  value={businessRequestForm.category}
-                  onChange={(e) => setBusinessRequestForm((f) => ({ ...f, category: e.target.value }))}
-                />
-              </SettingRow>
-              <SettingRow label="Region" description="Optional">
-                <input
-                  type="text"
-                  className="settings-input"
-                  placeholder="e.g. Dar es Salaam"
-                  value={businessRequestForm.region}
-                  onChange={(e) => setBusinessRequestForm((f) => ({ ...f, region: e.target.value }))}
-                />
-              </SettingRow>
-              {businessRequestError && (
-                <p className="settings-error" role="alert">{businessRequestError}</p>
-              )}
-              {businessRequestSuccess && (
-                <p className="settings-success" role="status">{businessRequestSuccess}</p>
-              )}
               <div className="settings-modal-actions">
                 <button
                   type="button"
                   className="settings-btn settings-btn-secondary"
-                  onClick={() => { setBusinessRequestOpen(false); setBusinessRequestError(''); setBusinessRequestSuccess(''); }}
+                  onClick={() => { setRatePopupAgent(null); setRateRating(0); setRateComment(''); }}
                 >
-                  Cancel
+                  Skip
                 </button>
-                <button
-                  type="submit"
-                  className="settings-btn settings-btn-primary"
-                  disabled={businessRequestLoading}
-                >
-                  {businessRequestLoading ? 'Submitting…' : 'Submit request'}
+                <button type="submit" className="settings-btn settings-btn-primary" disabled={rateRating < 1 || rateLoading}>
+                  {rateLoading ? 'Submitting…' : 'Submit rating'}
                 </button>
               </div>
             </form>
