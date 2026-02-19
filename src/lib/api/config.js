@@ -12,3 +12,13 @@ export async function getFeeAmounts() {
   const { data } = await api.get('/config/fees');
   return data?.data ?? data;
 }
+
+/**
+ * Get active business registration plans (for "Become a business" – user chooses subscription).
+ * GET /api/v1/config/business-registration-plans
+ * Public – no auth required.
+ */
+export async function getBusinessRegistrationPlans() {
+  const { data } = await api.get('/config/business-registration-plans');
+  return data?.data ?? data ?? [];
+}

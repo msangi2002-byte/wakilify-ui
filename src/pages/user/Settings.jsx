@@ -16,6 +16,7 @@ import {
   rateAgent,
 } from '@/lib/api/users';
 import { getAgentsForBusinessRequest } from '@/lib/api/agent';
+import { getBusinessRegistrationPlans } from '@/lib/api/config';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import { ROLES } from '@/types/roles';
 import {
@@ -132,6 +133,9 @@ export default function Settings() {
   const [rateRating, setRateRating] = useState(0);
   const [rateComment, setRateComment] = useState('');
   const [rateLoading, setRateLoading] = useState(false);
+  const [businessPlans, setBusinessPlans] = useState([]);
+  const [selectedPlanId, setSelectedPlanId] = useState(null);
+  const [businessPlansLoading, setBusinessPlansLoading] = useState(false);
 
   // Load agents for "Become a business" when modal opens (step agent)
   useEffect(() => {
@@ -170,15 +174,29 @@ export default function Settings() {
   const openBusinessRequestModal = () => {
     setBusinessRequestStep('agent');
     setSelectedAgent(null);
+    setSelectedPlanId(null);
     setBusinessRequestError('');
     setBusinessRequestSuccess('');
     setBusinessRequestOpen(true);
   };
 
+  // Load active business registration plans when form step is shown
+  useEffect(() => {
+    if (!businessRequestOpen || businessRequestStep !== 'form') return;
+    let cancelled = false;
+    setBusinessPlansLoading(true);
+    getBusinessRegistrationPlans()
+      .then((list) => { if (!cancelled) setBusinessPlans(Array.isArray(list) ? list : []); })
+      .catch(() => { if (!cancelled) setBusinessPlans([]); })
+      .finally(() => { if (!cancelled) setBusinessPlansLoading(false); });
+    return () => { cancelled = true; };
+  }, [businessRequestOpen, businessRequestStep]);
+
   const closeBusinessRequestModal = () => {
     setBusinessRequestOpen(false);
     setBusinessRequestStep('agent');
     setSelectedAgent(null);
+    setSelectedPlanId(null);
     setBusinessRequestError('');
     setBusinessRequestSuccess('');
   };
@@ -199,21 +217,23 @@ export default function Settings() {
         category: businessRequestForm.category?.trim() || undefined,
         region: businessRequestForm.region?.trim() || undefined,
         agentCode: selectedAgent?.agentCode || undefined,
+        latitude: userCoords?.lat ?? undefined,
+        longitude: userCoords?.lng ?? undefined,
+        businessPlanId: selectedPlanId || undefined,
       });
-      setBusinessRequestSuccess('USSD payment push sent to your phone. Complete the payment to activate your business.');
+      setBusinessRequestSuccess(
+        selectedAgent
+          ? `Request sent to ${selectedAgent.name || 'your agent'}. They will visit you and complete your registration. No payment here – you will pay when the agent instructs.`
+          : 'Request sent. An agent may contact you to complete registration.'
+      );
       setBusinessRequestForm({ businessName: '', ownerPhone: '', category: '', region: '' });
       getMe().then((me) => {
         if (me) setAuth(me, getToken(), getRefreshToken());
       }).catch(() => {});
-      if (selectedAgent) {
-        setRatePopupAgent(selectedAgent);
-        setRateRating(0);
-        setRateComment('');
-      }
       setTimeout(() => {
         closeBusinessRequestModal();
-        if (!selectedAgent) setBusinessRequestSuccess('');
-      }, 2000);
+        setBusinessRequestSuccess('');
+      }, 4000);
     } catch (err) {
       setBusinessRequestError(getApiErrorMessage(err, 'Failed to submit request'));
     } finally {
@@ -723,7 +743,7 @@ export default function Settings() {
             Become a business
           </h2>
           <p className="settings-row-desc" style={{ marginBottom: 12 }}>
-            Request to open a business on Wakilfy. Pay via USSD when prompted to complete activation.
+            Request to open a business on Wakilfy. Choose a plan (fee), fill details and send – no payment here. Request goes to your agent with your location; they will visit, then complete registration and payment.
           </p>
           <div className="settings-section-actions">
             <button
@@ -1151,6 +1171,29 @@ export default function Settings() {
                       Change
                     </button>
                   </p>
+                )}
+                {businessPlansLoading ? (
+                  <p className="settings-row-desc" style={{ marginBottom: 12 }}>Loading plans…</p>
+                ) : businessPlans.length > 0 && (
+                  <div className="settings-row-desc" style={{ marginBottom: 16 }}>
+                    <span style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>Choose registration plan (fee)</span>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {businessPlans.map((plan) => (
+                        <button
+                          key={plan.id}
+                          type="button"
+                          onClick={() => setSelectedPlanId(selectedPlanId === plan.id ? null : plan.id)}
+                          className={selectedPlanId === plan.id ? 'settings-btn settings-btn-primary' : 'settings-btn settings-btn-secondary'}
+                          style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left', padding: '10px 14px', minWidth: 140 }}
+                        >
+                          <span style={{ fontWeight: 600 }}>{plan.name}</span>
+                          <span style={{ fontSize: 12, opacity: 0.9 }}>
+                            {typeof plan.price === 'number' ? `TZS ${plan.price.toLocaleString()}` : plan.price}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 )}
                 <SettingRow label="Business name" description="Required">
                   <input

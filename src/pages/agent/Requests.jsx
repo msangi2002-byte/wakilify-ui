@@ -164,8 +164,10 @@ export default function Requests() {
             {incomingRequests.map((req) => {
               const status = (req.status || 'PENDING').toUpperCase();
               const isPending = status === 'PENDING';
+              const isPaid = status === 'PAID';
               return (
                 <li key={req.id} className="agent-request-card">
+                  <Link to={`/agent/requests/${req.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
                   <div className="agent-request-header">
                     <Building2 className="agent-request-icon" size={20} />
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -178,7 +180,7 @@ export default function Requests() {
                       )}
                     </div>
                     <span
-                      className={`agent-request-status ${isPending ? 'agent-request-status-pending' : 'agent-request-status-approved'}`}
+                      className={`agent-request-status ${isPending ? 'agent-request-status-pending' : isPaid ? 'agent-request-status-paid' : 'agent-request-status-approved'}`}
                     >
                       {status}
                     </span>
@@ -194,12 +196,13 @@ export default function Requests() {
                       <div className="agent-request-row">
                         <strong>Requested:</strong>{' '}
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                          {isPending ? <Clock size={14} /> : <CheckCircle size={14} />}
+                          {isPending ? <Clock size={14} /> : isPaid ? <Clock size={14} /> : <CheckCircle size={14} />}
                           {formatDate(req.createdAt)}
                         </span>
                       </div>
                     )}
                   </div>
+                  </Link>
                 </li>
               );
             })}
