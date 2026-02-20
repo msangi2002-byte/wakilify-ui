@@ -1,21 +1,21 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Send, ArrowLeft, Phone, Video, Mic, Square, Reply, X } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Send, ArrowLeft, Phone, Video, Mic, Reply, X } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
 import { getConversations, getConversation, sendMessage, markConversationRead, uploadMessageMedia } from '@/lib/api/messages';
 import { initiateCall } from '@/lib/api/calls';
 import { UserProfileMenu } from '@/components/ui/UserProfileMenu';
 import { formatPostTime } from '@/lib/utils/dateUtils';
+import { MessagesListSkeleton } from '@/components/ui/MessagesListSkeleton';
+import { MessagesChatSkeleton } from '@/components/ui/MessagesChatSkeleton';
 import '@/styles/user-app.css';
 
 export default function Messages() {
   const { user: currentUser } = useAuthStore();
   const location = useLocation();
-  const [conversations, setConversations] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [selectedUser, setSelectedUser] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [messagesLoading, setMessagesLoading] = useState(false);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [calling, setCalling] = useState(null);
@@ -28,72 +28,35 @@ export default function Messages() {
   const messageRefs = useRef({});
   const pendingVoiceActionRef = useRef('send');
 
-  const loadConversations = useCallback(async () => {
-    try {
-      const list = await getConversations();
-      setConversations(Array.isArray(list) ? list : []);
-    } catch {
-      setConversations([]);
-    }
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    loadConversations().finally(() => {
-      if (!cancelled) setLoading(false);
-    });
-    return () => { cancelled = true; };
-  }, [loadConversations]);
-
-  // Auto-refresh conversations list in background (real-time feel)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      loadConversations();
-    }, 4000);
-    return () => clearInterval(interval);
-  }, [loadConversations]);
-
   const currentUserId = currentUser?.id;
 
-  const loadMessages = useCallback(async (otherUserId, isBackgroundRefresh = false) => {
-    if (!otherUserId) return;
-    if (!isBackgroundRefresh) setMessagesLoading(true);
-    try {
-      if (!isBackgroundRefresh) await markConversationRead(otherUserId);
-      const list = await getConversation(otherUserId);
+  const { data: conversations = [], isLoading: loading } = useQuery({
+    queryKey: ['messages', 'conversations'],
+    queryFn: () => getConversations(),
+    select: (list) => Array.isArray(list) ? list : [],
+    refetchInterval: 4000,
+  });
+
+  const { data: messages = [], isPending: messagesLoading } = useQuery({
+    queryKey: ['messages', 'conversation', selectedUser?.id],
+    queryFn: async () => {
+      if (!selectedUser?.id) return [];
+      await markConversationRead(selectedUser.id);
+      const list = await getConversation(selectedUser.id);
       const arr = Array.isArray(list) ? list : [];
       const withIsMe = arr.map((m) => ({
         ...m,
         isMe: String(m.senderId || m.sender?.id || '') === String(currentUserId || '') || m.isMe,
       }));
-      const oldestFirst = [...withIsMe].reverse();
-      setMessages(oldestFirst);
-      if (!isBackgroundRefresh) loadConversations();
-    } catch {
-      if (!isBackgroundRefresh) setMessages([]);
-    } finally {
-      if (!isBackgroundRefresh) setMessagesLoading(false);
-    }
-  }, [loadConversations, currentUserId]);
-
-  useEffect(() => {
-    if (selectedUser) loadMessages(selectedUser.id);
-  }, [selectedUser?.id, loadMessages]);
+      return [...withIsMe].reverse();
+    },
+    enabled: !!selectedUser?.id,
+    refetchInterval: 3000,
+  });
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  // Real-time chat: poll messages for open conversation so new messages appear automatically
-  useEffect(() => {
-    if (!selectedUser?.id || !currentUserId) return;
-    const interval = setInterval(() => {
-      loadMessages(selectedUser.id, true);
-      loadConversations();
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [selectedUser?.id, currentUserId, loadMessages, loadConversations]);
 
   // Open chat with user when navigating from profile or story quick reply
   useEffect(() => {
@@ -110,8 +73,9 @@ export default function Messages() {
     setReplyTo(null);
     try {
       const msg = await sendMessage(selectedUser.id, text, replyToId ? { replyToId } : {});
-      setMessages((prev) => [...prev, { ...msg, isMe: true }]);
-      loadConversations();
+      const newMsg = { ...msg, isMe: true };
+      queryClient.setQueryData(['messages', 'conversation', selectedUser.id], (prev = []) => [...prev, newMsg]);
+      queryClient.invalidateQueries({ queryKey: ['messages', 'conversations'] });
     } catch {
       setDraft(text);
       if (replyToId) setReplyTo({ id: replyToId, content: text, senderName: currentUser?.name });
@@ -140,8 +104,9 @@ export default function Messages() {
         try {
           const url = await uploadMessageMedia(file);
           const msg = await sendMessage(selectedUser.id, '', { type: 'VOICE', mediaUrl: url, ...(replyToId && { replyToId }) });
-          setMessages((prev) => [...prev, { ...msg, isMe: true }]);
-          loadConversations();
+          const newMsg = { ...msg, isMe: true };
+          queryClient.setQueryData(['messages', 'conversation', selectedUser.id], (prev = []) => [...prev, newMsg]);
+          queryClient.invalidateQueries({ queryKey: ['messages', 'conversations'] });
         } catch {
           // ignore
         } finally {
@@ -244,7 +209,7 @@ export default function Messages() {
       <div className="messages-sidebar">
         <div className="messages-conversations-header">Conversations</div>
         {loading ? (
-          <p className="messages-loading">Loading…</p>
+          <MessagesListSkeleton rows={6} />
         ) : list.length === 0 ? (
           <p className="messages-empty">No conversations yet. Start a chat from someone's profile.</p>
         ) : (
@@ -314,7 +279,7 @@ export default function Messages() {
             </div>
             <div className="messages-chat-messages">
               {messagesLoading ? (
-                <p className="messages-loading">Loading messages…</p>
+                <MessagesChatSkeleton />
               ) : messages.length === 0 ? (
                 <p className="messages-empty-inline">No messages yet. Say hi!</p>
               ) : (

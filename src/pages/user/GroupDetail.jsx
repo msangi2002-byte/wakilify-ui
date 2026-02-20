@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Users, LogOut, Loader2, Settings, X, ImagePlus, ArrowLeft, Pin, PinOff, UserPlus, Search } from 'lucide-react';
 import { GroupPost } from '@/components/social/GroupPost';
 import { getCommunity, joinCommunity, leaveCommunity, updateCommunitySettings, pinPost, unpinPost, inviteUsers } from '@/lib/api/communities';
 import { searchUsers } from '@/lib/api/users';
 import { getPostsByCommunity, createPost, uploadChunked, CHUNK_THRESHOLD_BYTES } from '@/lib/api/posts';
 import { UploadProgressBar } from '@/components/ui/UploadProgressBar';
+import { GroupDetailSkeleton, GroupFeedListSkeleton } from '@/components/ui/GroupDetailSkeleton';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import { formatPostTime } from '@/lib/utils/dateUtils';
 import '@/styles/user-app.css';
@@ -31,12 +33,7 @@ function mapPostToGroupPost(post, groupName) {
 export default function GroupDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [group, setGroup] = useState(null);
-  const [groupLoading, setGroupLoading] = useState(true);
-  const [groupError, setGroupError] = useState(null);
-  const [posts, setPosts] = useState([]);
-  const [postsLoading, setPostsLoading] = useState(true);
-  const [postsError, setPostsError] = useState(null);
+  const queryClient = useQueryClient();
   const [joinLeaveLoading, setJoinLeaveLoading] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsSaving, setSettingsSaving] = useState(false);
@@ -53,44 +50,30 @@ export default function GroupDetail() {
   const [inviteSubmitting, setInviteSubmitting] = useState(false);
   const [inviteError, setInviteError] = useState('');
 
-  useEffect(() => {
-    if (!id) return;
-    let cancelled = false;
-    setGroupLoading(true);
-    setGroupError(null);
-    getCommunity(id)
-      .then((data) => {
-        if (!cancelled) {
-          setGroup(data);
-          setAllowMemberPosts(data?.allowMemberPosts !== false);
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          const status = err?.response?.status;
-          const msg = getApiErrorMessage(err, 'Failed to load group');
-          setGroupError(status === 404 ? 'Group not found.' : msg);
-        }
-      })
-      .finally(() => { if (!cancelled) setGroupLoading(false); });
-    return () => { cancelled = true; };
-  }, [id]);
+  const { data: group, isLoading: groupLoading, error: groupErrorResp } = useQuery({
+    queryKey: ['groups', 'detail', id],
+    queryFn: () => getCommunity(id),
+    enabled: !!id,
+  });
+
+  const { data: postsList = [], isLoading: postsLoading, error: postsErrorResp } = useQuery({
+    queryKey: ['groups', 'posts', id],
+    queryFn: () => getPostsByCommunity(id, { size: 50 }),
+    enabled: !!id,
+    select: (list) => (Array.isArray(list) ? list : []),
+  });
+
+  const groupError = groupErrorResp
+    ? (groupErrorResp?.response?.status === 404 ? 'Group not found.' : getApiErrorMessage(groupErrorResp, 'Failed to load group'))
+    : null;
+  const postsError = postsErrorResp ? (postsErrorResp?.response?.data?.message ?? 'Failed to load posts') : null;
+  const posts = postsList;
 
   useEffect(() => {
-    if (!id) return;
-    let cancelled = false;
-    setPostsLoading(true);
-    setPostsError(null);
-    getPostsByCommunity(id, { size: 50 })
-      .then((list) => {
-        if (!cancelled) setPosts(Array.isArray(list) ? list : []);
-      })
-      .catch((err) => {
-        if (!cancelled) setPostsError(err?.response?.data?.message ?? 'Failed to load posts');
-      })
-      .finally(() => { if (!cancelled) setPostsLoading(false); });
-    return () => { cancelled = true; };
-  }, [id]);
+    if (group && group.allowMemberPosts !== undefined) {
+      setAllowMemberPosts(group.allowMemberPosts !== false);
+    }
+  }, [group?.allowMemberPosts]);
 
   const handleJoinLeave = async () => {
     if (!group || joinLeaveLoading) return;
@@ -98,10 +81,16 @@ export default function GroupDetail() {
     try {
       if (group.isMember) {
         await leaveCommunity(id);
-        setGroup((g) => ({ ...g, isMember: false, membersCount: Math.max(0, (g.membersCount ?? 1) - 1) }));
+        queryClient.setQueryData(['groups', 'detail', id], (g) =>
+          g ? { ...g, isMember: false, membersCount: Math.max(0, (g.membersCount ?? 1) - 1) } : g
+        );
+        queryClient.invalidateQueries({ queryKey: ['groups', 'list'] });
       } else {
         await joinCommunity(id);
-        setGroup((g) => ({ ...g, isMember: true, membersCount: (g.membersCount ?? 0) + 1 }));
+        queryClient.setQueryData(['groups', 'detail', id], (g) =>
+          g ? { ...g, isMember: true, membersCount: (g.membersCount ?? 0) + 1 } : g
+        );
+        queryClient.invalidateQueries({ queryKey: ['groups', 'list'] });
       }
     } catch (_) {
       // keep state unchanged
@@ -116,7 +105,9 @@ export default function GroupDetail() {
     setSettingsSaving(true);
     try {
       const updated = await updateCommunitySettings(id, { allowMemberPosts });
-      setGroup((g) => ({ ...g, allowMemberPosts: updated?.allowMemberPosts !== false }));
+      queryClient.setQueryData(['groups', 'detail', id], (g) =>
+        g ? { ...g, allowMemberPosts: updated?.allowMemberPosts !== false } : g
+      );
       setSettingsOpen(false);
     } catch (_) {
       // keep modal open
@@ -155,8 +146,7 @@ export default function GroupDetail() {
       setInviteSelected([]);
       setInviteSearchQuery('');
       setInviteSearchResults([]);
-      const updated = await getCommunity(id);
-      setGroup(updated);
+      queryClient.invalidateQueries({ queryKey: ['groups', 'detail', id] });
     } catch (err) {
       setInviteError(getApiErrorMessage(err, 'Failed to invite users'));
     } finally {
@@ -175,8 +165,7 @@ export default function GroupDetail() {
     try {
       if (currentlyPinned) await unpinPost(id, postId);
       else await pinPost(id, postId);
-      const list = await getPostsByCommunity(id, { size: 50 });
-      setPosts(Array.isArray(list) ? list : []);
+      queryClient.invalidateQueries({ queryKey: ['groups', 'posts', id] });
     } catch (_) {}
   };
 
@@ -215,8 +204,7 @@ export default function GroupDetail() {
       }
       setCreateCaption('');
       setCreateFiles([]);
-      const list = await getPostsByCommunity(id, { size: 50 });
-      setPosts(Array.isArray(list) ? list : []);
+      queryClient.invalidateQueries({ queryKey: ['groups', 'posts', id] });
     } catch (err) {
       setCreateError(getApiErrorMessage(err, 'Failed to post'));
     } finally {
@@ -231,14 +219,7 @@ export default function GroupDetail() {
   const canPostInGroup = isMember && (group?.allowMemberPosts !== false || isAdmin);
 
   if (groupLoading) {
-    return (
-      <div className="groups-feed">
-        <div className="group-detail-loading">
-          <Loader2 size={32} className="spin" />
-          <p>Loading group…</p>
-        </div>
-      </div>
-    );
+    return <GroupDetailSkeleton />;
   }
 
   if (groupError || !group) {
@@ -514,7 +495,7 @@ export default function GroupDetail() {
       </div>
       <div className="groups-feed-list">
         {postsLoading ? (
-          <p className="groups-feed-empty">Loading posts…</p>
+          <GroupFeedListSkeleton count={3} />
         ) : postsError ? (
           <p className="groups-feed-empty">{postsError}</p>
         ) : posts.length === 0 ? (

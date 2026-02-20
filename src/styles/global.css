@@ -361,3 +361,12 @@ body {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* Skeleton screens (Facebook/Instagram-style loading) */
+.skeleton-shimmer {
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer {
+  0%, 100% { opacity: 0.65; }
+  50% { opacity: 1; }
+}

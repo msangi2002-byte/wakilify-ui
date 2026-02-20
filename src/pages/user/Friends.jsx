@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, Users, UserPlus, Phone } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
@@ -10,6 +11,8 @@ import {
   getPeopleYouMayKnow,
   uploadContacts,
 } from '@/lib/api/users';
+import { FriendsListSkeleton } from '@/components/ui/FriendsListSkeleton';
+import { FriendsGridSkeleton } from '@/components/ui/FriendsGridSkeleton';
 
 const TABS = [
   { id: 'following', label: 'Following', icon: Users },
@@ -64,95 +67,57 @@ function normalizeUser(u) {
 export default function Friends() {
   const { user: currentUser } = useAuthStore();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('following');
-
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [loadingId, setLoadingId] = useState(null);
-
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [searching, setSearching] = useState(false);
-  const [suggested, setSuggested] = useState([]);
-  const [suggestedLoading, setSuggestedLoading] = useState(false);
-  const [nearby, setNearby] = useState([]);
-  const [nearbyLoading, setNearbyLoading] = useState(false);
-  const [peopleYouMayKnow, setPeopleYouMayKnow] = useState([]);
-  const [pymkLoading, setPymkLoading] = useState(false);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [contactsModalOpen, setContactsModalOpen] = useState(false);
   const [contactsPhones, setContactsPhones] = useState('');
   const [contactsEmails, setContactsEmails] = useState('');
   const [contactsSubmitting, setContactsSubmitting] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
-    if (!currentUser?.id) {
-      setUsers([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    getFollowing(currentUser.id, { page: 0, size: 50 })
-      .then((res) => {
-        if (!cancelled && res?.content) setUsers(res.content.map(normalizeUser));
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err.response?.data?.message || err.message || 'Failed to load');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [currentUser?.id]);
+    const t = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
 
-  useEffect(() => {
-    let cancelled = false;
-    setSuggestedLoading(true);
-    getSuggestedUsers({ page: 0, size: 20 })
-      .then((res) => {
-        if (!cancelled && res?.content) setSuggested(res.content.map(normalizeUser));
-      })
-      .catch(() => {
-        if (!cancelled) setSuggested([]);
-      })
-      .finally(() => {
-        if (!cancelled) setSuggestedLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, []);
+  const { data: users = [], isLoading: loading, error: followError } = useQuery({
+    queryKey: ['friends', 'following', currentUser?.id],
+    queryFn: () => getFollowing(currentUser.id, { page: 0, size: 50 }),
+    select: (res) => (res?.content ?? []).map(normalizeUser),
+    enabled: !!currentUser?.id,
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-    setNearbyLoading(true);
-    getNearbyUsers({ page: 0, size: 20 })
-      .then((res) => {
-        if (!cancelled && res?.content) setNearby(res.content.map(normalizeUser));
-      })
-      .catch(() => {
-        if (!cancelled) setNearby([]);
-      })
-      .finally(() => {
-        if (!cancelled) setNearbyLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, []);
+  const { data: suggested = [], isLoading: suggestedLoading } = useQuery({
+    queryKey: ['friends', 'suggested'],
+    queryFn: () => getSuggestedUsers({ page: 0, size: 20 }),
+    select: (res) => (res?.content ?? []).map(normalizeUser),
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-    setPymkLoading(true);
-    getPeopleYouMayKnow({ page: 0, size: 20 })
-      .then((res) => {
-        if (!cancelled && res?.content) setPeopleYouMayKnow(res.content.map(normalizeUser));
-      })
-      .catch(() => {
-        if (!cancelled) setPeopleYouMayKnow([]);
-      })
-      .finally(() => {
-        if (!cancelled) setPymkLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, []);
+  const { data: nearby = [], isLoading: nearbyLoading } = useQuery({
+    queryKey: ['friends', 'nearby'],
+    queryFn: () => getNearbyUsers({ page: 0, size: 20 }),
+    select: (res) => (res?.content ?? []).map(normalizeUser),
+  });
+
+  const { data: peopleYouMayKnow = [], isLoading: pymkLoading } = useQuery({
+    queryKey: ['friends', 'pymk'],
+    queryFn: () => getPeopleYouMayKnow({ page: 0, size: 20 }),
+    select: (res) => {
+      const list = res?.content ?? (Array.isArray(res) ? res : []);
+      return list.map(normalizeUser);
+    },
+  });
+
+  const { data: searchResults = [], isLoading: searching } = useQuery({
+    queryKey: ['friends', 'search', debouncedSearch],
+    queryFn: () => searchUsers(debouncedSearch, { page: 0, size: 30 }),
+    select: (res) => (res?.content ?? []).map(normalizeUser),
+    enabled: debouncedSearch.length > 0,
+  });
+
+  const error = followError ? (followError.response?.data?.message || followError.message || 'Failed to load') : '';
 
   const handleUploadContacts = async () => {
     const phones = contactsPhones.trim().split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean);
@@ -164,52 +129,27 @@ export default function Friends() {
       setContactsModalOpen(false);
       setContactsPhones('');
       setContactsEmails('');
-      setPymkLoading(true);
-      const res = await getPeopleYouMayKnow({ page: 0, size: 20 });
-      setPeopleYouMayKnow((res?.content ?? []).map(normalizeUser));
+      await queryClient.invalidateQueries({ queryKey: ['friends', 'pymk'] });
     } catch (_) {}
     finally {
       setContactsSubmitting(false);
-      setPymkLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (!searchQuery.trim()) {
-      setSearchResults([]);
-      return;
-    }
-    let cancelled = false;
-    setSearching(true);
-    const timer = setTimeout(() => {
-      searchUsers(searchQuery.trim(), { page: 0, size: 30 })
-        .then((res) => {
-          if (!cancelled && res?.content) setSearchResults(res.content.map(normalizeUser));
-          else if (!cancelled) setSearchResults([]);
-        })
-        .catch(() => {
-          if (!cancelled) setSearchResults([]);
-        })
-        .finally(() => {
-          if (!cancelled) setSearching(false);
-        });
-    }, 300);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [searchQuery]);
-
-  const handleFollowToggle = async (user, setList) => {
+  const handleFollowToggle = async (user, queryKey) => {
     if (loadingId) return;
     setLoadingId(user.id);
     const nextFollowing = !user.isFollowing;
-    setList((prev) => prev.map((u) => (u.id === user.id ? { ...u, isFollowing: nextFollowing } : u)));
+    queryClient.setQueryData(queryKey, (old = []) =>
+      old.map((u) => (u.id === user.id ? { ...u, isFollowing: nextFollowing } : u))
+    );
     try {
       if (nextFollowing) await followUser(String(user.id));
       else await unfollowUser(String(user.id));
     } catch (err) {
-      setList((prev) => prev.map((u) => (u.id === user.id ? { ...u, isFollowing: user.isFollowing } : u)));
+      queryClient.setQueryData(queryKey, (old = []) =>
+        old.map((u) => (u.id === user.id ? { ...u, isFollowing: user.isFollowing } : u))
+      );
       alert(err.response?.data?.message || err.message || 'Action failed');
     } finally {
       setLoadingId(null);
@@ -220,7 +160,7 @@ export default function Friends() {
     navigate('/app/messages', { state: { openUser: user } });
   };
 
-  const UserCard = ({ user, setList }) => (
+  const UserCard = ({ user, queryKey }) => (
     <div className="friends-fb-card">
       <Link to={`/app/profile/${user.id}`} className="friends-fb-card-avatar-wrap">
         <UserAvatar user={user} size={72} />
@@ -239,7 +179,7 @@ export default function Friends() {
           <button
             type="button"
             className={`friends-fb-btn ${user.isFollowing ? 'following' : 'follow'}`}
-            onClick={() => handleFollowToggle(user, setList)}
+            onClick={() => handleFollowToggle(user, queryKey)}
             disabled={loadingId === user.id}
           >
             {loadingId === user.id ? '…' : user.isFollowing ? 'Following' : 'Add friend'}
@@ -256,7 +196,7 @@ export default function Friends() {
     </div>
   );
 
-  const UserRow = ({ user, setList }) => (
+  const UserRow = ({ user, queryKey }) => (
     <div className="friends-fb-row">
       <Link to={`/app/profile/${user.id}`} className="friends-fb-row-left">
         <UserAvatar user={user} size={48} />
@@ -274,7 +214,7 @@ export default function Friends() {
         <button
           type="button"
           className={`friends-fb-btn small ${user.isFollowing ? 'following' : 'follow'}`}
-          onClick={() => handleFollowToggle(user, setList)}
+          onClick={() => handleFollowToggle(user, queryKey)}
           disabled={loadingId === user.id}
         >
           {loadingId === user.id ? '…' : user.isFollowing ? 'Following' : 'Add friend'}
@@ -322,14 +262,14 @@ export default function Friends() {
           <section className="friends-fb-section">
             <h2 className="friends-fb-section-title">People you follow</h2>
             {error && <p className="friends-fb-error">{error}</p>}
-            {loading && <p className="friends-fb-loading">Loading…</p>}
+            {loading && <FriendsListSkeleton rows={6} />}
             {!loading && !error && users.length === 0 && (
               <p className="friends-fb-empty">You don&apos;t follow anyone yet. Find people in Suggestions or search.</p>
             )}
             {!loading && users.length > 0 && (
               <div className="friends-fb-list">
                 {users.map((u) => (
-                  <UserRow key={u.id} user={u} setList={setUsers} />
+                  <UserRow key={u.id} user={u} queryKey={['friends', 'following', currentUser?.id]} />
                 ))}
               </div>
             )}
@@ -340,14 +280,14 @@ export default function Friends() {
           <section className="friends-fb-section">
             <h2 className="friends-fb-section-title">Suggestions for you</h2>
             <p className="friends-fb-section-desc">People with similar location or interests</p>
-            {suggestedLoading && <p className="friends-fb-loading">Loading…</p>}
+            {suggestedLoading && <FriendsGridSkeleton cards={6} />}
             {!suggestedLoading && suggested.length === 0 && (
               <p className="friends-fb-empty">No suggestions right now. Add your location in profile.</p>
             )}
             {!suggestedLoading && suggested.length > 0 && (
               <div className="friends-fb-grid">
                 {suggested.map((u) => (
-                  <UserCard key={u.id} user={u} setList={setSuggested} />
+                  <UserCard key={u.id} user={u} queryKey={['friends', 'suggested']} />
                 ))}
               </div>
             )}
@@ -359,14 +299,14 @@ export default function Friends() {
             {searchQuery.trim() ? (
               <>
                 <h2 className="friends-fb-section-title">Search results</h2>
-                {searching && <p className="friends-fb-loading">Searching…</p>}
-                {!searching && searchResults.length === 0 && (
+                {(searching || searchQuery.trim() !== debouncedSearch) && <FriendsGridSkeleton cards={6} />}
+                {!searching && searchQuery.trim() === debouncedSearch && searchResults.length === 0 && (
                   <p className="friends-fb-empty">No users found. Try another search.</p>
                 )}
-                {!searching && searchResults.length > 0 && (
+                {!searching && searchQuery.trim() === debouncedSearch && searchResults.length > 0 && (
                   <div className="friends-fb-grid">
                     {searchResults.map((u) => (
-                      <UserCard key={u.id} user={u} setList={setSearchResults} />
+                      <UserCard key={u.id} user={u} queryKey={['friends', 'search', debouncedSearch]} />
                     ))}
                   </div>
                 )}
@@ -377,14 +317,14 @@ export default function Friends() {
                   <h2 className="friends-fb-section-title">People nearby</h2>
                   <span className="friends-fb-section-hint">Same region or country</span>
                 </div>
-                {nearbyLoading && <p className="friends-fb-loading">Loading…</p>}
+                {nearbyLoading && <FriendsGridSkeleton cards={6} />}
                 {!nearbyLoading && nearby.length === 0 && (
                   <p className="friends-fb-empty">No one nearby. Add city/region in your profile.</p>
                 )}
                 {!nearbyLoading && nearby.length > 0 && (
                   <div className="friends-fb-grid">
                     {nearby.map((u) => (
-                      <UserCard key={u.id} user={u} setList={setNearby} />
+                      <UserCard key={u.id} user={u} queryKey={['friends', 'nearby']} />
                     ))}
                   </div>
                 )}
@@ -400,14 +340,14 @@ export default function Friends() {
                     Sync contacts
                   </button>
                 </div>
-                {pymkLoading && <p className="friends-fb-loading">Loading…</p>}
+                {pymkLoading && <FriendsGridSkeleton cards={6} />}
                 {!pymkLoading && peopleYouMayKnow.length === 0 && (
                   <p className="friends-fb-empty">Sync your contacts to find friends on Wakify.</p>
                 )}
                 {!pymkLoading && peopleYouMayKnow.length > 0 && (
                   <div className="friends-fb-grid">
                     {peopleYouMayKnow.map((u) => (
-                      <UserCard key={u.id} user={u} setList={setPeopleYouMayKnow} />
+                      <UserCard key={u.id} user={u} queryKey={['friends', 'pymk']} />
                     ))}
                   </div>
                 )}

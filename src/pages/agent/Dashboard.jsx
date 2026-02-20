@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Building2,
   Banknote,
@@ -23,6 +23,7 @@ import {
 } from '@/lib/api/agent';
 import { checkPaymentStatus } from '@/lib/api/payments';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
+import { AgentDashboardSkeleton } from '@/components/ui/agent/AgentDashboardSkeleton';
 import '@/styles/agent.css';
 
 function formatAmount(n) {
@@ -51,14 +52,36 @@ function formatDate(iso) {
   }
 }
 
+async function loadDashboardData() {
+  const [dash, profile, comm, wdraw, pkgs] = await Promise.all([
+    getAgentDashboard(),
+    getAgentMe().catch(() => null),
+    getAgentCommissions({ page: 0, size: 10 }).then((r) => r || { content: [] }).catch(() => ({ content: [] })),
+    getAgentWithdrawals({ page: 0, size: 10 }).then((r) => r || { content: [] }).catch(() => ({ content: [] })),
+    getAgentPackages().then((r) => Array.isArray(r) ? r : []).catch(() => []),
+  ]);
+  return {
+    dashboard: dash ?? null,
+    agentProfile: profile ?? null,
+    commissions: Array.isArray(comm?.content) ? comm : { content: [] },
+    withdrawals: Array.isArray(wdraw?.content) ? wdraw : { content: [] },
+    packages: Array.isArray(pkgs) ? pkgs : [],
+  };
+}
+
 export default function Dashboard() {
-  const [dashboard, setDashboard] = useState(null);
-  const [agentProfile, setAgentProfile] = useState(null);
-  const [commissions, setCommissions] = useState({ content: [] });
-  const [withdrawals, setWithdrawals] = useState({ content: [] });
-  const [packages, setPackages] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const queryClient = useQueryClient();
+  const { data, isLoading: loading, error: queryError } = useQuery({
+    queryKey: ['agent', 'dashboard'],
+    queryFn: loadDashboardData,
+  });
+
+  const dashboard = data?.dashboard ?? null;
+  const agentProfile = data?.agentProfile ?? null;
+  const commissions = data?.commissions ?? { content: [] };
+  const withdrawals = data?.withdrawals ?? { content: [] };
+  const packages = data?.packages ?? [];
+
   const [packageError, setPackageError] = useState('');
   const [packageSuccess, setPackageSuccess] = useState('');
   const [purchasingId, setPurchasingId] = useState(null);
@@ -67,33 +90,7 @@ export default function Dashboard() {
   const [orderId, setOrderId] = useState(null);
   const [checkingPayment, setCheckingPayment] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError('');
-    Promise.all([
-      getAgentDashboard(),
-      getAgentMe().catch(() => null),
-      getAgentCommissions({ page: 0, size: 10 }).then((r) => r || { content: [] }).catch(() => ({ content: [] })),
-      getAgentWithdrawals({ page: 0, size: 10 }).then((r) => r || { content: [] }).catch(() => ({ content: [] })),
-      getAgentPackages().then((r) => Array.isArray(r) ? r : []).catch(() => []),
-    ])
-      .then(([dash, profile, comm, wdraw, pkgs]) => {
-        if (cancelled) return;
-        setDashboard(dash ?? null);
-        setAgentProfile(profile ?? null);
-        setCommissions(Array.isArray(comm?.content) ? comm : { content: [] });
-        setWithdrawals(Array.isArray(wdraw?.content) ? wdraw : { content: [] });
-        setPackages(Array.isArray(pkgs) ? pkgs : []);
-      })
-      .catch((err) => {
-        if (!cancelled) setError(getApiErrorMessage(err, 'Failed to load dashboard'));
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, []);
+  const error = queryError ? getApiErrorMessage(queryError, 'Failed to load dashboard') : '';
 
   const activityItems = useMemo(() => {
     const items = [];
@@ -133,11 +130,7 @@ export default function Dashboard() {
   const isAgentNotFound = error && /agent not found|not found/i.test(error);
 
   if (loading && !dashboard) {
-    return (
-      <div className="agent-loading">
-        Loading dashboard…
-      </div>
-    );
+    return <AgentDashboardSkeleton />;
   }
 
   return (
@@ -479,9 +472,7 @@ export default function Dashboard() {
                       if (status?.status === 'SUCCESS') {
                         clearInterval(interval);
                         setPackageSuccess('Payment completed! Package activated successfully.');
-                        // Reload dashboard
-                        const dash = await getAgentDashboard();
-                        setDashboard(dash ?? null);
+                        queryClient.invalidateQueries({ queryKey: ['agent', 'dashboard'] });
                         setTimeout(() => {
                           setSelectedPackage(null);
                           setPaymentPhone('');

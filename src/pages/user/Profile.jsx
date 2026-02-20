@@ -1,5 +1,6 @@
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   MoreHorizontal,
   ThumbsUp,
@@ -41,6 +42,8 @@ import {
 } from '@/lib/api/posts';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import { formatPostTime, formatCommentTime } from '@/lib/utils/dateUtils';
+import { ProfileSkeleton } from '@/components/ui/ProfileSkeleton';
+import { ProfileGridSkeleton } from '@/components/ui/ProfileGridSkeleton';
 import '@/styles/user-app.css';
 
 function Avatar({ user, size = 40, className = '' }) {
@@ -359,18 +362,12 @@ function ProfileFeedPost({ post, currentUser, saved: initialSaved = false, onSav
 export default function Profile() {
   const { userId: paramUserId } = useParams();
   const { user: authUser } = useAuthStore();
-  const [profile, setProfile] = useState(null);
-  const [posts, setPosts] = useState([]);
-  const [profileTab, setProfileTab] = useState('posts'); // posts (grid) | saved | tagged
-  const [postFilter, setPostFilter] = useState('all'); // all | photos | videos (used when profileTab === 'posts')
-  const [savedPosts, setSavedPosts] = useState([]);
-  const [savedLoading, setSavedLoading] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const queryClient = useQueryClient();
+  const [profileTab, setProfileTab] = useState('posts');
+  const [postFilter, setPostFilter] = useState('all');
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [coverUploading, setCoverUploading] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
-  const [isFollowing, setIsFollowing] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectedPostForDetail, setSelectedPostForDetail] = useState(null);
   const [postDetailData, setPostDetailData] = useState(null);
@@ -381,46 +378,51 @@ export default function Profile() {
 
   const userId = paramUserId && paramUserId !== 'me' ? paramUserId : authUser?.id;
   const isOwnProfile = !paramUserId || paramUserId === 'me' || (authUser?.id && paramUserId === authUser.id);
-  const isFollowingProfile = profile?.isFollowing ?? isFollowing;
 
-  useEffect(() => {
-    if (!userId) return;
-    let cancelled = false;
-    setLoading(true);
-    setError('');
-    const loadProfile = isOwnProfile
-      ? Promise.all([getMe(), getPostsByUser(userId, { page: 0, size: 50 })])
-          .then(([me, postsList]) => [me ?? authUser, postsList])
-      : Promise.all([getUser(userId), getPostsByUser(userId, { page: 0, size: 50 })]);
+  const {
+    data: profileData,
+    isPending: loading,
+    error: profileError,
+  } = useQuery({
+    queryKey: ['profile', userId, isOwnProfile],
+    queryFn: async () => {
+      if (isOwnProfile) {
+        const [me, postsList] = await Promise.all([getMe(), getPostsByUser(userId, { page: 0, size: 50 })]);
+        return { profile: me ?? authUser, posts: postsList };
+      }
+      const [profileRes, postsList] = await Promise.all([getUser(userId), getPostsByUser(userId, { page: 0, size: 50 })]);
+      return { profile: profileRes, posts: postsList };
+    },
+    select: (data) => ({
+      profile: data.profile,
+      posts: (Array.isArray(data.posts) ? data.posts : []).map(normalizePost),
+    }),
+    enabled: !!userId,
+  });
 
-    loadProfile
-      .then(([profileData, postsList]) => {
-        if (cancelled) return;
-        setProfile(profileData);
-        setIsFollowing(!!profileData?.isFollowing);
-        setPosts(Array.isArray(postsList) ? postsList.map(normalizePost) : []);
-      })
-      .catch((err) => {
-        if (!cancelled) setError(getApiErrorMessage(err, 'Failed to load profile'));
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [userId, isOwnProfile, authUser?.id]);
+  const profile = profileData?.profile ?? null;
+  const posts = profileData?.posts ?? [];
+  const isFollowingProfile = profile?.isFollowing ?? false;
+  const error = profileError ? getApiErrorMessage(profileError, 'Failed to load profile') : '';
+
+  const { data: savedPosts = [], isLoading: savedLoading } = useQuery({
+    queryKey: ['profile', 'saved', userId],
+    queryFn: () => getSavedPosts({ page: 0, size: 50 }),
+    select: (res) => (res?.content ?? (Array.isArray(res) ? res : [])).map(normalizePost),
+    enabled: profileTab === 'saved' && !!userId,
+  });
 
   const handleAvatarChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file || !file.type.startsWith('image/')) return;
     setAvatarUploading(true);
-    setError('');
     try {
       const updated = await uploadProfilePic(file);
-      setProfile(updated);
+      queryClient.setQueryData(['profile', userId, isOwnProfile], (old) => (old ? { ...old, profile: updated } : old));
       const token = getToken();
       if (token) setAuth(updated, token);
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Failed to update profile picture'));
+      // Error could be shown via toast; keep previous profile
     } finally {
       setAvatarUploading(false);
       e.target.value = '';
@@ -431,14 +433,13 @@ export default function Profile() {
     const file = e.target.files?.[0];
     if (!file || !file.type.startsWith('image/')) return;
     setCoverUploading(true);
-    setError('');
     try {
       const updated = await uploadCoverPic(file);
-      setProfile(updated);
+      queryClient.setQueryData(['profile', userId, isOwnProfile], (old) => (old ? { ...old, profile: updated } : old));
       const token = getToken();
       if (token) setAuth(updated, token);
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Failed to update cover photo'));
+      // Error could be shown via toast
     } finally {
       setCoverUploading(false);
       e.target.value = '';
@@ -475,25 +476,6 @@ export default function Profile() {
     return () => { cancelled = true; };
   }, [selectedPostForDetail?.id]);
 
-  useEffect(() => {
-    if (profileTab !== 'saved' || !userId) return;
-    let cancelled = false;
-    setSavedLoading(true);
-    getSavedPosts({ page: 0, size: 50 })
-      .then((res) => {
-        if (cancelled) return;
-        const list = res?.content ?? (Array.isArray(res) ? res : []);
-        setSavedPosts(list.map(normalizePost));
-      })
-      .catch(() => {
-        if (!cancelled) setSavedPosts([]);
-      })
-      .finally(() => {
-        if (!cancelled) setSavedLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [profileTab, userId]);
-
   const filteredPosts =
     profileTab === 'saved'
       ? savedPosts
@@ -516,12 +498,7 @@ export default function Profile() {
         : [];
 
   if (loading && !displayProfile) {
-    return (
-      <div className="profile-fb profile-fb-loading">
-        <div className="profile-fb-loading-spinner" />
-        <p>Loading profile…</p>
-      </div>
-    );
+    return <ProfileSkeleton />;
   }
 
   const handleStr = displayProfile?.username ?? (displayProfile?.name ?? 'user').replace(/\s+/g, '').toLowerCase() || 'user';
@@ -614,15 +591,18 @@ export default function Profile() {
                 onClick={async () => {
                   if (followLoading) return;
                   setFollowLoading(true);
+                  const next = !isFollowingProfile;
+                  queryClient.setQueryData(['profile', userId, isOwnProfile], (old) =>
+                    old?.profile ? { ...old, profile: { ...old.profile, isFollowing: next } } : old
+                  );
                   try {
-                    if (isFollowingProfile) {
-                      await unfollowUser(displayProfile.id);
-                      setIsFollowing(false);
-                    } else {
-                      await followUser(displayProfile.id);
-                      setIsFollowing(true);
-                    }
-                  } catch (_) {}
+                    if (isFollowingProfile) await unfollowUser(displayProfile.id);
+                    else await followUser(displayProfile.id);
+                  } catch (_) {
+                    queryClient.setQueryData(['profile', userId, isOwnProfile], (old) =>
+                      old?.profile ? { ...old, profile: { ...old.profile, isFollowing: !next } } : old
+                    );
+                  }
                   setFollowLoading(false);
                 }}
                 disabled={followLoading}
@@ -798,7 +778,7 @@ export default function Profile() {
           {(profileTab === 'posts' || profileTab === 'saved') && (
             <>
               {profileTab === 'saved' && savedLoading && (
-                <div className="profile-fb-posts-empty">Loading saved posts…</div>
+                <ProfileGridSkeleton cells={6} />
               )}
               {gridPosts.length === 0 && !(profileTab === 'saved' && savedLoading) && (
                 <div className="profile-fb-posts-empty">

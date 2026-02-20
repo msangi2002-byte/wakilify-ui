@@ -1,11 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, Settings, ShoppingBag, Loader2, Image as ImageIcon, Plus, ChevronDown, MapPin, Store } from 'lucide-react';
+import { Search, Settings, ShoppingBag, Image as ImageIcon, Plus, ChevronDown, MapPin, Store } from 'lucide-react';
 import { getProducts, searchProducts, getProductsByCategory, getTrendingProducts } from '@/lib/api/products';
 import { searchBusinesses } from '@/lib/api/businesses';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import { useAuthStore } from '@/store/auth.store';
 import { ROLES } from '@/types/roles';
+import { ShopGridSkeleton } from '@/components/ui/ShopGridSkeleton';
+import { ShopTrendingSkeleton } from '@/components/ui/ShopTrendingSkeleton';
 import '@/styles/user-app.css';
 
 const CATEGORIES = [
@@ -100,77 +103,62 @@ function groupProductsByBusiness(products) {
   return Array.from(byBusiness.values());
 }
 
+function toProductList(data) {
+  return Array.isArray(data?.content) ? data.content : Array.isArray(data) ? data : [];
+}
+
 export default function Shop() {
   const { user } = useAuthStore();
   const isBusiness = String(user?.role ?? '').toLowerCase() === ROLES.BUSINESS;
 
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [category, setCategory] = useState('all');
-  const [products, setProducts] = useState([]);
-  const [matchingShops, setMatchingShops] = useState([]);
-  const [trending, setTrending] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [trendingLoading, setTrendingLoading] = useState(true);
-  const [error, setError] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [sortOpen, setSortOpen] = useState(false);
 
-  const loadProducts = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    setMatchingShops([]);
-    try {
-      const query = search.trim();
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 400);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const {
+    data: productsData,
+    isPending: loading,
+    error: productsError,
+    refetch: refetchProducts,
+  } = useQuery({
+    queryKey: ['shop', 'products', debouncedSearch, category],
+    queryFn: async () => {
+      const query = debouncedSearch;
       if (query) {
-        const [productsData, businessesData] = await Promise.all([
+        const [productsRes, businessesRes] = await Promise.all([
           searchProducts(query, { page: 0, size: 60 }),
           searchBusinesses(query, { page: 0, size: 10 }),
         ]);
-        const list = Array.isArray(productsData?.content) ? productsData.content : Array.isArray(productsData) ? productsData : [];
-        setProducts(list);
-        const shops = Array.isArray(businessesData?.content) ? businessesData.content : Array.isArray(businessesData) ? businessesData : [];
-        setMatchingShops(shops);
-      } else if (category !== 'all') {
-        const data = await getProductsByCategory(category, { page: 0, size: 60 });
-        const list = Array.isArray(data?.content) ? data.content : Array.isArray(data) ? data : [];
-        setProducts(list);
-      } else {
-        const data = await getProducts({ page: 0, size: 60 });
-        const list = Array.isArray(data?.content) ? data.content : Array.isArray(data) ? data : [];
-        setProducts(list);
+        return {
+          products: toProductList(productsRes),
+          matchingShops: Array.isArray(businessesRes?.content) ? businessesRes.content : Array.isArray(businessesRes) ? businessesRes : [],
+        };
       }
-    } catch (err) {
-      setError(getApiErrorMessage(err, 'Failed to load products'));
-      setProducts([]);
-      setMatchingShops([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [search, category]);
+      if (category !== 'all') {
+        const data = await getProductsByCategory(category, { page: 0, size: 60 });
+        return { products: toProductList(data), matchingShops: [] };
+      }
+      const data = await getProducts({ page: 0, size: 60 });
+      return { products: toProductList(data), matchingShops: [] };
+    },
+  });
 
-  useEffect(() => {
-    const timer = setTimeout(loadProducts, 400);
-    return () => clearTimeout(timer);
-  }, [loadProducts]);
+  const { data: trending = [], isLoading: trendingLoading } = useQuery({
+    queryKey: ['shop', 'trending'],
+    queryFn: () => getTrendingProducts({ page: 0, size: 8 }),
+    select: (data) => toProductList(data),
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-    setTrendingLoading(true);
-    getTrendingProducts({ page: 0, size: 8 })
-      .then((data) => {
-        if (!cancelled) {
-          const list = Array.isArray(data?.content) ? data.content : Array.isArray(data) ? data : [];
-          setTrending(list);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setTrending([]);
-      })
-      .finally(() => {
-        if (!cancelled) setTrendingLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, []);
+  const products = productsData?.products ?? [];
+  const matchingShops = productsData?.matchingShops ?? [];
+  const error = productsError ? getApiErrorMessage(productsError, 'Failed to load products') : '';
 
   const sortedProducts = [...products].sort((a, b) => {
     if (sortBy === 'price_asc') return (a.price ?? 0) - (b.price ?? 0);
@@ -275,7 +263,7 @@ export default function Shop() {
             <h2 className="shop-mp-section-title">Trending</h2>
             <div className="shop-mp-trending">
               {trendingLoading ? (
-                <div className="shop-mp-trending-skeleton" />
+                <ShopTrendingSkeleton cards={6} />
               ) : (
                 trending.map((p) => (
                   <ProductCard key={p.id} product={p} size="compact" />
@@ -291,16 +279,13 @@ export default function Shop() {
           </h2>
 
           {loading ? (
-            <div className="shop-mp-empty">
-              <Loader2 size={40} className="shop-mp-spinner" />
-              <p>Loading…</p>
-            </div>
+            <ShopGridSkeleton cards={8} />
           ) : error ? (
             <div className="shop-mp-empty">
               <ShoppingBag size={48} className="shop-mp-empty-icon" />
               <p className="shop-mp-empty-title">Error loading products</p>
               <p className="shop-mp-empty-desc">{error}</p>
-              <button type="button" className="shop-mp-empty-btn" onClick={loadProducts}>
+              <button type="button" className="shop-mp-empty-btn" onClick={() => refetchProducts()}>
                 Try again
               </button>
             </div>

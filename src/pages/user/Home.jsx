@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { ImagePlus, Users, Video, MoreHorizontal, Plus, ThumbsUp, Heart, MessageCircle, Share2, Play, Sparkles, Globe, Lock, Film, TrendingUp } from 'lucide-react';
 import { UserProfileMenu } from '@/components/ui/UserProfileMenu';
+import { FeedSkeleton } from '@/components/ui/FeedSkeleton';
 import { CommentItem } from '@/components/social/CommentItem';
 import { VideoFullscreenOverlay } from '@/components/social/VideoFullscreenOverlay';
 import { ImagePostViewerOverlay } from '@/components/social/ImagePostViewerOverlay';
@@ -772,52 +774,33 @@ function isSingleVideoPost(post) {
 export default function Home() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [storyGroups, setStoryGroups] = useState([]);
-  const [storiesLoading, setStoriesLoading] = useState(true);
 
+  const {
+    data: posts = [],
+    isLoading: loading,
+    error: feedError,
+  } = useQuery({
+    queryKey: ['feed', user?.id],
+    queryFn: async () => {
+      const list = await (user?.id ? getFeed({ page: 0, size: 20 }) : getPublicFeed({ page: 0, size: 20 }));
+      return Array.isArray(list) ? list.map(normalizePost) : [];
+    },
+  });
+
+  const { data: storiesList = [], isLoading: storiesLoading } = useQuery({
+    queryKey: ['stories', user?.id],
+    queryFn: getStories,
+    select: (list) => groupStoriesByAuthor(list ?? [], user?.id ?? null),
+  });
+  const storyGroups = storiesList;
+
+  const error = feedError ? (feedError.response?.data?.message || feedError.message || 'Failed to load posts') : '';
   const videoPosts = posts.filter(isSingleVideoPost);
 
   const openVideoInReels = useCallback((idx) => {
     const post = videoPosts[idx];
     if (post) navigate('/app/reels', { state: { fromFeedVideo: post } });
   }, [videoPosts, navigate]);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError('');
-    const fetchFeed = user?.id ? getFeed : getPublicFeed;
-    fetchFeed({ page: 0, size: 20 })
-      .then((list) => {
-        if (!cancelled) setPosts(Array.isArray(list) ? list.map(normalizePost) : []);
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err.response?.data?.message || err.message || 'Failed to load posts');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [user?.id]);
-
-  useEffect(() => {
-    let cancelled = false;
-    setStoriesLoading(true);
-    getStories()
-      .then((list) => {
-        if (!cancelled) setStoryGroups(groupStoriesByAuthor(list ?? [], user?.id ?? null));
-      })
-      .catch(() => {
-        if (!cancelled) setStoryGroups([]);
-      })
-      .finally(() => {
-        if (!cancelled) setStoriesLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [user?.id]);
 
   /* Facebook-style order: Composer first, then Stories, then Feed */
   return (
@@ -889,11 +872,7 @@ export default function Home() {
           {error}
         </div>
       )}
-      {loading && (
-        <div className="user-app-card" style={{ padding: 24, textAlign: 'center', color: '#65676b' }}>
-          Loading posts…
-        </div>
-      )}
+      {loading && <FeedSkeleton postCount={3} />}
       {!loading && !error && posts.length === 0 && (
         <div className="user-app-card" style={{ padding: 24, textAlign: 'center', color: '#65676b' }}>
           <p>No posts yet. Be the first to post!</p>

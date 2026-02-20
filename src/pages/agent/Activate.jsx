@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Building2, CheckCircle2, Clock, RefreshCw, AlertCircle, XCircle, ShieldCheck } from 'lucide-react';
 import { getAgentBusinesses, approveBusiness, cancelBusinessRequest } from '@/lib/api/agent';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
+import { AgentRequestsListSkeleton } from '@/components/ui/agent/AgentRequestsListSkeleton';
 import '@/styles/agent.css';
 
 function formatDate(iso) {
@@ -21,31 +23,19 @@ function formatDate(iso) {
 }
 
 export default function Activate() {
-  const [businesses, setBusinesses] = useState({ content: [] });
-  const [loadingBusinesses, setLoadingBusinesses] = useState(true);
+  const queryClient = useQueryClient();
+  const { data: businessesData, isLoading: loadingBusinesses, error: businessesError, refetch: refetchBusinesses } = useQuery({
+    queryKey: ['agent', 'businesses'],
+    queryFn: () => getAgentBusinesses({ page: 0, size: 50 }),
+    select: (data) => (Array.isArray(data?.content) ? { content: data.content } : { content: [] }),
+  });
+  const businesses = businessesData ?? { content: [] };
   const [approvingId, setApprovingId] = useState(null);
   const [cancellingId, setCancellingId] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  useEffect(() => {
-    loadBusinesses();
-  }, []);
-
-  const loadBusinesses = async () => {
-    setLoadingBusinesses(true);
-    setError('');
-    try {
-      const data = await getAgentBusinesses({ page: 0, size: 50 });
-      setBusinesses(Array.isArray(data?.content) ? { content: data.content } : { content: [] });
-    } catch (err) {
-      console.error('Failed to load businesses:', err);
-      setError(getApiErrorMessage(err, 'Failed to load business requests'));
-      setBusinesses({ content: [] });
-    } finally {
-      setLoadingBusinesses(false);
-    }
-  };
+  const errorMsg = error || (businessesError ? getApiErrorMessage(businessesError, 'Failed to load business requests') : '');
 
   const handleVerify = async (businessId) => {
     if (!confirm('Are you sure you want to verify/approve this business activation? This will activate the business.')) {
@@ -57,7 +47,7 @@ export default function Activate() {
     try {
       await approveBusiness(businessId);
       setSuccess('Business verified and approved successfully!');
-      await loadBusinesses();
+      queryClient.invalidateQueries({ queryKey: ['agent', 'businesses'] });
       setTimeout(() => setSuccess(''), 5000);
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to verify business'));
@@ -81,7 +71,7 @@ export default function Activate() {
     try {
       await cancelBusinessRequest(businessId);
       setSuccess('Business activation cancelled successfully.');
-      await loadBusinesses();
+      queryClient.invalidateQueries({ queryKey: ['agent', 'businesses'] });
       setTimeout(() => setSuccess(''), 5000);
     } catch (err) {
       const errorMsg = getApiErrorMessage(err, 'Failed to cancel business activation');
@@ -115,11 +105,11 @@ export default function Activate() {
     <div className="agent-dashboard agent-dashboard-cards agent-page-centered">
       <h1 className="agent-dashboard-title">Activate Business</h1>
 
-      {error && (
+      {errorMsg && (
         <div className="agent-dashboard-card agent-dashboard-card-error">
           <div className="agent-dashboard-card-alert agent-dashboard-card-alert-error" role="alert">
             <AlertCircle size={18} />
-            {error}
+            {errorMsg}
           </div>
         </div>
       )}
@@ -142,7 +132,7 @@ export default function Activate() {
           <button
             type="button"
             className="agent-btn-ghost"
-            onClick={loadBusinesses}
+            onClick={() => refetchBusinesses()}
             disabled={loadingBusinesses}
           >
             <RefreshCw size={18} style={{ animation: loadingBusinesses ? 'spin 1s linear infinite' : 'none' }} />
@@ -154,7 +144,7 @@ export default function Activate() {
         </p>
 
         {loadingBusinesses ? (
-          <div className="agent-loading">Loading businesses...</div>
+          <AgentRequestsListSkeleton cards={4} />
         ) : pendingBusinesses.length === 0 ? (
           <div className="agent-empty">No pending business activations.</div>
         ) : (

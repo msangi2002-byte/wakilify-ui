@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/auth.store';
 import {
   getMyPostsForBoost,
@@ -8,6 +9,9 @@ import {
   checkPaymentStatus,
   getBoostAnalytics,
 } from '@/lib/api/ads';
+import { BoostPostSelectSkeleton } from '@/components/ui/BoostPostSelectSkeleton';
+import { BoostPriceSkeleton } from '@/components/ui/BoostPriceSkeleton';
+import { BoostAnalyticsSkeleton } from '@/components/ui/BoostAnalyticsSkeleton';
 import {
   getPromotionStats,
   pausePromotion,
@@ -50,11 +54,15 @@ const AUDIENCE_TYPES = [
 
 const REGIONS = ['Dar es Salaam', 'Mwanza', 'Arusha', 'Dodoma', 'Mbeya', 'Morogoro', 'Tanga', 'Moshi', 'Other'];
 
+function normalizePosts(data) {
+  if (Array.isArray(data)) return data;
+  return data?.content ?? data ?? [];
+}
+
 export default function Boost() {
   const { user } = useAuthStore();
   const location = useLocation();
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [selectedPostId, setSelectedPostId] = useState(location.state?.postId || '');
   const [objective, setObjective] = useState('ENGAGEMENT');
   const [audienceType, setAudienceType] = useState('AUTOMATIC');
@@ -63,67 +71,51 @@ export default function Boost() {
   const [targetAgeMax, setTargetAgeMax] = useState(65);
   const [targetGender, setTargetGender] = useState('ALL');
   const [targetReach, setTargetReach] = useState(1000);
-  const [calculatedPrice, setCalculatedPrice] = useState(null);
-  const [priceLoading, setPriceLoading] = useState(false);
   const [paymentPhone, setPaymentPhone] = useState(user?.phone || '');
   const [boosting, setBoosting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [analytics, setAnalytics] = useState(null);
-  const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [viewPromo, setViewPromo] = useState(null);
   const [viewPromoStats, setViewPromoStats] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
 
-  useEffect(() => {
-    if (user?.id) {
-      setLoading(true);
-      getMyPostsForBoost()
-        .then((data) => {
-          const list = data?.content ?? data ?? [];
-          setPosts(list);
-          const fromState = location.state?.postId;
-          if (list.length > 0) {
-            if (fromState && list.some((p) => p.id === fromState)) {
-              setSelectedPostId(fromState);
-            } else {
-              setSelectedPostId(list[0].id);
-            }
-          }
-        })
-        .catch(() => setPosts([]))
-        .finally(() => setLoading(false));
-    }
-  }, [user?.id]);
+  const { data: postsRaw, isLoading: loading } = useQuery({
+    queryKey: ['boost', 'posts', user?.id],
+    queryFn: getMyPostsForBoost,
+    enabled: !!user?.id,
+    select: normalizePosts,
+  });
+  const posts = postsRaw ?? [];
+
+  const { data: calculatedPrice, isLoading: priceLoading } = useQuery({
+    queryKey: ['boost', 'price', targetReach],
+    queryFn: () => calculateAdPrice(targetReach),
+    enabled: targetReach > 0,
+  });
+
+  const { data: analytics, isLoading: analyticsLoading } = useQuery({
+    queryKey: ['boost', 'analytics'],
+    queryFn: getBoostAnalytics,
+    enabled: !!user?.id,
+  });
 
   useEffect(() => {
-    if (targetReach > 0) {
-      setPriceLoading(true);
-      calculateAdPrice(targetReach)
-        .then(setCalculatedPrice)
-        .catch(() => setCalculatedPrice(null))
-        .finally(() => setPriceLoading(false));
-    } else {
-      setCalculatedPrice(null);
+    if (posts.length === 0) return;
+    const fromState = location.state?.postId;
+    const currentInList = posts.some((p) => p.id === selectedPostId);
+    if (fromState && posts.some((p) => p.id === fromState)) {
+      if (selectedPostId !== fromState) setSelectedPostId(fromState);
+    } else if (!currentInList) {
+      setSelectedPostId(posts[0]?.id || '');
     }
-  }, [targetReach]);
-
-  useEffect(() => {
-    if (user?.id) {
-      setAnalyticsLoading(true);
-      getBoostAnalytics()
-        .then(setAnalytics)
-        .catch(() => setAnalytics(null))
-        .finally(() => setAnalyticsLoading(false));
-    }
-  }, [user?.id]);
+  }, [posts, location.state?.postId]);
 
   useEffect(() => {
     if (user?.phone) setPaymentPhone(user.phone);
   }, [user?.phone]);
 
-  const loadAnalytics = () => {
-    getBoostAnalytics().then(setAnalytics).catch(() => {});
+  const invalidateAnalytics = () => {
+    queryClient.invalidateQueries({ queryKey: ['boost', 'analytics'] });
   };
 
   const handleViewPromo = async (promo) => {
@@ -141,7 +133,7 @@ export default function Boost() {
     setActionLoading(id);
     try {
       await pausePromotion(id);
-      loadAnalytics();
+      invalidateAnalytics();
       setSuccess('Kampeni imesimamishwa.');
       if (viewPromo?.id === id) setViewPromo(null);
     } catch (err) {
@@ -155,7 +147,7 @@ export default function Boost() {
     setActionLoading(id);
     try {
       await resumePromotion(id);
-      loadAnalytics();
+      invalidateAnalytics();
       setSuccess('Kampeni imeendelea.');
       if (viewPromo?.id === id) setViewPromo(null);
     } catch (err) {
@@ -174,7 +166,7 @@ export default function Boost() {
     setActionLoading(id);
     try {
       await cancelPromotion(id);
-      loadAnalytics();
+      invalidateAnalytics();
       setSuccess(isRemove ? 'Kampeni imeondolewa.' : 'Kampeni imefutwa.');
       setViewPromo(null);
     } catch (err) {
@@ -228,7 +220,7 @@ export default function Boost() {
             setSuccess('Malipo yametumwa! Tangazo lako linaanza kuonyeshwa.');
             setSelectedPostId(posts[0]?.id || '');
             setTargetReach(1000);
-            loadAnalytics();
+            invalidateAnalytics();
           } else if (status?.status === 'FAILED' || status?.status === 'CANCELLED') {
             clearInterval(interval);
             setError('Malipo yameshindwa au yameghairiwa.');
@@ -267,7 +259,7 @@ export default function Boost() {
               <h2 className="boost-section-title">Chagua Post</h2>
             </div>
             {loading ? (
-              <p className="boost-muted">Inapakia posts...</p>
+              <BoostPostSelectSkeleton />
             ) : posts.length === 0 ? (
               <p className="boost-muted">Huna posts bado. Tengeneza post kwanza.</p>
             ) : (
@@ -413,7 +405,7 @@ export default function Boost() {
               </div>
             </div>
             {priceLoading ? (
-              <p className="boost-muted">Inahesabu bei...</p>
+              <BoostPriceSkeleton />
             ) : calculatedPrice && (
               <div className="boost-price-box">
                 <div className="boost-price-value">TZS {calculatedPrice.totalPrice?.toLocaleString() || '0'}</div>
@@ -449,15 +441,14 @@ export default function Boost() {
           </section>
 
           {/* Analytics */}
-          {analytics && (
-            <section className="boost-card boost-card-analytics">
-              <div className="boost-step-header">
-                <span className="boost-step-num boost-step-num-sm"><Users size={18} /></span>
-                <h2 className="boost-section-title">Tangazo Analytics</h2>
-              </div>
-              {analyticsLoading ? (
-                <p className="boost-muted">Inapakia...</p>
-              ) : (
+          <section className="boost-card boost-card-analytics">
+            <div className="boost-step-header">
+              <span className="boost-step-num boost-step-num-sm"><Users size={18} /></span>
+              <h2 className="boost-section-title">Tangazo Analytics</h2>
+            </div>
+            {analyticsLoading ? (
+              <BoostAnalyticsSkeleton />
+            ) : analytics ? (
                 <>
                   <div className="boost-analytics">
                     <div className="boost-stat">
@@ -549,9 +540,10 @@ export default function Boost() {
                     </div>
                   )}
                 </>
+              ) : (
+                <p className="boost-muted">Hakuna data bado. Boost post kwanza.</p>
               )}
-            </section>
-          )}
+          </section>
 
           {/* View Kampeni Modal */}
           {viewPromo && (

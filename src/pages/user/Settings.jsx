@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore, setAuth, getToken, getRefreshToken } from '@/store/auth.store';
 import { useUIStore, setUI, subscribeUI } from '@/store/ui.store';
 import {
@@ -19,6 +20,10 @@ import { getAgentsForBusinessRequest } from '@/lib/api/agent';
 import { getBusinessRegistrationPlans } from '@/lib/api/config';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import { ROLES } from '@/types/roles';
+import { SettingsUserListSkeleton } from '@/components/ui/SettingsUserListSkeleton';
+import { SettingsActivitySkeleton } from '@/components/ui/SettingsActivitySkeleton';
+import { SettingsAgentsSkeleton } from '@/components/ui/SettingsAgentsSkeleton';
+import { SettingsPlansSkeleton } from '@/components/ui/SettingsPlansSkeleton';
 import {
   User,
   Eye,
@@ -77,6 +82,7 @@ function Toggle({ checked, onChange, ariaLabel }) {
 export default function Settings() {
   const { user } = useAuthStore();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const ui = useUIStore();
   const [theme, setTheme] = useState(ui.theme);
   const [showPassword, setShowPassword] = useState(false);
@@ -119,11 +125,8 @@ export default function Settings() {
   const [businessRequestStep, setBusinessRequestStep] = useState('agent'); // 'agent' | 'form'
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [agentViewTab, setAgentViewTab] = useState('map'); // 'map' | 'list'
-  const [agentsList, setAgentsList] = useState([]);
   const [agentsSort, setAgentsSort] = useState('popularity');
-  const [agentsLoading, setAgentsLoading] = useState(false);
   const [agentsPage, setAgentsPage] = useState(0);
-  const [agentsTotalPages, setAgentsTotalPages] = useState(0);
   const [userCoords, setUserCoords] = useState(null);
   const [businessRequestForm, setBusinessRequestForm] = useState({ businessName: '', ownerPhone: '', category: '', region: '' });
   const [businessRequestLoading, setBusinessRequestLoading] = useState(false);
@@ -133,32 +136,47 @@ export default function Settings() {
   const [rateRating, setRateRating] = useState(0);
   const [rateComment, setRateComment] = useState('');
   const [rateLoading, setRateLoading] = useState(false);
-  const [businessPlans, setBusinessPlans] = useState([]);
   const [selectedPlanId, setSelectedPlanId] = useState(null);
-  const [businessPlansLoading, setBusinessPlansLoading] = useState(false);
 
-  // Load agents for "Become a business" when modal opens (step agent)
-  useEffect(() => {
-    if (!businessRequestOpen || businessRequestStep !== 'agent') return;
-    let cancelled = false;
-    setAgentsLoading(true);
-    getAgentsForBusinessRequest({
-      sort: agentsSort,
-      lat: userCoords?.lat,
-      lng: userCoords?.lng,
-      page: agentsPage,
-      size: 20,
-    })
-      .then((res) => {
-        if (!cancelled && res?.content) {
-          setAgentsList(res.content);
-          setAgentsTotalPages(res.totalPages ?? 0);
-        }
-      })
-      .catch(() => { if (!cancelled) setAgentsList([]); })
-      .finally(() => { if (!cancelled) setAgentsLoading(false); });
-    return () => { cancelled = true; };
-  }, [businessRequestOpen, businessRequestStep, agentsSort, agentsPage, userCoords?.lat, userCoords?.lng]);
+  const { data: blockedUsers = [], isLoading: blockedLoading } = useQuery({
+    queryKey: ['settings', 'blocked'],
+    queryFn: () => getBlockedUsers({ page: 0, size: 50 }),
+    select: (res) => res?.content ?? [],
+  });
+
+  const { data: restrictedUsers = [], isLoading: restrictedLoading } = useQuery({
+    queryKey: ['settings', 'restricted'],
+    queryFn: () => getRestrictedUsers({ page: 0, size: 50 }),
+    select: (res) => res?.content ?? [],
+  });
+
+  const { data: loginActivity = [], isLoading: loginActivityLoading } = useQuery({
+    queryKey: ['settings', 'loginActivity'],
+    queryFn: () => getLoginActivity({ page: 0, size: 20 }),
+    select: (res) => res?.content ?? [],
+  });
+
+  const { data: agentsData, isLoading: agentsLoading } = useQuery({
+    queryKey: ['settings', 'agents', agentsSort, agentsPage, userCoords?.lat, userCoords?.lng],
+    queryFn: () =>
+      getAgentsForBusinessRequest({
+        sort: agentsSort,
+        lat: userCoords?.lat,
+        lng: userCoords?.lng,
+        page: agentsPage,
+        size: 20,
+      }),
+    enabled: !!businessRequestOpen && businessRequestStep === 'agent',
+  });
+  const agentsList = agentsData?.content ?? [];
+  const agentsTotalPages = agentsData?.totalPages ?? 0;
+
+  const { data: businessPlans = [], isLoading: businessPlansLoading } = useQuery({
+    queryKey: ['settings', 'businessPlans'],
+    queryFn: getBusinessRegistrationPlans,
+    enabled: !!businessRequestOpen && businessRequestStep === 'form',
+    select: (list) => (Array.isArray(list) ? list : []),
+  });
 
   // Get user location once when opening agent step (for "nearby" sort)
   useEffect(() => {
@@ -179,18 +197,6 @@ export default function Settings() {
     setBusinessRequestSuccess('');
     setBusinessRequestOpen(true);
   };
-
-  // Load active business registration plans when form step is shown
-  useEffect(() => {
-    if (!businessRequestOpen || businessRequestStep !== 'form') return;
-    let cancelled = false;
-    setBusinessPlansLoading(true);
-    getBusinessRegistrationPlans()
-      .then((list) => { if (!cancelled) setBusinessPlans(Array.isArray(list) ? list : []); })
-      .catch(() => { if (!cancelled) setBusinessPlans([]); })
-      .finally(() => { if (!cancelled) setBusinessPlansLoading(false); });
-    return () => { cancelled = true; };
-  }, [businessRequestOpen, businessRequestStep]);
 
   const closeBusinessRequestModal = () => {
     setBusinessRequestOpen(false);
@@ -256,56 +262,6 @@ export default function Settings() {
     }
   };
 
-  const [blockedUsers, setBlockedUsers] = useState([]);
-  const [blockedLoading, setBlockedLoading] = useState(false);
-  useEffect(() => {
-    let cancelled = false;
-    setBlockedLoading(true);
-    getBlockedUsers({ page: 0, size: 50 })
-      .then((res) => {
-        if (!cancelled) setBlockedUsers(res?.content ?? []);
-      })
-      .catch(() => {
-        if (!cancelled) setBlockedUsers([]);
-      })
-      .finally(() => {
-        if (!cancelled) setBlockedLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    setRestrictedLoading(true);
-    getRestrictedUsers({ page: 0, size: 50 })
-      .then((res) => {
-        if (!cancelled) setRestrictedUsers(res?.content ?? []);
-      })
-      .catch(() => {
-        if (!cancelled) setRestrictedUsers([]);
-      })
-      .finally(() => {
-        if (!cancelled) setRestrictedLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoginActivityLoading(true);
-    getLoginActivity({ page: 0, size: 20 })
-      .then((res) => {
-        if (!cancelled) setLoginActivity((res?.content ?? []));
-      })
-      .catch(() => {
-        if (!cancelled) setLoginActivity([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoginActivityLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, []);
-
   const handleSaveProfile = async () => {
     setProfileSaving(true);
     setProfileSaveError('');
@@ -339,7 +295,7 @@ export default function Settings() {
   const handleUnblock = async (userId) => {
     try {
       await unblockUser(userId);
-      setBlockedUsers((prev) => prev.filter((u) => u.id !== userId));
+      queryClient.setQueryData(['settings', 'blocked'], (prev = []) => prev.filter((u) => u.id !== userId));
     } catch (_) {}
   };
 
@@ -362,10 +318,6 @@ export default function Settings() {
   });
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileSaveError, setProfileSaveError] = useState('');
-  const [restrictedUsers, setRestrictedUsers] = useState([]);
-  const [restrictedLoading, setRestrictedLoading] = useState(false);
-  const [loginActivity, setLoginActivity] = useState([]);
-  const [loginActivityLoading, setLoginActivityLoading] = useState(false);
   const avatarInputRef = useRef(null);
   const coverInputRef = useRef(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -900,7 +852,7 @@ export default function Settings() {
           Watu uliofunga. Hauona posts/stories zao; wao hawanaona zako.
         </p>
         {blockedLoading ? (
-          <p className="settings-loading">Loading…</p>
+          <SettingsUserListSkeleton rows={4} />
         ) : blockedUsers.length === 0 ? (
           <p className="settings-empty">Hakuna watu uliofunga.</p>
         ) : (
@@ -933,7 +885,7 @@ export default function Settings() {
           Watu uliozuia. Wanaona posts zako za public tu.
         </p>
         {restrictedLoading ? (
-          <p className="settings-loading">Loading…</p>
+          <SettingsUserListSkeleton rows={4} />
         ) : restrictedUsers.length === 0 ? (
           <p className="settings-empty">Hakuna watu uliozuia.</p>
         ) : (
@@ -954,7 +906,7 @@ export default function Settings() {
                   onClick={async () => {
                     try {
                       await unrestrictUser(u.id);
-                      setRestrictedUsers((prev) => prev.filter((x) => x.id !== u.id));
+                      queryClient.setQueryData(['settings', 'restricted'], (prev = []) => prev.filter((x) => x.id !== u.id));
                     } catch (_) {}
                   }}
                 >
@@ -975,7 +927,7 @@ export default function Settings() {
           Recent logins (device, browser, IP).
         </p>
         {loginActivityLoading ? (
-          <p className="settings-loading">Loading…</p>
+          <SettingsActivitySkeleton rows={5} />
         ) : loginActivity.length === 0 ? (
           <p className="settings-empty">No login history.</p>
         ) : (
@@ -1059,7 +1011,7 @@ export default function Settings() {
                 )}
 
                 {agentsLoading ? (
-                  <p className="settings-agent-search-loading">Loading agents…</p>
+                  <SettingsAgentsSkeleton rows={5} />
                 ) : agentViewTab === 'map' ? (
                   <div style={{ height: 320, borderRadius: 8, overflow: 'hidden', marginBottom: 12 }}>
                     <MapContainer
@@ -1173,7 +1125,7 @@ export default function Settings() {
                   </p>
                 )}
                 {businessPlansLoading ? (
-                  <p className="settings-row-desc" style={{ marginBottom: 12 }}>Loading plans…</p>
+                  <SettingsPlansSkeleton rows={3} />
                 ) : businessPlans.length > 0 && (
                   <div className="settings-row-desc" style={{ marginBottom: 16 }}>
                     <span style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>Choose registration plan (fee)</span>

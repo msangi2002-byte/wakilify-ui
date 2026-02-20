@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Search,
@@ -31,6 +32,8 @@ import { getAllCommunities } from '@/lib/api/communities';
 import { getUnreadCount as getNotificationUnreadCount } from '@/lib/api/notifications';
 import { getUnreadCount as getMessageUnreadCount } from '@/lib/api/messages';
 import IncomingCallModal from '@/components/call/IncomingCallModal';
+import { SponsoredSkeleton } from '@/components/ui/SponsoredSkeleton';
+import { PymkSkeleton } from '@/components/ui/PymkSkeleton';
 import { APP_NAME, LOGO_PNG, LOGO_ICON } from '@/lib/constants/brand';
 import { clearAuth } from '@/store/auth.store';
 import '@/styles/user-app.css';
@@ -111,12 +114,50 @@ export default function UserLayout() {
   const [searchResults, setSearchResults] = useState({ people: [], groups: [] });
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [sponsoredAds, setSponsoredAds] = useState([]);
-  const [sponsoredLoading, setSponsoredLoading] = useState(false);
-  const [peopleYouMayKnow, setPeopleYouMayKnow] = useState([]);
-  const [mutualFollows, setMutualFollows] = useState([]);
-  const [pymkLoading, setPymkLoading] = useState(false);
   const [followLoadingId, setFollowLoadingId] = useState(null);
+  const queryClient = useQueryClient();
+
+  const { data: sponsoredAds = [], isLoading: sponsoredLoading } = useQuery({
+    queryKey: ['sidebar', 'sponsored'],
+    queryFn: async () => {
+      const list = await getActiveAds({ type: 'FEED', limit: 5 });
+      return Array.isArray(list) ? list : [];
+    },
+  });
+
+  const { data: pymkData, isLoading: pymkLoading } = useQuery({
+    queryKey: ['sidebar', 'pymk', user?.id],
+    queryFn: async () => {
+      const [mutual, pymkRes] = await Promise.all([
+        getMutualFollows({ page: 0, size: 20 }),
+        getPeopleYouMayKnow({ page: 0, size: 15 }).then((res) => res?.content ?? res ?? []),
+      ]);
+      const mutualList = Array.isArray(mutual) ? mutual : [];
+      const pymkList = Array.isArray(pymkRes) ? pymkRes : [];
+      const mutualIds = new Set(mutualList.map((u) => u.id));
+      const rest = pymkList.filter((u) => !mutualIds.has(u.id));
+      rest.sort((a, b) => {
+        const aOnline = a.isOnline === true;
+        const bOnline = b.isOnline === true;
+        if (aOnline !== bOnline) return aOnline ? -1 : 1;
+        const aSeen = a.lastSeen ? new Date(a.lastSeen).getTime() : 0;
+        const bSeen = b.lastSeen ? new Date(b.lastSeen).getTime() : 0;
+        return bSeen - aSeen;
+      });
+      const sortedMutual = [...mutualList].sort((a, b) => {
+        const aOnline = a.isOnline === true;
+        const bOnline = b.isOnline === true;
+        if (aOnline !== bOnline) return aOnline ? -1 : 1;
+        const aSeen = a.lastSeen ? new Date(a.lastSeen).getTime() : 0;
+        const bSeen = b.lastSeen ? new Date(b.lastSeen).getTime() : 0;
+        return bSeen - aSeen;
+      });
+      return { mutualFollows: sortedMutual, peopleYouMayKnow: rest };
+    },
+    enabled: !!user?.id,
+  });
+  const mutualFollows = pymkData?.mutualFollows ?? [];
+  const peopleYouMayKnow = pymkData?.peopleYouMayKnow ?? [];
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
   const impressedAdIds = useRef(new Set());
@@ -333,68 +374,6 @@ export default function UserLayout() {
     return () => clearTimeout(t);
   }, [searchQuery]);
 
-  useEffect(() => {
-    let cancelled = false;
-    setSponsoredLoading(true);
-    getActiveAds({ type: 'FEED', limit: 5 })
-      .then((list) => {
-        if (!cancelled) setSponsoredAds(Array.isArray(list) ? list : []);
-      })
-      .catch(() => {
-        if (!cancelled) setSponsoredAds([]);
-      })
-      .finally(() => {
-        if (!cancelled) setSponsoredLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    setPymkLoading(true);
-    Promise.all([
-      getMutualFollows({ page: 0, size: 20 }),
-      getPeopleYouMayKnow({ page: 0, size: 15 }).then((res) => res?.content ?? []),
-    ])
-      .then(([mutual, pymk]) => {
-        const mutualList = Array.isArray(mutual) ? mutual : [];
-        const pymkList = Array.isArray(pymk) ? pymk : [];
-        const mutualIds = new Set(mutualList.map((u) => u.id));
-        const rest = pymkList.filter((u) => !mutualIds.has(u.id));
-        rest.sort((a, b) => {
-          const aOnline = a.isOnline === true;
-          const bOnline = b.isOnline === true;
-          if (aOnline !== bOnline) return aOnline ? -1 : 1;
-          const aSeen = a.lastSeen ? new Date(a.lastSeen).getTime() : 0;
-          const bSeen = b.lastSeen ? new Date(b.lastSeen).getTime() : 0;
-          return bSeen - aSeen;
-        });
-        if (!cancelled) {
-          setMutualFollows(
-            mutualList.sort((a, b) => {
-              const aOnline = a.isOnline === true;
-              const bOnline = b.isOnline === true;
-              if (aOnline !== bOnline) return aOnline ? -1 : 1;
-              const aSeen = a.lastSeen ? new Date(a.lastSeen).getTime() : 0;
-              const bSeen = b.lastSeen ? new Date(b.lastSeen).getTime() : 0;
-              return bSeen - aSeen;
-            })
-          );
-          setPeopleYouMayKnow(rest);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setMutualFollows([]);
-          setPeopleYouMayKnow([]);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setPymkLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, []);
-
   const handleAdClick = (ad) => {
     if (!ad) return;
     if (ad.id && !String(ad.id).startsWith('sample-')) recordClick(ad.id).catch(() => {});
@@ -410,7 +389,9 @@ export default function UserLayout() {
     setFollowLoadingId(id);
     try {
       await followUser(id);
-      setPeopleYouMayKnow((prev) => prev.filter((p) => p.id !== id));
+      queryClient.setQueryData(['sidebar', 'pymk', user?.id], (old) =>
+        old ? { ...old, peopleYouMayKnow: (old.peopleYouMayKnow ?? []).filter((p) => p.id !== id) } : old
+      );
     } catch (_) {
       // keep in list
     } finally {
@@ -849,7 +830,7 @@ export default function UserLayout() {
               <h3>Sponsored</h3>
             </div>
             {sponsoredLoading ? (
-              <div className="user-app-right-loading">Loading…</div>
+              <SponsoredSkeleton count={3} />
             ) : (
               (sponsoredAds.length === 0 ? SAMPLE_SPONSORED : sponsoredAds).map((ad) => (
                 <button
@@ -881,7 +862,7 @@ export default function UserLayout() {
               <Link to="/app/friends" className="user-app-right-see-all">See all</Link>
             </div>
             {pymkLoading ? (
-              <div className="user-app-right-loading">Loading…</div>
+              <PymkSkeleton rows={5} />
             ) : mutualFollows.length === 0 && peopleYouMayKnow.length === 0 ? (
               <div className="user-app-right-empty">No suggestions</div>
             ) : (
