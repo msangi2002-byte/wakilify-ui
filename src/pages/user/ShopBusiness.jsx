@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Store, MapPin, Package, Loader2, AlertCircle, Image as ImageIcon } from 'lucide-react';
-import { getBusinessById } from '@/lib/api/businesses';
+import { ArrowLeft, Store, MapPin, Package, Loader2, AlertCircle, Image as ImageIcon, MessageSquare, Send } from 'lucide-react';
+import { getBusinessById, submitBusinessFeedback } from '@/lib/api/businesses';
 import { getProductsByBusiness } from '@/lib/api/products';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
+import { useAuthStore } from '@/store/auth.store';
 import '@/styles/user-app.css';
 
 function formatCurrency(amount) {
@@ -50,10 +51,14 @@ function ProductCard({ product, navigate }) {
 export default function ShopBusiness() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [business, setBusiness] = useState(null);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [feedbackText, setFeedbackText] = useState('');
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+  const [feedbackSuccess, setFeedbackSuccess] = useState(false);
 
   useEffect(() => {
     if (!id) {
@@ -177,6 +182,58 @@ export default function ShopBusiness() {
               <ProductCard key={product.id} product={product} navigate={navigate} />
             ))}
           </div>
+        )}
+      </div>
+
+      {/* Feedback / advice section: authenticated users can leave feedback for the shop */}
+      <div className="shop-business-feedback-section">
+        <h2 className="shop-business-section-title">
+          <MessageSquare size={20} style={{ verticalAlign: 'middle', marginRight: '8px' }} />
+          Feedback &amp; advice
+        </h2>
+        <p className="shop-business-feedback-desc">
+          Share feedback or advice for this shop. The owner can see it in their business dashboard.
+        </p>
+        {user ? (
+          feedbackSuccess ? (
+            <p className="shop-business-feedback-success">Thank you! Your feedback has been sent to the shop owner.</p>
+          ) : (
+            <form
+              className="shop-business-feedback-form"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const content = feedbackText.trim();
+                if (!content || feedbackSubmitting) return;
+                setFeedbackSubmitting(true);
+                try {
+                  await submitBusinessFeedback(id, content);
+                  setFeedbackText('');
+                  setFeedbackSuccess(true);
+                } catch (err) {
+                  alert(getApiErrorMessage(err, 'Failed to send feedback'));
+                } finally {
+                  setFeedbackSubmitting(false);
+                }
+              }}
+            >
+              <textarea
+                className="shop-business-feedback-textarea"
+                placeholder="Your feedback or advice for this shop…"
+                value={feedbackText}
+                onChange={(e) => setFeedbackText(e.target.value)}
+                rows={3}
+                maxLength={2000}
+                disabled={feedbackSubmitting}
+              />
+              <button type="submit" className="shop-business-feedback-submit" disabled={!feedbackText.trim() || feedbackSubmitting}>
+                <Send size={18} /> {feedbackSubmitting ? 'Sending…' : 'Send feedback'}
+              </button>
+            </form>
+          )
+        ) : (
+          <p className="shop-business-feedback-login">
+            <Link to="/auth/login">Sign in</Link> to leave feedback or advice for this shop.
+          </p>
         )}
       </div>
     </div>

@@ -25,3 +25,12 @@ export async function searchBusinesses(query, params = {}) {
   });
   return data?.data ?? data;
 }
+
+/**
+ * Submit feedback or advice for a shop (authenticated user)
+ * POST /api/v1/businesses/{id}/feedback
+ */
+export async function submitBusinessFeedback(businessId, content) {
+  const { data } = await api.post(`/businesses/${businessId}/feedback`, { content });
+  return data?.data ?? data;
+}

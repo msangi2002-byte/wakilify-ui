@@ -164,3 +164,12 @@ export async function deliverOrder(id) {
   const { data } = await api.post(`/business/orders/${id}/deliver`);
   return data?.data ?? data;
 }
+
+/**
+ * Get feedback/advice submitted by customers for my shop
+ * GET /api/v1/business/feedback?page=0&size=20
+ */
+export async function getBusinessFeedback(params = {}) {
+  const { data } = await api.get('/business/feedback', { params: { page: 0, size: 20, ...params } });
+  return data?.data ?? data;
+}

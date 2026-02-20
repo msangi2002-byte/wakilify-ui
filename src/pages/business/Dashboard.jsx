@@ -304,6 +304,8 @@ export default function Dashboard() {
                     fontSize: 14,
                     resize: 'vertical',
                     fontFamily: 'inherit',
+                    color: '#111827',
+                    backgroundColor: '#fff',
                   }}
                 />
               </div>

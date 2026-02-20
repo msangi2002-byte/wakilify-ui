@@ -53,6 +53,7 @@ const BusinessProducts = lazy(() => import('@/pages/business/Products'));
 const ProductNew = lazy(() => import('@/pages/business/ProductNew'));
 const ProductEdit = lazy(() => import('@/pages/business/ProductEdit'));
 const BusinessOrders = lazy(() => import('@/pages/business/Orders'));
+const BusinessFeedback = lazy(() => import('@/pages/business/Feedback'));
 const Stats = lazy(() => import('@/pages/business/Stats'));
 const BusinessSettings = lazy(() => import('@/pages/business/Settings'));
 
@@ -171,6 +172,7 @@ const router = createBrowserRouter([
           { path: 'products/new', element: <Suspense fallback={<Fallback />}><ProductNew /></Suspense> },
           { path: 'products/:id/edit', element: <Suspense fallback={<Fallback />}><ProductEdit /></Suspense> },
           { path: 'orders', element: <Suspense fallback={<Fallback />}><BusinessOrders /></Suspense> },
+          { path: 'feedback', element: <Suspense fallback={<Fallback />}><BusinessFeedback /></Suspense> },
           { path: 'stats', element: <Suspense fallback={<Fallback />}><Stats /></Suspense> },
           { path: 'settings', element: <Suspense fallback={<Fallback />}><BusinessSettings /></Suspense> },
         ],
