@@ -304,10 +304,10 @@ export default function Shop() {
                 Try again
               </button>
             </div>
-          ) : sortedProducts.length === 0 ? (
+          ) : sortedProducts.length === 0 && matchingShops.length === 0 ? (
             <div className="shop-mp-empty">
               <ShoppingBag size={48} className="shop-mp-empty-icon" />
-              <p className="shop-mp-empty-title">No products found</p>
+              <p className="shop-mp-empty-title">No products or shops found</p>
               <p className="shop-mp-empty-desc">
                 {search.trim() || category !== 'all'
                   ? 'Try a different search or category.'

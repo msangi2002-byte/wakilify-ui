@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/auth.store';
 import {
   getMyPostsForBoost,
@@ -51,9 +52,10 @@ const REGIONS = ['Dar es Salaam', 'Mwanza', 'Arusha', 'Dodoma', 'Mbeya', 'Morogo
 
 export default function Boost() {
   const { user } = useAuthStore();
+  const location = useLocation();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPostId, setSelectedPostId] = useState('');
+  const [selectedPostId, setSelectedPostId] = useState(location.state?.postId || '');
   const [objective, setObjective] = useState('ENGAGEMENT');
   const [audienceType, setAudienceType] = useState('AUTOMATIC');
   const [targetRegions, setTargetRegions] = useState([]);
@@ -80,7 +82,14 @@ export default function Boost() {
         .then((data) => {
           const list = data?.content ?? data ?? [];
           setPosts(list);
-          if (list.length > 0 && !selectedPostId) setSelectedPostId(list[0].id);
+          const fromState = location.state?.postId;
+          if (list.length > 0) {
+            if (fromState && list.some((p) => p.id === fromState)) {
+              setSelectedPostId(fromState);
+            } else {
+              setSelectedPostId(list[0].id);
+            }
+          }
         })
         .catch(() => setPosts([]))
         .finally(() => setLoading(false));

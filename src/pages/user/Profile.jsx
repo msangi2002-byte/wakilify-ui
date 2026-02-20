@@ -18,6 +18,9 @@ import {
   UserPlus,
   Heart,
   Sparkles,
+  X,
+  Eye,
+  TrendingUp,
 } from 'lucide-react';
 import { ROLES } from '@/types/roles';
 import { useAuthStore, setAuth, getToken } from '@/store/auth.store';
@@ -33,6 +36,8 @@ import {
   getComments,
   addComment,
   deleteComment,
+  getPostById,
+  getPostInsights,
 } from '@/lib/api/posts';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import { formatPostTime, formatCommentTime } from '@/lib/utils/dateUtils';
@@ -82,6 +87,7 @@ function normalizePost(post) {
     likesCount: post.reactionsCount ?? post.likesCount ?? 0,
     commentsCount: post.commentsCount ?? 0,
     sharesCount: post.sharesCount ?? 0,
+    viewsCount: post.viewsCount ?? 0,
     saved: !!post.saved,
     hashtags: post.hashtags ?? [],
   };
@@ -366,8 +372,12 @@ export default function Profile() {
   const [followLoading, setFollowLoading] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [selectedPostForDetail, setSelectedPostForDetail] = useState(null);
+  const [postDetailData, setPostDetailData] = useState(null);
+  const [postDetailLoading, setPostDetailLoading] = useState(false);
   const avatarInputRef = useRef(null);
   const coverInputRef = useRef(null);
+  const navigate = useNavigate();
 
   const userId = paramUserId && paramUserId !== 'me' ? paramUserId : authUser?.id;
   const isOwnProfile = !paramUserId || paramUserId === 'me' || (authUser?.id && paramUserId === authUser.id);
@@ -436,6 +446,34 @@ export default function Profile() {
   };
 
   const displayProfile = profile ?? authUser;
+
+  useEffect(() => {
+    if (!selectedPostForDetail?.id) {
+      setPostDetailData(null);
+      return;
+    }
+    let cancelled = false;
+    setPostDetailLoading(true);
+    setPostDetailData(null);
+    Promise.all([
+      getPostById(selectedPostForDetail.id),
+      getPostInsights(selectedPostForDetail.id).catch(() => null),
+    ])
+      .then(([postData, insights]) => {
+        if (cancelled) return;
+        setPostDetailData({
+          post: postData ? normalizePost(postData) : selectedPostForDetail,
+          insights: insights || null,
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setPostDetailData({ post: selectedPostForDetail, insights: null });
+      })
+      .finally(() => {
+        if (!cancelled) setPostDetailLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [selectedPostForDetail?.id]);
 
   useEffect(() => {
     if (profileTab !== 'saved' || !userId) return;
@@ -774,7 +812,14 @@ export default function Profile() {
               {gridPosts.length > 0 && (
                 <div className="profile-fb-posts-grid">
                   {gridPosts.map((post) => (
-                    <div key={post.id} className="profile-fb-posts-grid-item">
+                    <div
+                      key={post.id}
+                      className="profile-fb-posts-grid-item"
+                      role={isOwnProfile ? 'button' : undefined}
+                      tabIndex={isOwnProfile ? 0 : undefined}
+                      onClick={isOwnProfile ? () => setSelectedPostForDetail(post) : undefined}
+                      onKeyDown={isOwnProfile ? (e) => e.key === 'Enter' && setSelectedPostForDetail(post) : undefined}
+                    >
                       {post.media?.[0] ? (
                         post.hasVideo ? (
                           <video src={post.media[0]} muted playsInline className="profile-fb-grid-thumb" />
@@ -806,6 +851,78 @@ export default function Profile() {
           )}
         </div>
       </div>
+
+      {/* Post detail modal (own profile): likes, views, boost */}
+      {selectedPostForDetail && (
+        <div
+          className="profile-post-detail-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="profile-post-detail-title"
+          onClick={() => setSelectedPostForDetail(null)}
+        >
+          <div
+            className="profile-post-detail-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="profile-post-detail-header">
+              <h2 id="profile-post-detail-title">Post stats</h2>
+              <button
+                type="button"
+                onClick={() => setSelectedPostForDetail(null)}
+                className="profile-post-detail-close"
+                aria-label="Close"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            {postDetailLoading ? (
+              <div className="profile-post-detail-loading">Loading…</div>
+            ) : postDetailData ? (
+              <>
+                <div className="profile-post-detail-preview">
+                  {postDetailData.post.media?.[0] ? (
+                    postDetailData.post.hasVideo ? (
+                      <video src={postDetailData.post.media[0]} controls playsInline className="profile-post-detail-media" />
+                    ) : (
+                      <img src={postDetailData.post.media[0]} alt="" className="profile-post-detail-media" />
+                    )
+                  ) : (
+                    <div className="profile-post-detail-media profile-post-detail-media-placeholder">Post</div>
+                  )}
+                </div>
+                {postDetailData.post.description && (
+                  <p className="profile-post-detail-caption">{postDetailData.post.description.slice(0, 150)}{postDetailData.post.description.length > 150 ? '…' : ''}</p>
+                )}
+                <div className="profile-post-detail-stats">
+                  <span className="profile-post-detail-stat">
+                    <Heart size={20} fill="currentColor" /> {postDetailData.post.likesCount ?? postDetailData.insights?.likes ?? 0} likes
+                  </span>
+                  <span className="profile-post-detail-stat">
+                    <Eye size={20} /> {postDetailData.post.viewsCount ?? postDetailData.insights?.views ?? 0} views
+                  </span>
+                  <span className="profile-post-detail-stat">
+                    <MessageCircle size={20} /> {postDetailData.post.commentsCount ?? 0} comments
+                  </span>
+                  <span className="profile-post-detail-stat">
+                    <Share2 size={20} /> {postDetailData.post.sharesCount ?? 0} shares
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="profile-post-detail-boost-btn"
+                  onClick={() => {
+                    setSelectedPostForDetail(null);
+                    navigate('/app/boost', { state: { postId: postDetailData.post.id } });
+                  }}
+                >
+                  <TrendingUp size={20} /> Boost this post
+                </button>
+              </>
+            ) : null}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
