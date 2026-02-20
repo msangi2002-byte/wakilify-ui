@@ -55,7 +55,21 @@ function getStoryThumbnail(story) {
   const media = story?.media;
   if (!Array.isArray(media) || media.length === 0) return null;
   const first = media[0];
-  return typeof first === 'string' ? first : first?.url ?? first?.thumbnailUrl ?? null;
+  if (typeof first === 'string') return first;
+  const isVideo = (first?.type ?? '').toUpperCase() === 'VIDEO';
+  // Video: only use thumbnailUrl (background-image can't use .mp4)
+  if (isVideo) return first?.thumbnailUrl ?? null;
+  return first?.url ?? first?.thumbnailUrl ?? null;
+}
+
+function getStoryGradient(story) {
+  return story?.storyGradient || 'linear-gradient(135deg, #7c3aed, #d946ef)';
+}
+
+function getStoryTextCover(story) {
+  const cap = story?.caption?.trim();
+  if (!cap) return null;
+  return cap.length > 80 ? cap.slice(0, 77) + '…' : cap;
 }
 
 function Avatar({ user, size = 40, className = '' }) {
@@ -850,12 +864,16 @@ export default function Home() {
             <span className="label">Create Story</span>
           </Link>
           {!storiesLoading && storyGroups.map((group) => {
-            const thumb = getStoryThumbnail(group.stories[0]);
+            const story = group.stories[0];
+            const thumb = getStoryThumbnail(story);
+            const gradient = getStoryGradient(story);
+            const textCover = getStoryTextCover(story);
             const authorId = group.authorId ?? group.author?.id;
             return (
               <Link key={authorId} to={`/app/stories/view/${authorId}`} className="user-app-story-card">
                 {thumb && <div className="story-bg story-bg-img" style={{ backgroundImage: `url(${thumb})` }} />}
-                {!thumb && <div className="story-bg" />}
+                {!thumb && <div className="story-bg" style={{ background: gradient }} />}
+                {!thumb && textCover && <div className="story-text-cover"><span>{textCover}</span></div>}
                 <div className="story-ring-inner">
                   <Avatar user={group.author} size={36} className="story-avatar" />
                 </div>

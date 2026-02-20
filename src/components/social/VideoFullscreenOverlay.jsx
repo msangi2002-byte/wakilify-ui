@@ -4,7 +4,7 @@
  * Optional onSwipeUp / onSwipeDown to go to next/previous video (scroll up = next).
  */
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Play, ThumbsUp, MessageCircle, Share2, Bookmark } from 'lucide-react';
+import { Play, ThumbsUp, MessageCircle, Share2, Bookmark, Volume2, VolumeX } from 'lucide-react';
 
 const SWIPE_THRESHOLD = 50;
 
@@ -30,6 +30,7 @@ export function VideoFullscreenOverlay({
 }) {
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [muted, setMuted] = useState(true);
   const videoRef = useRef(null);
   const [liked, setLiked] = useState(!!initialLiked);
   const [likesCount, setLikesCount] = useState(initialLikesCount);
@@ -82,6 +83,7 @@ export function VideoFullscreenOverlay({
     const t = setTimeout(() => {
       const v = videoRef.current;
       if (v && videoUrl) {
+        v.muted = true; // Start muted so autoplay is allowed by browser
         v.play().then(() => setPlaying(true)).catch(() => {});
       }
     }, 100);
@@ -99,6 +101,7 @@ export function VideoFullscreenOverlay({
   const handlePlayPause = () => {
     const v = videoRef.current;
     if (!v || !videoUrl) return;
+    v.muted = muted;
     if (v.paused) {
       v.play().then(() => setPlaying(true)).catch(() => {});
     } else {
@@ -149,11 +152,19 @@ export function VideoFullscreenOverlay({
           className="video-fullscreen-video"
           loop
           playsInline
-          muted={false}
+          muted={muted}
           onPlay={() => setPlaying(true)}
           onPause={() => setPlaying(false)}
           onError={() => setPlaying(false)}
         />
+        <button
+          type="button"
+          className="video-fullscreen-mute-btn"
+          onClick={(e) => { e.stopPropagation(); setMuted((m) => !m); }}
+          aria-label={muted ? 'Unmute' : 'Mute'}
+        >
+          {muted ? <VolumeX size={24} /> : <Volume2 size={24} />}
+        </button>
         {!playing && (
           <div className="video-fullscreen-play-btn" aria-hidden>
             <Play size={72} fill="currentColor" />

@@ -101,7 +101,8 @@ export default function StoryCreate() {
         thumbnailUrl = typeof result === 'object' && result.thumbnailUrl ? result.thumbnailUrl : null;
         // Fallback: if video and backend didn't return thumbnail (e.g. FFmpeg missing), capture client-side
         if (!thumbnailUrl && isVideo) {
-          const thumbFile = await captureVideoFrame(file);
+          let thumbFile = await captureVideoFrame(file, 1);
+          if (!thumbFile) thumbFile = await captureVideoFrame(file, 0);
           if (thumbFile) {
             const thumbResult = await uploadChunked(thumbFile, 'posts');
             thumbnailUrl = typeof thumbResult === 'string' ? thumbResult : thumbResult?.url;
