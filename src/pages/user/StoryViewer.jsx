@@ -132,6 +132,7 @@ export default function StoryViewer() {
   const [quickReplySending, setQuickReplySending] = useState(false);
   const [quickReplyFocused, setQuickReplyFocused] = useState(false);
   const [videoMuted, setVideoMuted] = useState(false);
+  const [storyDurationMs, setStoryDurationMs] = useState(STORY_DURATION_MS);
   const viewedStoryIdsRef = useRef(new Set());
   const timerRef = useRef(null);
   const startTimeRef = useRef(null);
@@ -428,6 +429,16 @@ export default function StoryViewer() {
 
   const isPaused = paused || commentsOpen || viewersOpen || insightsOpen || quickReplyFocused;
 
+  // Set duration: image/text use fixed; video will be updated when metadata loads
+  useEffect(() => {
+    if (!currentStory) return;
+    if (!isVideo) {
+      setStoryDurationMs(STORY_DURATION_MS);
+    } else {
+      setStoryDurationMs(STORY_DURATION_MS * 2); // fallback until video loadedmetadata
+    }
+  }, [currentStory, currentStoryIndex, currentGroupIndex, isVideo]);
+
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !isVideo) return;
@@ -457,6 +468,22 @@ export default function StoryViewer() {
       }
     };
 
+    const onLoadedMetadata = () => {
+      if (video.duration != null && isFinite(video.duration) && video.duration > 0) {
+        const ms = Math.round(video.duration * 1000);
+        setStoryDurationMs(Math.max(1000, Math.min(60000, ms)));
+      }
+    };
+    const onTimeUpdate = () => {
+      const dur = video.duration;
+      if (dur != null && isFinite(dur) && dur > 0) {
+        const p = Math.min(1, video.currentTime / dur);
+        setProgress(p);
+      }
+    };
+    const onEnded = () => {
+      goNext();
+    };
     const onCanPlay = () => {
       if (!isPaused) tryPlay();
     };
@@ -476,26 +503,37 @@ export default function StoryViewer() {
       }, 2500);
     };
 
+    video.addEventListener('loadedmetadata', onLoadedMetadata);
+    video.addEventListener('timeupdate', onTimeUpdate);
+    video.addEventListener('ended', onEnded);
     video.addEventListener('canplay', onCanPlay);
     video.addEventListener('error', onError);
     video.addEventListener('stalled', onStalled);
     if (!isPaused) tryPlay(false);
+    if (video.duration != null && isFinite(video.duration) && video.duration > 0) {
+      onLoadedMetadata();
+    }
+    onTimeUpdate();
     return () => {
       if (stallTimeoutRef.current) clearTimeout(stallTimeoutRef.current);
+      video.removeEventListener('loadedmetadata', onLoadedMetadata);
+      video.removeEventListener('timeupdate', onTimeUpdate);
+      video.removeEventListener('ended', onEnded);
       video.removeEventListener('canplay', onCanPlay);
       video.removeEventListener('error', onError);
       video.removeEventListener('stalled', onStalled);
     };
   }, [isVideo, mediaUrl, currentStoryIndex, currentGroupIndex, goNext, videoMuted, isPaused]);
 
+  // Timer only for image/text stories; video progress is driven by video timeupdate/ended
   useEffect(() => {
-    if (!currentStory || isPaused) return;
-    const duration = isVideo ? STORY_DURATION_MS * 2 : STORY_DURATION_MS;
+    if (!currentStory || isPaused || isVideo) return;
+    const duration = storyDurationMs;
     const start = startTimeRef.current ?? Date.now();
     startTimeRef.current = start;
 
     const tick = () => {
-      if (isPaused) return;
+      if (isPaused || isVideo) return;
       const elapsed = Date.now() - start;
       const p = Math.min(1, elapsed / duration);
       setProgress(p);
@@ -505,7 +543,7 @@ export default function StoryViewer() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [currentStory, currentStoryIndex, currentGroupIndex, mediaUrl, isVideo, isPaused, goNext]);
+  }, [currentStory, currentStoryIndex, currentGroupIndex, mediaUrl, isVideo, isPaused, goNext, storyDurationMs]);
 
   const handleTap = (e) => {
     setReactionPickerOpen(false);
@@ -580,9 +618,9 @@ export default function StoryViewer() {
 
       {/* Header */}
       <div className="story-viewer-header story-viewer-header-fb">
-        <UserProfileMenu user={currentGroup.author} avatarSize={40} className="story-viewer-author" />
+        <UserProfileMenu user={currentGroup?.author ?? null} avatarSize={40} className="story-viewer-author" />
         <div className="story-viewer-meta">
-          <span className="story-viewer-name">{currentGroup.author?.name ?? 'User'}</span>
+          <span className="story-viewer-name">{currentGroup?.author?.name ?? 'User'}</span>
           <span className="story-viewer-time">{formatPostTime(currentStory?.createdAt)}</span>
         </div>
         <div className="story-viewer-header-actions">
