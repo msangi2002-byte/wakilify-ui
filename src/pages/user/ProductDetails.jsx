@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, ShoppingBag, Star, Package, MapPin, Phone, Loader2, AlertCircle, Plus, Minus, CheckCircle, Image as ImageIcon } from 'lucide-react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { ArrowLeft, ShoppingBag, Star, Package, MapPin, Loader2, AlertCircle, Plus, Minus, CheckCircle, Image as ImageIcon } from 'lucide-react';
 import { getProductById } from '@/lib/api/products';
 import { createOrder } from '@/lib/api/orders';
 import { useAuthStore } from '@/store/auth.store';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
+import { ProductDetailsSkeleton } from '@/components/ui/ProductDetailsSkeleton';
 import '@/styles/user-app.css';
 
 function formatCurrency(amount) {
@@ -20,9 +22,6 @@ export default function ProductDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const [product, setProduct] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [orderForm, setOrderForm] = useState({
     deliveryName: user?.name || '',
@@ -34,28 +33,22 @@ export default function ProductDetails() {
   const [orderError, setOrderError] = useState('');
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
-  useEffect(() => {
-    if (!id) {
-      setError('Product ID is required');
-      setLoading(false);
-      return;
-    }
+  const {
+    data: product = null,
+    isPending: loading,
+    error: queryError,
+    refetch: refetchProduct,
+  } = useQuery({
+    queryKey: ['product', id],
+    queryFn: () => getProductById(id),
+    enabled: !!id,
+  });
 
-    const loadProduct = async () => {
-      setLoading(true);
-      setError('');
-      try {
-        const data = await getProductById(id);
-        setProduct(data);
-      } catch (err) {
-        setError(getApiErrorMessage(err, 'Failed to load product'));
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadProduct();
-  }, [id]);
+  const error = !id
+    ? 'Product ID is required'
+    : queryError
+      ? getApiErrorMessage(queryError, 'Failed to load product')
+      : '';
 
   // Update form fields when user changes
   useEffect(() => {
@@ -132,14 +125,7 @@ export default function ProductDetails() {
   };
 
   if (loading) {
-    return (
-      <div className="product-details-container">
-        <div className="product-details-loading">
-          <Loader2 size={48} className="icon-spin product-details-spinner" />
-          <p className="product-details-loading-text">Loading product...</p>
-        </div>
-      </div>
-    );
+    return <ProductDetailsSkeleton />;
   }
 
   if (error || !product) {

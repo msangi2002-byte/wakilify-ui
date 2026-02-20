@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, Outlet, useParams } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Users, ChevronRight, Plus, Search, Loader2, Check, X } from 'lucide-react';
 import { getAllCommunities, getMyInvites, acceptInvite, declineInvite } from '@/lib/api/communities';
+import { GroupsListSkeleton } from '@/components/ui/GroupsListSkeleton';
 import '@/styles/user-app.css';
 import '@/styles/theme-dark.css';
 
@@ -17,51 +19,31 @@ function sortJoinedFirst(list) {
 
 export default function GroupsLayout() {
   const { id } = useParams();
+  const queryClient = useQueryClient();
   const [groupSearch, setGroupSearch] = useState('');
-  const [groups, setGroups] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [invites, setInvites] = useState([]);
-  const [invitesLoading, setInvitesLoading] = useState(true);
   const [inviteActionId, setInviteActionId] = useState(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const page = await getAllCommunities();
-        const content = page.content ?? [];
-        if (!cancelled) setGroups(sortJoinedFirst(content));
-      } catch (err) {
-        if (!cancelled) setError(err?.response?.data?.message ?? 'Failed to load groups');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+  const { data: groups = [], isLoading: loading, error: groupsError } = useQuery({
+    queryKey: ['groups', 'list'],
+    queryFn: () => getAllCommunities(),
+    select: (page) => sortJoinedFirst(page?.content ?? []),
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-    getMyInvites({ page: 0, size: 20 })
-      .then((res) => {
-        if (!cancelled) setInvites(res?.content ?? []);
-      })
-      .catch(() => { if (!cancelled) setInvites([]); })
-      .finally(() => { if (!cancelled) setInvitesLoading(false); });
-    return () => { cancelled = true; };
-  }, []);
+  const { data: invites = [] } = useQuery({
+    queryKey: ['groups', 'invites'],
+    queryFn: () => getMyInvites({ page: 0, size: 20 }),
+    select: (res) => res?.content ?? [],
+  });
+
+  const error = groupsError ? (groupsError?.response?.data?.message ?? 'Failed to load groups') : null;
 
   const handleAcceptInvite = async (inviteId) => {
     if (inviteActionId) return;
     setInviteActionId(inviteId);
     try {
       await acceptInvite(inviteId);
-      setInvites((prev) => prev.filter((i) => i.id !== inviteId));
-      const page = await getAllCommunities();
-      setGroups(sortJoinedFirst(page.content ?? []));
+      queryClient.setQueryData(['groups', 'invites'], (prev = []) => prev.filter((i) => i.id !== inviteId));
+      await queryClient.invalidateQueries({ queryKey: ['groups', 'list'] });
     } catch (_) {}
     finally { setInviteActionId(null); }
   };
@@ -71,7 +53,7 @@ export default function GroupsLayout() {
     setInviteActionId(inviteId);
     try {
       await declineInvite(inviteId);
-      setInvites((prev) => prev.filter((i) => i.id !== inviteId));
+      queryClient.setQueryData(['groups', 'invites'], (prev = []) => prev.filter((i) => i.id !== inviteId));
     } catch (_) {}
     finally { setInviteActionId(null); }
   };
@@ -145,7 +127,7 @@ export default function GroupsLayout() {
           </div>
           <ul className="groups-list">
             {loading ? (
-              <li className="groups-list-empty">Loading groups…</li>
+              <GroupsListSkeleton rows={6} />
             ) : error ? (
               <li className="groups-list-empty">{error}</li>
             ) : filteredGroups.length === 0 ? (

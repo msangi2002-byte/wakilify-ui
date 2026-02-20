@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Wallet, CheckCircle, AlertCircle } from 'lucide-react';
 import { getAgentWithdrawals, requestWithdrawal, cancelWithdrawal } from '@/lib/api/agent';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
+import { AgentTableSkeleton } from '@/components/ui/agent/AgentTableSkeleton';
 import '@/styles/agent.css';
 
 function formatAmount(n) {
@@ -38,34 +40,26 @@ function statusClass(status) {
 }
 
 export default function Withdrawals() {
-  const [data, setData] = useState({ content: [], totalElements: 0 });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const queryClient = useQueryClient();
+  const [page, setPage] = useState(0);
+  const size = 20;
   const [amount, setAmount] = useState('');
   const [phone, setPhone] = useState('');
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [submitSuccess, setSubmitSuccess] = useState('');
-  const [page, setPage] = useState(0);
-  const size = 20;
 
-  const loadList = () => {
-    setLoading(true);
-    getAgentWithdrawals({ page, size })
-      .then((res) => {
-        const content = Array.isArray(res?.content) ? res.content : [];
-        setData({
-          content,
-          totalElements: res?.totalElements ?? content.length,
-        });
-      })
-      .catch(() => setData({ content: [], totalElements: 0 }))
-      .finally(() => setLoading(false));
-  };
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ['agent', 'withdrawals', page],
+    queryFn: () => getAgentWithdrawals({ page, size }),
+    select: (res) => {
+      const content = Array.isArray(res?.content) ? res.content : [];
+      return { content, totalElements: res?.totalElements ?? content.length };
+    },
+  });
 
-  useEffect(() => {
-    loadList();
-  }, [page]);
+  const list = data?.content ?? [];
+  const totalPages = Math.ceil((data?.totalElements ?? 0) / size);
 
   const handleRequest = async (e) => {
     e.preventDefault();
@@ -86,7 +80,7 @@ export default function Withdrawals() {
       setSubmitSuccess('Withdrawal request submitted.');
       setAmount('');
       setPhone('');
-      loadList();
+      queryClient.invalidateQueries({ queryKey: ['agent', 'withdrawals'] });
     } catch (err) {
       setSubmitError(getApiErrorMessage(err, 'Request failed'));
     } finally {
@@ -98,12 +92,9 @@ export default function Withdrawals() {
     if (!window.confirm('Cancel this withdrawal request?')) return;
     try {
       await cancelWithdrawal(id);
-      loadList();
+      queryClient.invalidateQueries({ queryKey: ['agent', 'withdrawals'] });
     } catch (_) {}
   };
-
-  const list = data.content;
-  const totalPages = Math.ceil((data.totalElements || 0) / size);
 
   return (
     <div className="agent-dashboard agent-dashboard-cards agent-page-centered">
@@ -167,7 +158,7 @@ export default function Withdrawals() {
             Withdrawal history
           </h2>
         {loading ? (
-          <div className="agent-loading">Loading…</div>
+          <AgentTableSkeleton rows={5} cols={4} />
         ) : list.length === 0 ? (
           <p className="agent-empty">No withdrawals yet.</p>
         ) : (

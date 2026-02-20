@@ -1,8 +1,11 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Package, Loader2, RefreshCw, CheckCircle, Truck, MapPin, Calendar, AlertCircle, X, ShoppingBag, Building2, Phone, User as UserIcon, Mail, Globe, MessageCircle } from 'lucide-react';
 import { getMyOrders, getOrderById, cancelOrder } from '@/lib/api/orders';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
+import { OrdersListSkeleton } from '@/components/ui/OrdersListSkeleton';
+import { OrdersDetailSkeleton } from '@/components/ui/OrdersDetailSkeleton';
 import '@/styles/user-app.css';
 
 const ORDER_STATUSES = {
@@ -42,32 +45,20 @@ function formatDate(dateString) {
 
 function OrderCard({ order, onOrderUpdate }) {
   const [expanded, setExpanded] = useState(false);
-  const [orderDetails, setOrderDetails] = useState(null);
-  const [loadingDetails, setLoadingDetails] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
 
+  const { data: orderDetails, isLoading: loadingDetails } = useQuery({
+    queryKey: ['orders', 'detail', order.id],
+    queryFn: () => getOrderById(order.id),
+    enabled: expanded,
+  });
+
   const statusInfo = ORDER_STATUSES[order.status] || ORDER_STATUSES.PENDING;
   const canCancel = order.status === 'PENDING' || order.status === 'CONFIRMED';
 
-  const loadOrderDetails = async () => {
-    if (orderDetails || loadingDetails) return;
-    setLoadingDetails(true);
-    try {
-      const details = await getOrderById(order.id);
-      setOrderDetails(details);
-    } catch (err) {
-      console.error('Failed to load order details:', err);
-    } finally {
-      setLoadingDetails(false);
-    }
-  };
-
   const handleExpand = () => {
-    if (!expanded && !orderDetails) {
-      loadOrderDetails();
-    }
     setExpanded(!expanded);
   };
 
@@ -86,7 +77,7 @@ function OrderCard({ order, onOrderUpdate }) {
     }
   };
 
-  const orderData = orderDetails || order;
+  const orderData = orderDetails ?? order;
 
   return (
     <div className="orders-card">
@@ -141,10 +132,7 @@ function OrderCard({ order, onOrderUpdate }) {
       {expanded && (
         <div className="orders-card-expanded">
           {loadingDetails ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', gap: '8px' }}>
-              <Loader2 size={20} className="icon-spin" />
-              <span style={{ color: '#65676b' }}>Loading details...</span>
-            </div>
+            <OrdersDetailSkeleton />
           ) : (
             <>
               {orderData.items && orderData.items.length > 0 && (
@@ -581,53 +569,39 @@ function OrderCard({ order, onOrderUpdate }) {
   );
 }
 
+function normalizeOrdersResponse(data) {
+  if (!data) return { content: [], totalElements: 0 };
+  const content = Array.isArray(data.content) ? data.content : [];
+  const totalElements = data.totalElements ?? content.length;
+  return { content, totalElements };
+}
+
 export default function Orders() {
   const navigate = useNavigate();
-  const [orders, setOrders] = useState({ content: [], totalElements: 0 });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState('all');
 
-  const loadOrders = async () => {
-    setLoading(true);
-    setError('');
-    try {
+  const {
+    data: ordersData,
+    isLoading: loading,
+    error: ordersError,
+    refetch,
+  } = useQuery({
+    queryKey: ['orders', statusFilter],
+    queryFn: () => {
       const params = { page: 0, size: 50 };
-      if (statusFilter !== 'all') {
-        params.status = statusFilter;
-      }
-      const data = await getMyOrders(params);
-      setOrders(
-        Array.isArray(data?.content)
-          ? { content: data.content, totalElements: data.totalElements || data.content.length }
-          : { content: [], totalElements: 0 }
-      );
-    } catch (err) {
-      setError(getApiErrorMessage(err, 'Failed to load orders'));
-      setOrders({ content: [], totalElements: 0 });
-    } finally {
-      setLoading(false);
-    }
-  };
+      if (statusFilter !== 'all') params.status = statusFilter;
+      return getMyOrders(params);
+    },
+    select: normalizeOrdersResponse,
+  });
 
-  useEffect(() => {
-    loadOrders();
-  }, [statusFilter]);
+  const orders = ordersData ?? { content: [], totalElements: 0 };
+  const error = ordersError ? getApiErrorMessage(ordersError, 'Failed to load orders') : '';
 
   const handleOrderUpdate = () => {
-    loadOrders();
+    queryClient.invalidateQueries({ queryKey: ['orders'] });
   };
-
-  if (loading) {
-    return (
-      <div className="orders-container">
-        <div className="orders-loading">
-          <Loader2 size={48} className="icon-spin orders-loading-spinner" />
-          <p className="orders-loading-text">Loading orders...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="orders-container">
@@ -638,7 +612,7 @@ export default function Orders() {
             My Orders
           </h1>
           <p className="orders-header-sub">
-            {orders.totalElements} {orders.totalElements === 1 ? 'order' : 'orders'}
+            {loading ? '—' : `${orders.totalElements} ${orders.totalElements === 1 ? 'order' : 'orders'}`}
           </p>
         </div>
         <div className="orders-header-actions">
@@ -646,7 +620,7 @@ export default function Orders() {
             <ShoppingBag size={18} />
             Shop Now
           </button>
-          <button type="button" onClick={loadOrders} disabled={loading} className="orders-btn orders-btn-secondary">
+          <button type="button" onClick={() => refetch()} disabled={loading} className="orders-btn orders-btn-secondary">
             <RefreshCw size={18} className={loading ? 'icon-spin' : ''} />
             Refresh
           </button>
@@ -680,7 +654,9 @@ export default function Orders() {
         </div>
       )}
 
-      {orders.content.length === 0 ? (
+      {loading ? (
+        <OrdersListSkeleton cards={4} />
+      ) : orders.content.length === 0 ? (
         <div className="orders-empty-card">
           <Package size={64} className="orders-empty-icon" />
           <h2 className="orders-empty-title">No orders yet</h2>

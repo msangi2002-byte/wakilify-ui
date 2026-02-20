@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import {
@@ -17,6 +18,7 @@ import {
 } from 'lucide-react';
 import { getAgentBusinessRequestById, updateBusinessRequestDetails, approveBusinessRequest } from '@/lib/api/agent';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
+import { AgentRequestDetailSkeleton } from '@/components/ui/agent/AgentRequestDetailSkeleton';
 import 'leaflet/dist/leaflet.css';
 import '@/styles/agent.css';
 
@@ -47,9 +49,12 @@ function formatDate(iso) {
 export default function RequestDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [request, setRequest] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const queryClient = useQueryClient();
+  const { data: request, isLoading: loading, error: queryError } = useQuery({
+    queryKey: ['agent', 'business-request', id],
+    queryFn: () => getAgentBusinessRequestById(id),
+    enabled: !!id,
+  });
   const [detailsForm, setDetailsForm] = useState({
     nidaNumber: '',
     tinNumber: '',
@@ -61,31 +66,19 @@ export default function RequestDetail() {
   const [saveSuccess, setSaveSuccess] = useState('');
   const [approving, setApproving] = useState(false);
   const [approveSuccess, setApproveSuccess] = useState('');
+  const error = queryError ? getApiErrorMessage(queryError, 'Failed to load request') : '';
 
   useEffect(() => {
-    if (!id) return;
-    let cancelled = false;
-    setLoading(true);
-    setError('');
-    getAgentBusinessRequestById(id)
-      .then((data) => {
-        if (!cancelled && data) {
-          setRequest(data);
-          setDetailsForm({
-            nidaNumber: data.nidaNumber ?? '',
-            tinNumber: data.tinNumber ?? '',
-            companyName: data.companyName ?? '',
-            idDocumentUrl: data.idDocumentUrl ?? '',
-            idBackDocumentUrl: data.idBackDocumentUrl ?? '',
-          });
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) setError(getApiErrorMessage(err, 'Failed to load request'));
-      })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [id]);
+    if (request) {
+      setDetailsForm({
+        nidaNumber: request.nidaNumber ?? '',
+        tinNumber: request.tinNumber ?? '',
+        companyName: request.companyName ?? '',
+        idDocumentUrl: request.idDocumentUrl ?? '',
+        idBackDocumentUrl: request.idBackDocumentUrl ?? '',
+      });
+    }
+  }, [request]);
 
   const handleSaveDetails = async (e) => {
     e.preventDefault();
@@ -95,7 +88,7 @@ export default function RequestDetail() {
     try {
       await updateBusinessRequestDetails(id, detailsForm);
       setSaveSuccess('Details saved.');
-      setRequest((prev) => prev ? { ...prev, ...detailsForm } : null);
+      queryClient.setQueryData(['agent', 'business-request', id], (prev) => (prev ? { ...prev, ...detailsForm } : prev));
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to save'));
     } finally {
@@ -110,7 +103,8 @@ export default function RequestDetail() {
     setError('');
     try {
       const updated = await approveBusinessRequest(id);
-      setRequest(updated);
+      queryClient.setQueryData(['agent', 'business-request', id], updated);
+      queryClient.invalidateQueries({ queryKey: ['agent', 'business-requests'] });
       setApproveSuccess('Business registered successfully. User is now a business.');
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to approve'));
@@ -120,11 +114,7 @@ export default function RequestDetail() {
   };
 
   if (loading) {
-    return (
-      <div className="agent-dashboard agent-dashboard-cards">
-        <div className="agent-loading" style={{ padding: 24 }}><Loader2 size={24} style={{ animation: 'spin 1s linear infinite' }} /> Loading…</div>
-      </div>
-    );
+    return <AgentRequestDetailSkeleton />;
   }
   if (error && !request) {
     return (

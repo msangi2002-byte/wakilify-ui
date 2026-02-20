@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { getAgentCommissions } from '@/lib/api/agent';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
+import { AgentTableSkeleton } from '@/components/ui/agent/AgentTableSkeleton';
 import '@/styles/agent.css';
 
 function formatAmount(n) {
@@ -36,35 +38,22 @@ function statusClass(status) {
 }
 
 export default function Commissions() {
-  const [data, setData] = useState({ content: [], totalElements: 0 });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [page, setPage] = useState(0);
   const size = 20;
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    getAgentCommissions({ page, size })
-      .then((res) => {
-        if (cancelled) return;
-        const content = Array.isArray(res?.content) ? res.content : [];
-        setData({
-          content,
-          totalElements: res?.totalElements ?? content.length,
-        });
-      })
-      .catch((err) => {
-        if (!cancelled) setError(getApiErrorMessage(err, 'Failed to load commissions'));
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [page]);
+  const { data, isLoading: loading, error: queryError } = useQuery({
+    queryKey: ['agent', 'commissions', page],
+    queryFn: () => getAgentCommissions({ page, size }),
+    select: (res) => {
+      const content = Array.isArray(res?.content) ? res.content : [];
+      return { content, totalElements: res?.totalElements ?? content.length };
+    },
+  });
 
-  const list = data.content;
-  const totalPages = Math.ceil((data.totalElements || 0) / size);
+  const list = data?.content ?? [];
+  const totalElements = data?.totalElements ?? 0;
+  const totalPages = Math.ceil((totalElements || 0) / size);
+  const error = queryError ? getApiErrorMessage(queryError, 'Failed to load commissions') : '';
 
   return (
     <div className="agent-dashboard agent-dashboard-cards agent-page-centered">
@@ -79,7 +68,7 @@ export default function Commissions() {
       )}
       <div className="agent-dashboard-card agent-dashboard-card-commissions">
         {loading ? (
-          <div className="agent-loading">Loading…</div>
+          <AgentTableSkeleton rows={6} cols={5} />
         ) : list.length === 0 ? (
           <p className="agent-empty">No commissions yet.</p>
         ) : (

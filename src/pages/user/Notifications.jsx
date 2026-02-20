@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import {
   Bell,
@@ -12,6 +13,7 @@ import {
 } from 'lucide-react';
 import { getNotifications, markNotificationRead, markAllNotificationsRead } from '@/lib/api/notifications';
 import { formatPostTime } from '@/lib/utils/dateUtils';
+import { NotificationsListSkeleton } from '@/components/ui/NotificationsListSkeleton';
 
 const ICON_BY_TYPE = {
   LIKE: Heart,
@@ -71,37 +73,29 @@ function NotificationItem({ item, onMarkRead }) {
 }
 
 export default function Notifications() {
-  const [notifs, setNotifs] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [filter, setFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState(''); // '', 'LIKE', 'COMMENT', 'FOLLOW'
 
-  useEffect(() => {
-    let cancelled = false;
-    const params = { page: 0, size: 50 };
-    if (typeFilter) params.type = typeFilter;
-    getNotifications(params)
-      .then((res) => {
-        if (!cancelled && res?.content) setNotifs(res.content);
-      })
-      .catch(() => {
-        if (!cancelled) setNotifs([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [typeFilter]);
+  const { data: notifs = [], isLoading: loading } = useQuery({
+    queryKey: ['notifications', typeFilter],
+    queryFn: () => getNotifications({ page: 0, size: 50, ...(typeFilter && { type: typeFilter }) }),
+    select: (res) => res?.content ?? [],
+  });
 
   const markRead = async (id) => {
-    setNotifs((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
+    queryClient.setQueryData(['notifications', typeFilter], (prev = []) =>
+      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+    );
     try {
       await markNotificationRead(id);
     } catch (_) {}
   };
 
   const markAllRead = async () => {
-    setNotifs((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    queryClient.setQueryData(['notifications', typeFilter], (prev = []) =>
+      prev.map((n) => ({ ...n, isRead: true }))
+    );
     try {
       await markAllNotificationsRead();
     } catch (_) {}
@@ -178,9 +172,7 @@ export default function Notifications() {
 
       <section className="user-app-card settings-section notif-list-section">
         {loading ? (
-          <div className="notif-empty">
-            <p className="notif-empty-desc">Loading notifications…</p>
-          </div>
+          <NotificationsListSkeleton rows={8} />
         ) : filtered.length === 0 ? (
           <div className="notif-empty">
             <Bell size={48} className="notif-empty-icon" />

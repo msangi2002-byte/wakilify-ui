@@ -1,10 +1,12 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation } from 'react-router-dom';
 import { ThumbsUp, MessageCircle, Share2, MoreHorizontal, Plus, Play, X, Bookmark, Radio, ChevronLeft, BarChart2, Volume2, VolumeX, Heart } from 'lucide-react';
 import { getReels, recordReelView, getPostInsights, likePost, unlikePost, savePost, unsavePost, getComments, addComment, deleteComment, likeComment, unlikeComment, sharePostToStory, createPost } from '@/lib/api/posts';
 import { followUser, unfollowUser } from '@/lib/api/friends';
 import { formatPostTime, formatCommentTime } from '@/lib/utils/dateUtils';
 import { CommentItem } from '@/components/social/CommentItem';
+import { ReelsSkeleton } from '@/components/ui/ReelsSkeleton';
 import { useAuthStore } from '@/store/auth.store';
 
 function normalizeReel(post) {
@@ -850,96 +852,90 @@ function ReelSlide({ item, isActive, onLikeChange, onSaveChange, onCommentClick,
 
 export default function Reels() {
   const location = useLocation();
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState('');
-  const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
+  const queryClient = useQueryClient();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [viewMode, setViewMode] = useState('list'); // 'list' = feed of cards, 'player' = full-height reel view
+  const [viewMode, setViewMode] = useState('list');
   const [commentsPostId, setCommentsPostId] = useState(null);
   const [shareItem, setShareItem] = useState(null);
   const loadMoreRef = useRef(null);
   const scrollContainerRef = useRef(null);
   const slideHeightRef = useRef(0);
+  const fromFeedAppliedRef = useRef(false);
 
-  const loadPage = useCallback((pageNum) => {
-    return getReels({ page: pageNum, size: 20 }).then((list) => {
-      const next = Array.isArray(list) ? list.map(normalizeReel) : [];
-      return next;
-    });
-  }, []);
+  const {
+    data,
+    isPending: loading,
+    error: queryError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage: loadingMore,
+  } = useInfiniteQuery({
+    queryKey: ['reels'],
+    queryFn: async ({ pageParam }) => {
+      const list = await getReels({ page: pageParam, size: 20 });
+      return Array.isArray(list) ? list.map(normalizeReel) : [];
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length >= 20 ? allPages.length : undefined,
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-    const fromFeedVideo = location.state?.fromFeedVideo;
-    setLoading(true);
-    setError('');
-    loadPage(0)
-      .then((list) => {
-        if (!cancelled) {
-          if (fromFeedVideo) {
-            const first = normalizeReel(fromFeedVideo);
-            const rest = (Array.isArray(list) ? list : []).filter((i) => i.id !== first.id);
-            setItems([first, ...rest]);
-            setViewMode('player');
-            setCurrentIndex(0);
-          } else {
-            setItems(Array.isArray(list) ? list : []);
-          }
-          setHasMore((Array.isArray(list) ? list : []).length >= 20);
-          setPage(1);
-          if (!fromFeedVideo) setCurrentIndex(0);
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err.response?.data?.message || err.message || 'Failed to load reels');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [loadPage]);
+  const items = useMemo(() => {
+    const list = data?.pages.flat() ?? [];
+    const fromFeed = location.state?.fromFeedVideo;
+    if (fromFeed && list.length >= 0) {
+      const first = normalizeReel(fromFeed);
+      return [first, ...list.filter((i) => i.id !== first.id)];
+    }
+    return list;
+  }, [data?.pages, location.state?.fromFeedVideo]);
 
   useEffect(() => {
-    if (!loadMoreRef.current || loading || loadingMore || !hasMore || items.length === 0) return;
+    if (fromFeedAppliedRef.current || !location.state?.fromFeedVideo || loading || !data?.pages?.length) return;
+    fromFeedAppliedRef.current = true;
+    setViewMode('player');
+    setCurrentIndex(0);
+  }, [loading, data?.pages?.length, location.state?.fromFeedVideo]);
+
+  useEffect(() => {
+    if (!loadMoreRef.current || loading || loadingMore || !hasNextPage || items.length === 0) return;
     const el = loadMoreRef.current;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (!entries[0]?.isIntersecting || loadingMore || !hasMore) return;
-        setLoadingMore(true);
-        loadPage(page)
-          .then((list) => {
-            setItems((prev) => {
-              const ids = new Set(prev.map((i) => i.id));
-              const added = list.filter((i) => !ids.has(i.id));
-              return prev.concat(added);
-            });
-            setHasMore(list.length >= 20);
-            setPage((p) => p + 1);
-          })
-          .catch(() => setHasMore(false))
-          .finally(() => setLoadingMore(false));
+        if (entries[0]?.isIntersecting) fetchNextPage();
       },
       { rootMargin: '200px', threshold: 0 }
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [page, hasMore, loading, loadingMore, loadPage]);
+  }, [loading, loadingMore, hasNextPage, items.length, fetchNextPage]);
 
-  const handleLikeChange = useCallback((id, liked, newCount) => {
-    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, liked, likes: newCount } : i)));
-  }, []);
-  const handleSaveChange = useCallback((id, saved) => {
-    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, saved } : i)));
-  }, []);
-  const handleCommentCountChange = useCallback((postId, newCount) => {
-    setItems((prev) => prev.map((i) => (i.id === postId ? { ...i, comments: newCount } : i)));
-  }, []);
-  const handleFollowChange = useCallback((authorId, followed) => {
-    setItems((prev) => prev.map((i) => (i.author?.id === authorId ? { ...i, authorIsFollowed: followed } : i)));
-  }, []);
+  const updateReelsCache = useCallback((updater) => {
+    queryClient.setQueryData(['reels'], (old) => {
+      if (!old?.pages) return old;
+      return { ...old, pages: old.pages.map((page) => page.map(updater)) };
+    });
+  }, [queryClient]);
+
+  const handleLikeChange = useCallback(
+    (id, liked, newCount) => updateReelsCache((i) => (i.id === id ? { ...i, liked, likes: newCount } : i)),
+    [updateReelsCache]
+  );
+  const handleSaveChange = useCallback(
+    (id, saved) => updateReelsCache((i) => (i.id === id ? { ...i, saved } : i)),
+    [updateReelsCache]
+  );
+  const handleCommentCountChange = useCallback(
+    (postId, newCount) => updateReelsCache((i) => (i.id === postId ? { ...i, comments: newCount } : i)),
+    [updateReelsCache]
+  );
+  const handleFollowChange = useCallback(
+    (authorId, followed) =>
+      updateReelsCache((i) => (i.author?.id === authorId ? { ...i, authorIsFollowed: followed } : i)),
+    [updateReelsCache]
+  );
+
+  const error = queryError ? (queryError.response?.data?.message || queryError.message || 'Failed to load reels') : '';
   const openComments = useCallback((item) => setCommentsPostId(item?.id ?? null), []);
   const openShare = useCallback((item) => setShareItem(item ?? null), []);
 
@@ -965,9 +961,21 @@ export default function Reels() {
 
   if (loading) {
     return (
-      <div className="reels-page reels-page-loading">
-        <div className="reels-loading-spinner" />
-        <p>Loading reels…</p>
+      <div className="reels-page reels-page-list">
+        <div className="reels-page-header reels-list-header">
+          <h1 className="reels-page-title">Reels</h1>
+          <div className="reels-page-header-actions">
+            <Link to="/app/create?type=reel" className="reels-page-create-btn" aria-label="Post reel">
+              <Plus size={18} />
+              <span>Post reel</span>
+            </Link>
+            <Link to="/app/live" className="reels-page-golive-btn" aria-label="Go live">
+              <Radio size={18} />
+              <span>Go live</span>
+            </Link>
+          </div>
+        </div>
+        <ReelsSkeleton cards={3} />
       </div>
     );
   }
@@ -1054,8 +1062,8 @@ export default function Reels() {
           ))}
           <div ref={loadMoreRef} className="reels-load-more-sentinel" aria-hidden />
           {loadingMore && (
-            <div className="reels-loading-more" style={{ padding: 16, textAlign: 'center', color: '#65676b' }}>
-              Loading more…
+            <div className="reels-loading-more" style={{ padding: 16, textAlign: 'center' }}>
+              <ReelsSkeleton cards={1} />
             </div>
           )}
         </div>

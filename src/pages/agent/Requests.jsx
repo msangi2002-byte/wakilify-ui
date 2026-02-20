@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Building2, UserPlus, Package, AlertTriangle, CheckCircle, Inbox, RefreshCw, Clock } from 'lucide-react';
 import { activateBusiness, getAgentBusinessRequests } from '@/lib/api/agent';
 import { getFeeAmounts } from '@/lib/api/config';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import { useGeolocation } from '@/hooks/useGeolocation';
+import { AgentRequestsListSkeleton } from '@/components/ui/agent/AgentRequestsListSkeleton';
 import '@/styles/agent.css';
 
 function formatTzs(amount) {
@@ -48,33 +50,22 @@ export default function Requests() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const [incomingRequests, setIncomingRequests] = useState([]);
-  const [incomingLoading, setIncomingLoading] = useState(true);
-  const [incomingTotal, setIncomingTotal] = useState(0);
-
-  const loadIncomingRequests = () => {
-    setIncomingLoading(true);
-    getAgentBusinessRequests({ page: 0, size: 20 })
-      .then((res) => {
-        const content = Array.isArray(res?.content) ? res.content : [];
-        setIncomingRequests(content);
-        setIncomingTotal(res?.totalElements ?? content.length);
-      })
-      .catch(() => {
-        setIncomingRequests([]);
-        setIncomingTotal(0);
-      })
-      .finally(() => setIncomingLoading(false));
-  };
+  const queryClient = useQueryClient();
+  const { data: incomingData, isLoading: incomingLoading, refetch: refetchIncoming } = useQuery({
+    queryKey: ['agent', 'business-requests'],
+    queryFn: () => getAgentBusinessRequests({ page: 0, size: 20 }),
+    select: (res) => ({
+      content: Array.isArray(res?.content) ? res.content : [],
+      totalElements: res?.totalElements ?? (Array.isArray(res?.content) ? res.content.length : 0),
+    }),
+  });
+  const incomingRequests = incomingData?.content ?? [];
+  const incomingTotal = incomingData?.totalElements ?? 0;
 
   useEffect(() => {
     getFeeAmounts()
       .then((fees) => setBusinessActivationAmount(fees?.businessActivationAmount ?? 10000))
       .catch(() => setBusinessActivationAmount(10000));
-  }, []);
-
-  useEffect(() => {
-    loadIncomingRequests();
   }, []);
 
   const handleSubmit = async (e) => {
@@ -145,7 +136,7 @@ export default function Requests() {
           <button
             type="button"
             className="agent-btn-ghost"
-            onClick={loadIncomingRequests}
+            onClick={() => refetchIncoming()}
             disabled={incomingLoading}
           >
             <RefreshCw size={18} style={{ animation: incomingLoading ? 'spin 1s linear infinite' : 'none' }} />
@@ -156,7 +147,7 @@ export default function Requests() {
           Users with an account who requested to become a business and selected you as their agent. After they complete payment, the system creates their business automatically.
         </p>
         {incomingLoading ? (
-          <div className="agent-loading">Loading…</div>
+          <AgentRequestsListSkeleton cards={4} />
         ) : incomingRequests.length === 0 ? (
           <p className="agent-empty">No incoming requests yet. Share your agent code so users can select you when they request to become a business.</p>
         ) : (
