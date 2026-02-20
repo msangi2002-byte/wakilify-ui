@@ -44,16 +44,17 @@ const SAMPLE_SPONSORED = [
   { id: 'sample-3', title: 'Create Your Group', description: 'Connect with people who share your interests.', imageUrl: 'https://picsum.photos/seed/ads3/240/240', targetUrl: '/app/groups' },
 ];
 
+/* Color coding: kila item rangi yake – vibrancy kama design original */
 const leftNav = [
-  { to: '/app/profile', icon: User, label: 'Profile' },
-  { to: '/app/friends', icon: Users, label: 'Friends' },
-  { to: '/app/live', icon: Radio, label: 'Live' },
-  { to: '/app/groups', icon: Users, label: 'Groups' },
-  { to: '/app/shop', icon: ShoppingBag, label: 'Marketplace' },
-  { to: '/app/boost', icon: TrendingUp, label: 'Boost' },
-  { to: '/app/orders', icon: Package, label: 'My Orders' },
-  { to: '/app/notifications', icon: Bell, label: 'Notifications' },
-  { to: '/app/settings', icon: Settings, label: 'Settings' },
+  { to: '/app/profile', icon: User, label: 'Profile', iconStyle: 'profile' },
+  { to: '/app/friends', icon: Users, label: 'Friends', iconStyle: 'friends' },
+  { to: '/app/live', icon: Radio, label: 'Live', iconStyle: 'live' },
+  { to: '/app/groups', icon: Users, label: 'Groups', iconStyle: 'groups' },
+  { to: '/app/shop', icon: ShoppingBag, label: 'Marketplace', iconStyle: 'marketplace' },
+  { to: '/app/boost', icon: TrendingUp, label: 'Boost', iconStyle: 'gradient' },
+  { to: '/app/orders', icon: Package, label: 'My Orders', iconStyle: 'orders' },
+  { to: '/app/notifications', icon: Bell, label: 'Notifications', iconStyle: 'notifications' },
+  { to: '/app/settings', icon: Settings, label: 'Settings', iconStyle: 'settings' },
 ];
 
 function BrandLogo({ size = 40, className = '' }) {
@@ -458,8 +459,8 @@ export default function UserLayout() {
               </span>
               <input
                 type="text"
-                placeholder="Search people or groups"
-                aria-label="Search people or groups"
+                placeholder="Find friends, businesses & products..."
+                aria-label="Find friends, businesses & products"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => setSearchOpen(true)}
@@ -475,7 +476,7 @@ export default function UserLayout() {
                       <Search size={20} className="user-app-search-overlay-icon" />
                       <input
                         type="text"
-                        placeholder="Search people or groups"
+                        placeholder="Find friends, businesses & products..."
                         aria-label="Search"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
@@ -781,21 +782,25 @@ export default function UserLayout() {
               {[
                 ...leftNav,
                 ...(String(user?.role ?? '').toLowerCase() === ROLES.AGENT
-                  ? [{ to: '/agent', icon: Building2, label: 'Agent Dashboard' }]
-                  : [{ to: '/app/register-agent', icon: Sparkles, label: 'Become agent' }]),
+                  ? [{ to: '/agent', icon: Building2, label: 'Agent Dashboard', iconStyle: 'profile' }]
+                  : [{ to: '/app/register-agent', icon: Sparkles, label: 'Become agent', iconStyle: 'golden' }]),
                 ...(String(user?.role ?? '').toLowerCase() === ROLES.ADMIN
-                  ? [{ to: '/admin', icon: Shield, label: 'Admin Dashboard' }]
+                  ? [{ to: '/admin', icon: Shield, label: 'Admin Dashboard', iconStyle: 'settings' }]
                   : []),
               ].map((item) => {
                 const Icon = item.icon;
+                const isActive = item.to === '/app'
+                  ? (location.pathname === '/app' || location.pathname === '/app/')
+                  : (location.pathname === item.to || location.pathname.startsWith(item.to + '/'));
+                const iconClass = item.iconStyle ? ` sidebar-icon-${item.iconStyle}` : '';
                 return (
                   <li key={item.to + item.label}>
                     <Link
                       to={item.to}
-                      className="user-app-sidebar-link"
+                      className={`user-app-sidebar-link${isActive ? ' active' : ''}${iconClass}`}
                     >
                       <span className="icon-wrap">
-                        <Icon size={20} />
+                        <Icon size={22} strokeWidth={3} />
                       </span>
                       {item.label}
                     </Link>

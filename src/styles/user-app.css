@@ -1,8 +1,59 @@
-/* User app (post-login) - light social feed layout */
+/* User app – WAKILIFY Design Spec
+   - Color: Gradients (purple→pink primary; golden/orange for Business & Wallet).
+   - Background: Pale Lavender/Blue-Grey (#F0F2F5) so white cards pop.
+   - Cards: #FFFFFF, border-radius 12–20px, box-shadow soft (0 4px 6px -1px rgba(0,0,0,0.05)).
+   - Icons: Rounded/soft; Active = gradient/filled, Inactive = grey outline.
+   - Layout: 3-column (Left 20–25%, Center 50%, Right 25–30%).
+*/
+:root {
+  /* Backgrounds – pale lavender/blue-grey so white cards pop */
+  --wk-bg: #F0F2F5;
+  --wk-bg-alt: #F5F7FA;
+  --wk-bg-card: #FFFFFF;
+
+  /* Text – spec */
+  --wk-text: #2D3748;
+  --wk-text-muted: #A0AEC0;
+
+  /* Borders */
+  --wk-border: #E2E8F0;
+
+  /* Primary brand – purple to pink gradient */
+  --wk-primary: #7F5AF0;
+  --wk-primary-alt: #6C63FF;
+  --wk-hot-pink: #F72585;
+
+  /* Main gradient – Image 2 style: vivid purple → pink (header, active states, CTAs) */
+  --wk-gradient-primary: linear-gradient(90deg, #8A2BE2 0%, #FF00FF 100%);
+  --wk-gradient-header: linear-gradient(90deg, #667EEA 0%, #764BA2 50%, #C026D3 100%);
+  --wk-gradient-primary-soft: linear-gradient(135deg, #7F5AF0 0%, #F72585 100%);
+
+  /* Golden/Orange – Become a Business, Wallet, premium/financial */
+  --wk-gradient-golden: linear-gradient(90deg, #F2994A 0%, #F2C94C 100%);
+
+  /* Success green – price tags, offers */
+  --wk-success: #00B894;
+
+  /* Effects – depth (modern & premium): double soft shadow */
+  --wk-shadow-card: 0 2px 4px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.08);
+  --wk-shadow-soft: 0 4px 14px rgba(127, 90, 240, 0.08);
+
+  /* Border radius – 12px au 16px kwa cards */
+  --wk-radius: 16px;
+  --wk-radius-sm: 12px;
+  --wk-radius-xl: 20px;
+}
+
+/* 1. RANGI YA MWILI – Facebook/Twitter style (MUHIMU: sio nyeupe) */
+html:has(.user-app),
+body:has(.user-app) {
+  background-color: #F0F2F5;
+}
+
 .user-app {
   min-height: 100vh;
-  background: #f0f2f5;
-  color: #050505;
+  background-color: #F0F2F5;
+  color: var(--wk-text);
   overflow-x: hidden;
 }
 
@@ -14,28 +65,25 @@
   }
 
   html {
-    scrollbar-width: auto;
-    scrollbar-color: rgba(0, 0, 0, 0.35) rgba(0, 0, 0, 0.06);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
   }
 
   html::-webkit-scrollbar {
-    width: 14px;
+    width: 6px;
   }
 
   html::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.06);
+    background: transparent;
   }
 
   html::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.35);
-    border-radius: 7px;
-    border: 3px solid transparent;
-    background-clip: padding-box;
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 6px;
   }
 
   html::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, 0.5);
-    background-clip: padding-box;
+    background: rgba(0, 0, 0, 0.25);
   }
 
   .user-app {
@@ -48,12 +96,12 @@
 
   .user-app-body {
     display: grid;
-    grid-template-columns: 1fr minmax(0, 680px) 1fr;
+    grid-template-columns: minmax(180px, 22%) minmax(320px, 56%) minmax(180px, 22%);
     grid-template-rows: 1fr;
     gap: 24px;
     padding: 20px;
-    padding-top: calc(56px + env(safe-area-inset-top, 0) + 8px);
-    max-width: 1280px;
+    padding-top: calc(56px + env(safe-area-inset-top, 0));
+    max-width: 1400px;
     margin: 0 auto;
     width: 100%;
     flex: 1;
@@ -62,16 +110,47 @@
     align-items: stretch;
   }
 
-  /* Center only scrolls; left/right have their own scroll */
+  /* Center feed: scroll, scrollbar mwembamba sana au kufichwa */
   .user-app-body .user-app-main {
+    padding-top: 12px;
     padding-bottom: 24px;
     overflow-y: auto;
     overflow-x: hidden;
     min-height: 0;
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.12) transparent;
   }
 
-  /* Left sidebar: constrained by grid so it scrolls; visible scrollbar (override base height: fit-content) */
+  .user-app-body .user-app-main::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .user-app-body .user-app-main::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .user-app-body .user-app-main::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.12);
+    border-radius: 4px;
+  }
+
+  .user-app-body .user-app-main::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.2);
+  }
+
+  /* Space juu ya left menu na Sponsored: uitowe kabisha – sidebars songea juu */
+  .user-app-body .user-app-sidebar:first-child,
+  .user-app-body .user-app-sidebar:last-child {
+    align-self: start;
+    margin-top: -40px;
+  }
+  /* Feed katikati: space kidogo chini ya header (What's on your mind? card) */
+  .user-app-body .user-app-main {
+    margin-top: 0;
+  }
+
+  /* Left sidebar: scrollbar mwembamba */
   .user-app-body .user-app-sidebar:first-child {
     position: relative;
     height: 100%;
@@ -80,11 +159,11 @@
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
-    scrollbar-color: rgba(0, 0, 0, 0.25) transparent;
+    scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
   }
 
   .user-app-body .user-app-sidebar:first-child::-webkit-scrollbar {
-    width: 6px;
+    width: 4px;
   }
 
   .user-app-body .user-app-sidebar:first-child::-webkit-scrollbar-track {
@@ -92,15 +171,15 @@
   }
 
   .user-app-body .user-app-sidebar:first-child::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.25);
-    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
   }
 
   .user-app-body .user-app-sidebar:first-child::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(0, 0, 0, 0.18);
   }
 
-  /* Right sidebar: constrained by grid so it scrolls; visible scrollbar */
+  /* Right sidebar: scrollbar mwembamba */
   .user-app-body .user-app-sidebar:last-child {
     position: relative;
     height: 100%;
@@ -109,11 +188,11 @@
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
-    scrollbar-color: rgba(0, 0, 0, 0.25) transparent;
+    scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
   }
 
   .user-app-body .user-app-sidebar:last-child::-webkit-scrollbar {
-    width: 6px;
+    width: 4px;
   }
 
   .user-app-body .user-app-sidebar:last-child::-webkit-scrollbar-track {
@@ -121,12 +200,12 @@
   }
 
   .user-app-body .user-app-sidebar:last-child::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.25);
-    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
   }
 
   .user-app-body .user-app-sidebar:last-child::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(0, 0, 0, 0.18);
   }
 }
 
@@ -137,8 +216,8 @@
   right: 0;
   height: 56px;
   padding-top: env(safe-area-inset-top, 0);
-  background: #fff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(90deg, #7F5AF0 0%, #F72585 100%);
+  box-shadow: 0 2px 12px rgba(127, 90, 240, 0.2);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -159,12 +238,23 @@
 .user-app-logo {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   text-decoration: none;
-  color: #7c3aed;
   font-weight: 700;
-  font-size: 1.25rem;
+  font-size: 1.35rem;
   flex-shrink: 0;
+  letter-spacing: -0.02em;
+}
+.user-app-logo span {
+  background: linear-gradient(90deg, #E9D5FF 0%, #FBCFE8 50%, #FCE7F3 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
+}
+.user-app-logo img {
+  filter: brightness(0) invert(1);
+  opacity: 0.9;
 }
 
 .user-app-search-wrap {
@@ -174,15 +264,18 @@
   max-width: 280px;
 }
 
+/* 3. SEARCH BAR – glassy / safi (header gradient inaonekana ndani) */
 .user-app-search {
   display: flex;
   align-items: center;
-  background: #f0f2f5;
+  background-color: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: #fff;
   border-radius: 50px;
-  padding: 8px 12px 8px 16px;
+  padding: 8px 16px 8px 20px;
   cursor: pointer;
-  gap: 8px;
-  max-width: 240px;
+  gap: 10px;
+  max-width: 260px;
   margin-left: 8px;
   transition: max-width 0.25s ease, padding 0.2s ease;
 }
@@ -215,18 +308,20 @@
   }
 }
 
-.user-app-search input {
+.user-app-search input,
+.user-app-search .user-app-search-input {
   border: none;
   background: none;
   outline: none;
   font-size: 0.9375rem;
-  color: #050505;
+  color: #fff;
   width: 100%;
   min-width: 0;
 }
 
-.user-app-search input::placeholder {
-  color: #65676b;
+.user-app-search input::placeholder,
+.user-app-search .user-app-search-input::placeholder {
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .user-app-search-icon-wrap {
@@ -239,7 +334,7 @@
 }
 
 .user-app-search-icon {
-  color: #65676b;
+  color: rgba(255, 255, 255, 0.95);
   flex-shrink: 0;
   display: block;
   width: 20px;
@@ -355,33 +450,24 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 8px;
-  color: #65676b;
+  min-width: 44px;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 20px;
+  color: rgba(255, 255, 255, 0.9);
   text-decoration: none;
-  transition: background 0.15s;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
 }
 
 .user-app-nav-item:hover {
-  background: #f0f2f5;
-  color: #7c3aed;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
 }
 
 .user-app-nav-item.active {
-  color: #7c3aed;
-  position: relative;
-}
-
-.user-app-nav-item.active::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: #7c3aed;
-  border-radius: 3px 3px 0 0;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 
 .user-app-nav-item-badge {
@@ -424,6 +510,8 @@
   overflow: hidden;
   cursor: pointer;
   flex-shrink: 0;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .user-app-icon-btn {
@@ -433,17 +521,18 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  color: #050505;
-  background: #e4e6eb;
+  color: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.2);
   border: none;
   cursor: pointer;
   position: relative;
   text-decoration: none;
-  transition: background 0.15s;
+  transition: background 0.2s, color 0.2s;
 }
 
 .user-app-icon-btn:hover {
-  background: #d8dadf;
+  background: rgba(255, 255, 255, 0.35);
+  color: #fff;
 }
 
 .user-app-icon-btn .badge {
@@ -479,8 +568,17 @@
 
 .user-app-sidebar {
   position: sticky;
-  top: 72px;
+  top: calc(56px + env(safe-area-inset-top, 0));
   height: fit-content;
+}
+
+/* Right sidebar – card style, juu bila space (Sponsored karibu na header) */
+.user-app-sidebar:has(.user-app-right-section) {
+  background-color: #FFFFFF;
+  border-radius: 15px;
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.08);
+  padding: 0 20px 20px;
+  border: none;
 }
 
 .user-app-sidebar-list {
@@ -489,31 +587,100 @@
   padding: 0;
 }
 
+/* Left sidebar – design original: icons hazina duara, kubwa kidogo, rangi tofauti */
+.user-app-sidebar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.user-app-sidebar-list > li {
+  margin: 0;
+}
+
 .user-app-sidebar-link {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  color: #050505;
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  color: var(--wk-text);
   text-decoration: none;
   font-weight: 500;
-  transition: background 0.15s;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
 }
 
-.user-app-sidebar-link:hover {
-  background: #e4e6eb;
+.user-app-sidebar-link:hover:not(.active) {
+  background: rgba(127, 90, 240, 0.06);
+  color: var(--wk-text);
 }
 
+/* Icons: Bulk/Filled look (nene, shiba) */
 .user-app-sidebar-link .icon-wrap {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: #e4e6eb;
-  color: #7c3aed;
+  width: auto;
+  height: auto;
+  min-width: 28px;
+  min-height: 28px;
+  background: transparent;
+  border-radius: 0;
+  color: var(--wk-primary);
+  flex-shrink: 0;
+  transition: color 0.2s;
+}
+.user-app-sidebar-link .icon-wrap svg {
+  fill: currentColor;
+  stroke: currentColor;
+  width: 22px;
+  height: 22px;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Color coding – kila menu item utambulisho wake (Vibrancy) */
+.user-app-sidebar-link.sidebar-icon-profile .icon-wrap { color: #8A2BE2; }
+.user-app-sidebar-link.sidebar-icon-profile:hover:not(.active) .icon-wrap { color: #7C3AED; }
+.user-app-sidebar-link.sidebar-icon-friends .icon-wrap { color: #1877F2; }
+.user-app-sidebar-link.sidebar-icon-friends:hover:not(.active) .icon-wrap { color: #166FE5; }
+.user-app-sidebar-link.sidebar-icon-live .icon-wrap { color: #F02849; }
+.user-app-sidebar-link.sidebar-icon-live:hover:not(.active) .icon-wrap { color: #E11D48; }
+.user-app-sidebar-link.sidebar-icon-groups .icon-wrap { color: #00B894; }
+.user-app-sidebar-link.sidebar-icon-groups:hover:not(.active) .icon-wrap { color: #00A085; }
+.user-app-sidebar-link.sidebar-icon-marketplace .icon-wrap { color: #F2994A; }
+.user-app-sidebar-link.sidebar-icon-marketplace:hover:not(.active) .icon-wrap { color: #E08B3A; }
+.user-app-sidebar-link.sidebar-icon-gradient .icon-wrap { color: #7C3AED; }
+.user-app-sidebar-link.sidebar-icon-gradient:hover:not(.active) .icon-wrap { color: #6D28D9; }
+.user-app-sidebar-link.sidebar-icon-orders .icon-wrap { color: #8A2BE2; }
+.user-app-sidebar-link.sidebar-icon-orders:hover:not(.active) .icon-wrap { color: #7C3AED; }
+.user-app-sidebar-link.sidebar-icon-notifications .icon-wrap { color: #E11D48; }
+.user-app-sidebar-link.sidebar-icon-notifications:hover:not(.active) .icon-wrap { color: #BE123C; }
+.user-app-sidebar-link.sidebar-icon-settings .icon-wrap { color: #6B7280; }
+.user-app-sidebar-link.sidebar-icon-settings:hover:not(.active) .icon-wrap { color: #4B5563; }
+.user-app-sidebar-link.sidebar-icon-golden .icon-wrap { color: #F2994A; }
+.user-app-sidebar-link.sidebar-icon-golden:hover:not(.active) .icon-wrap { color: #E08B3A; }
+
+.user-app-sidebar-link:hover:not(.active) .icon-wrap {
+  color: inherit;
+}
+
+/* Active tab – style ya button (gradient, nyeupe, kivuli) */
+.user-app-sidebar-link.active {
+  background: linear-gradient(90deg, #7F5AF0 0%, #F72585 100%);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 4px 10px rgba(127, 90, 240, 0.3);
+}
+.user-app-sidebar-link.active .icon-wrap {
+  color: #ffffff !important;
+  background: transparent;
+  box-shadow: none;
+}
+.user-app-sidebar-link.active .icon-wrap svg {
+  fill: #ffffff;
+  stroke: #ffffff;
 }
 
 .user-app-main {
@@ -521,15 +688,41 @@
   padding-bottom: 24px;
 }
 
+/* 2. CARDS – nyeupe kabisa, kivuli na radius (kichomoze / pop out) */
 .user-app-card {
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
-  margin-bottom: 16px;
+  background-color: #FFFFFF;
+  border-radius: 15px;
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.08);
+  margin-bottom: 20px;
+  padding: 20px;
   overflow: hidden;
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+  border: none;
+}
+
+/* Golden/Orange button – Become a Business, Wallet, premium CTAs */
+.wk-btn-golden {
+  padding: 8px 20px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  background: var(--wk-gradient-golden);
+  border: none;
+  border-radius: var(--wk-radius-sm);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: var(--wk-shadow-card);
+  transition: opacity 0.2s, transform 0.15s;
+}
+.wk-btn-golden:hover {
+  opacity: 0.95;
+  transform: translateY(-1px);
 }
 
 /* Nafasi kati ya Stories na Feed (smooth kama Facebook) */
@@ -554,19 +747,23 @@
 .user-app-stories-header h3 {
   margin: 0;
   font-size: 1.0625rem;
-  font-weight: 600;
-  color: #050505;
+  font-weight: 700;
+  background: var(--wk-gradient-primary-soft);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .user-app-stories-header a {
-  color: #7c3aed;
+  color: var(--wk-primary);
   font-size: 0.9375rem;
-  font-weight: 500;
+  font-weight: 600;
   text-decoration: none;
 }
 
 .user-app-stories-header a:hover {
   text-decoration: underline;
+  color: var(--wk-hot-pink);
 }
 
 .user-app-stories-row {
@@ -723,7 +920,7 @@
 }
 
 .user-app-composer:hover {
-  background: #fafafa;
+  background: rgba(124, 58, 237, 0.04);
 }
 
 .user-app-composer-avatar {
@@ -738,19 +935,26 @@
 .user-app-composer-input {
   flex: 1;
   min-width: 0;
-  padding: 8px 14px;
-  background: #f0f2f5;
-  border: none;
-  border-radius: 20px;
-  font-size: 0.8125rem;
-  color: #050505;
+  padding: 10px 16px;
+  background: var(--wk-bg);
+  border: 1px solid var(--wk-border);
+  border-radius: 24px;
+  font-size: 0.9375rem;
+  color: var(--wk-text);
   outline: none;
   cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.user-app-composer-input:focus,
+.user-app-composer:focus-within .user-app-composer-placeholder {
+  border-color: var(--wk-primary);
+  box-shadow: 0 0 0 3px rgba(127, 90, 240, 0.12);
 }
 
 .user-app-composer-input::placeholder,
 .user-app-composer-placeholder {
-  color: #65676b;
+  color: var(--wk-text-muted);
 }
 
 /* Inline icons on the right (mobile-style) */
@@ -765,26 +969,47 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 42px;
+  height: 42px;
   padding: 0;
   border: none;
   background: none;
   border-radius: 50%;
-  color: #65676b;
+  color: var(--wk-text-muted);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.2s, color 0.2s, transform 0.15s;
   text-decoration: none;
 }
 
 .user-app-composer-icon:hover {
-  background: #f0f2f5;
+  background: rgba(127, 90, 240, 0.1);
+  color: var(--wk-primary);
+  transform: scale(1.05);
 }
 
-.user-app-composer-icon.video { color: #e41e3f; }
-.user-app-composer-icon.post { color: #31a24c; }
-.user-app-composer-icon.reel { color: #e41e3f; }
-.user-app-composer-icon.more { color: #65676b; }
+.user-app-composer-icon.video { color: #ec4899; }
+.user-app-composer-icon.post { color: #22c55e; }
+.user-app-composer-icon.reel { color: #d946ef; }
+.user-app-composer-icon.more { color: var(--wk-text-muted); }
+
+.user-app-composer-post-btn {
+  padding: 8px 20px;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--wk-gradient-primary-soft);
+  border: none;
+  border-radius: var(--wk-radius-xl);
+  cursor: pointer;
+  text-decoration: none;
+  box-shadow: var(--wk-shadow-card);
+  transition: transform 0.15s, box-shadow 0.2s;
+  white-space: nowrap;
+}
+.user-app-composer-post-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+}
 
 .user-app-composer-actions {
   display: flex;
@@ -956,33 +1181,44 @@
   color: #050505;
 }
 
+/* Follow = blue (kuitana "Add friend"); Following = green (tayari connected) */
 .feed-post-follow {
-  padding: 4px 12px;
+  padding: 6px 16px;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #7c3aed;
-  background: none;
+  color: #fff;
+  background: #1877F2;
   border: none;
   cursor: pointer;
-  border-radius: 6px;
-  transition: background 0.15s;
+  border-radius: var(--wk-radius-xl);
+  transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s, background 0.2s;
+  box-shadow: 0 2px 6px rgba(24, 119, 242, 0.35);
 }
 
 .feed-post-follow:hover {
-  background: #ede9fe;
+  opacity: 1;
+  background: #166FE5;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(24, 119, 242, 0.4);
 }
 
 .feed-post-follow.following {
-  color: #65676b;
+  color: #059669;
+  background: #D1FAE5;
+  border: 1px solid #A7F3D0;
+  box-shadow: none;
 }
 
 .feed-post-follow.following:hover {
-  background: #e4e6eb;
+  background: #A7F3D0;
+  border-color: #6EE7B7;
+  color: #047857;
 }
 
 .feed-post-follow:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+  transform: none;
 }
 
 .feed-post-time {
@@ -1078,7 +1314,7 @@
   max-height: 500px;
   object-fit: cover;
   box-sizing: border-box;
-  border-radius: 0;
+  border-radius: 0 0 var(--wk-radius) var(--wk-radius);
 }
 
 .feed-post-body .feed-post-video {
@@ -1247,7 +1483,7 @@
 }
 
 .feed-post-hashtag {
-  color: #7c3aed;
+  color: var(--wk-primary);
   text-decoration: none;
 }
 
@@ -1373,7 +1609,8 @@
 }
 
 .feed-post-action.active {
-  color: #7c3aed;
+  color: var(--wk-primary);
+  font-weight: 600;
 }
 
 .feed-post-action.active svg {
@@ -3518,7 +3755,7 @@
 .reels-info-follow {
   padding: 6px 16px;
   border-radius: 6px;
-  background: #7c3aed;
+  background: #1877F2;
   color: #fff;
   border: none;
   font-weight: 600;
@@ -3528,7 +3765,7 @@
 }
 
 .reels-info-follow:hover:not(:disabled) {
-  background: #6d28d9;
+  background: #166FE5;
 }
 
 .reels-info-follow.following {
@@ -3695,7 +3932,7 @@
 .reels-card-follow-btn {
   padding: 4px 12px;
   border-radius: 6px;
-  background: #7c3aed;
+  background: #1877F2;
   color: #fff;
   border: none;
   font-size: 0.8125rem;
@@ -3705,16 +3942,17 @@
 }
 
 .reels-card-follow-btn:hover:not(:disabled) {
-  background: #6d28d9;
+  background: #166FE5;
 }
 
 .reels-card-follow-btn.following {
-  background: #e4e6eb;
-  color: #050505;
+  background: #D1FAE5;
+  color: #059669;
 }
 
 .reels-card-follow-btn.following:hover:not(:disabled) {
-  background: #d8dadf;
+  background: #A7F3D0;
+  color: #047857;
 }
 
 .reels-card-follow-btn:disabled {
@@ -4999,8 +5237,11 @@
 .user-app-right-section-header h3 {
   margin: 0;
   font-size: 1.0625rem;
-  font-weight: 600;
-  color: #65676b;
+  font-weight: 700;
+  background: var(--wk-gradient-primary-soft);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .user-app-right-section-header button {
@@ -5020,11 +5261,11 @@
 .user-app-sponsored-card {
   display: flex;
   gap: 12px;
-  padding: 8px 0;
+  padding: 10px 0;
   text-align: left;
   color: inherit;
-  border-radius: 8px;
-  transition: background 0.15s;
+  border-radius: var(--wk-radius-sm);
+  transition: background 0.2s, transform 0.15s;
   background: none;
   border: none;
   cursor: pointer;
@@ -5033,14 +5274,15 @@
 }
 
 .user-app-sponsored-card:hover {
-  background: #e4e6eb;
+  background: rgba(127, 90, 240, 0.06);
+  border-radius: var(--wk-radius-sm);
 }
 
 .user-app-sponsored-card .thumb {
   width: 120px;
   height: 120px;
-  border-radius: 8px;
-  background: #e4e6eb;
+  border-radius: var(--wk-radius-sm);
+  background: linear-gradient(135deg, rgba(127, 90, 240, 0.1), rgba(247, 37, 133, 0.08));
   flex-shrink: 0;
   overflow: hidden;
 }
@@ -5089,20 +5331,24 @@
   min-width: 0;
 }
 
+/* Sidebar: Follow = blue, consistent na feed */
 .user-app-follow-btn {
-  padding: 6px 14px;
+  padding: 6px 16px;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--primary, #1877f2);
-  background: none;
+  color: #fff;
+  background: #1877F2;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--wk-radius-xl);
   cursor: pointer;
   flex-shrink: 0;
+  transition: opacity 0.2s, box-shadow 0.2s, background 0.2s;
+  box-shadow: 0 2px 6px rgba(24, 119, 242, 0.35);
 }
 
 .user-app-follow-btn:hover:not(:disabled) {
-  background: #e7f3ff;
+  background: #166FE5;
+  box-shadow: 0 4px 10px rgba(24, 119, 242, 0.4);
 }
 
 .user-app-follow-btn:disabled {
@@ -5110,12 +5356,14 @@
   cursor: not-allowed;
 }
 
+/* Badge "Friends" = green (tayari connected) */
 .user-app-follow-badge {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #65676b;
-  padding: 4px 8px;
-  background: #e4e6eb;
+  color: #059669;
+  padding: 4px 10px;
+  background: #D1FAE5;
+  border: 1px solid #A7F3D0;
   border-radius: 6px;
   flex-shrink: 0;
 }
@@ -5410,10 +5658,10 @@
     right: 0;
     height: 52px;
     padding-bottom: env(safe-area-inset-bottom, 0);
-    background: #fff;
-    border-top: 1px solid #e4e6eb;
+    background: var(--wk-bg-card);
+    border-top: 1px solid var(--wk-border);
     z-index: 99;
-    box-shadow: 0 -1px 4px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 -2px 12px rgba(124, 58, 237, 0.06);
   }
 
   .user-app-bottom-nav-item {
@@ -5425,16 +5673,16 @@
     gap: 2px;
     padding: 4px 2px;
     min-height: 40px;
-    color: #65676b;
+    color: var(--wk-text-muted);
     text-decoration: none;
     font-size: 0.625rem;
     font-weight: 500;
-    transition: color 0.15s;
+    transition: color 0.2s;
   }
 
   .user-app-bottom-nav-item:hover,
   .user-app-bottom-nav-item.active {
-    color: #7c3aed;
+    color: var(--wk-primary);
   }
 
   .user-app-bottom-nav-item-badge {
@@ -5654,6 +5902,11 @@
   .user-app-composer-actions-inline .user-app-composer-icon svg {
     width: 20px;
     height: 20px;
+  }
+
+  .user-app-composer-post-btn {
+    padding: 6px 14px;
+    font-size: 0.875rem;
   }
 }
 
@@ -6044,21 +6297,22 @@
 }
 
 .profile-fb-btn-primary {
-  background: #7c3aed;
+  background: #1877F2;
   color: #fff;
 }
 
 .profile-fb-btn-primary:hover {
-  background: #6d28d9;
+  background: #166FE5;
 }
 
 .profile-fb-btn-secondary {
-  background: #e4e6eb;
-  color: #050505;
+  background: #D1FAE5;
+  color: #059669;
 }
 
 .profile-fb-btn-secondary:hover {
-  background: #d8dadf;
+  background: #A7F3D0;
+  color: #047857;
 }
 
 .profile-fb-btn-icon {
@@ -7575,21 +7829,22 @@
 }
 
 .friends-list-follow-btn:not(.following) {
-  background: #7c3aed;
+  background: #1877F2;
   color: #fff;
 }
 
 .friends-list-follow-btn:not(.following):hover {
-  background: #6d28d9;
+  background: #166FE5;
 }
 
 .friends-list-follow-btn.following {
-  background: #e4e6eb;
-  color: #050505;
+  background: #D1FAE5;
+  color: #059669;
 }
 
 .friends-list-follow-btn.following:hover {
-  background: #d8dadf;
+  background: #A7F3D0;
+  color: #047857;
 }
 
 .friends-list-follow-btn:disabled {
@@ -8006,21 +8261,22 @@
 }
 
 .friends-fb-btn.follow {
-  background: #7c3aed;
+  background: #1877F2;
   color: #fff;
 }
 
 .friends-fb-btn.follow:hover:not(:disabled) {
-  background: #6d28d9;
+  background: #166FE5;
 }
 
 .friends-fb-btn.following {
-  background: #e4e6eb;
-  color: #050505;
+  background: #D1FAE5;
+  color: #059669;
 }
 
 .friends-fb-btn.following:hover:not(:disabled) {
-  background: #d8dadf;
+  background: #A7F3D0;
+  color: #047857;
 }
 
 .friends-fb-btn.secondary {

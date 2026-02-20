@@ -7,8 +7,8 @@
 }
 
 [data-theme="dark"] .user-app-header {
-  background: #242526;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(90deg, #4c1d95 0%, #6b21a8 50%, #831843 100%);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
 }
 
 [data-theme="dark"] .user-app-header-left .user-app-logo-text {
@@ -47,7 +47,8 @@
 
 [data-theme="dark"] .user-app-card {
   background: #242526;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+  border-color: #3a3b3c;
 }
 
 [data-theme="dark"] .user-app-body {
@@ -61,16 +62,32 @@
 }
 
 [data-theme="dark"] .user-app-sidebar-link {
-  color: #fff;
+  color: #e2e8f0;
 }
 
-[data-theme="dark"] .user-app-sidebar-link:hover {
-  background: #3a3b3c;
+[data-theme="dark"] .user-app-sidebar-link:hover:not(.active) {
+  background: rgba(167, 139, 250, 0.12);
 }
 
 [data-theme="dark"] .user-app-sidebar-link .icon-wrap {
-  background: #3a3b3c;
-  color: #a78bfa;
+  background: rgba(167, 139, 250, 0.2) !important;
+  color: #c4b5fd;
+}
+[data-theme="dark"] .user-app-sidebar-link:hover:not(.active) .icon-wrap {
+  background: rgba(167, 139, 250, 0.3) !important;
+  color: #ddd6fe;
+  box-shadow: 0 2px 10px rgba(139, 92, 246, 0.25);
+}
+
+[data-theme="dark"] .user-app-sidebar-link.active {
+  background: rgba(167, 139, 250, 0.22);
+  color: #fff;
+  font-weight: 600;
+}
+[data-theme="dark"] .user-app-sidebar-link.active .icon-wrap {
+  background: rgba(167, 139, 250, 0.4) !important;
+  color: #e9d5ff;
+  box-shadow: 0 2px 12px rgba(139, 92, 246, 0.35);
 }
 
 [data-theme="dark"] .user-app-composer-inner {
@@ -430,17 +447,18 @@
 }
 
 [data-theme="dark"] .user-app-follow-btn {
-  color: #a78bfa;
+  background: #1877F2;
+  color: #fff;
 }
 
 [data-theme="dark"] .user-app-follow-btn:hover:not(:disabled) {
-  background: rgba(124, 58, 237, 0.2);
-  color: #c4b5fd;
+  background: #166FE5;
 }
 
 [data-theme="dark"] .user-app-follow-badge {
-  color: #b0b3b8;
-  background: #3a3b3c;
+  color: #6ee7b7;
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.35);
 }
 
 [data-theme="dark"] .user-app-online-dot {
