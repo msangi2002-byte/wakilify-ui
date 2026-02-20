@@ -1,9 +1,9 @@
 /**
  * One slide in the feed video reels scroll: video + overlay UI (like/comment/share/save, author, caption).
- * Plays only when isActive. Used inside a vertical scroll container so scrolling moves to next/previous.
+ * Plays only when isActive. Start muted so autoplay works (browser policy); user can unmute.
  */
 import { useState, useRef, useEffect } from 'react';
-import { Play, ThumbsUp, MessageCircle, Share2, Bookmark } from 'lucide-react';
+import { Play, ThumbsUp, MessageCircle, Share2, Bookmark, Volume2, VolumeX } from 'lucide-react';
 
 export function FeedVideoReelSlide({
   videoUrl,
@@ -22,6 +22,7 @@ export function FeedVideoReelSlide({
 }) {
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [muted, setMuted] = useState(true);
   const [liked, setLiked] = useState(!!initialLiked);
   const [likesCount, setLikesCount] = useState(initialLikesCount);
   const [saved, setSaved] = useState(!!initialSaved);
@@ -37,8 +38,16 @@ export function FeedVideoReelSlide({
     setLikesCount(initialLikesCount);
     setSaved(!!initialSaved);
     const v = videoRef.current;
-    if (v && videoUrl) v.play().then(() => setPlaying(true)).catch(() => {});
-  }, [isActive, initialLiked, initialLikesCount, initialSaved, videoUrl]);
+    if (!v || !videoUrl) return;
+    v.muted = muted;
+    v.play()
+      .then(() => setPlaying(true))
+      .catch(() => {
+        v.muted = true;
+        setMuted(true);
+        v.play().then(() => setPlaying(true)).catch(() => {});
+      });
+  }, [isActive, initialLiked, initialLikesCount, initialSaved, videoUrl, muted]);
 
   useEffect(() => {
     if (!isActive || !videoRef.current) return;
@@ -91,11 +100,19 @@ export function FeedVideoReelSlide({
           className="feed-video-reel-slide-video"
           loop
           playsInline
-          muted={false}
+          muted={muted}
           onPlay={() => setPlaying(true)}
           onPause={() => setPlaying(false)}
           onError={() => setPlaying(false)}
         />
+        <button
+          type="button"
+          className="feed-video-reel-slide-mute-btn"
+          onClick={(e) => { e.stopPropagation(); setMuted((m) => !m); }}
+          aria-label={muted ? 'Unmute' : 'Mute'}
+        >
+          {muted ? <VolumeX size={24} /> : <Volume2 size={24} />}
+        </button>
         {!playing && (
           <div className="feed-video-reel-slide-play-btn" aria-hidden>
             <Play size={72} fill="currentColor" />

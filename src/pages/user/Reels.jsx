@@ -593,7 +593,13 @@ function ReelSlide({ item, isActive, onLikeChange, onSaveChange, onCommentClick,
     if (!v) return;
     v.muted = muted;
     if (isActive) {
-      v.play().then(() => setPlaying(true)).catch(() => {});
+      v.play()
+        .then(() => setPlaying(true))
+        .catch(() => {
+          v.muted = true;
+          setMuted(true);
+          v.play().then(() => setPlaying(true)).catch(() => {});
+        });
     } else {
       v.pause();
       setPlaying(false);

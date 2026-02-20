@@ -37,13 +37,22 @@ function getStoryThumbnail(story) {
   if (!Array.isArray(media) || media.length === 0) return null;
   const first = media[0];
   if (typeof first === 'string') return first;
-  // Prefer thumbnailUrl for video (background-image can't use .mp4)
+  const isVideo = (first?.type ?? '').toUpperCase() === 'VIDEO';
+  // Video: only use thumbnailUrl (background-image can't use .mp4)
+  if (isVideo) return first?.thumbnailUrl ?? null;
   return first?.thumbnailUrl ?? first?.url ?? null;
 }
 
 /** For text stories: user's chosen gradient or default */
 function getStoryGradient(story) {
   return story?.storyGradient || 'linear-gradient(135deg, #7c3aed, #d946ef)';
+}
+
+/** Text to show on card for text-only stories (truncated caption). */
+function getStoryTextCover(story) {
+  const cap = story?.caption?.trim();
+  if (!cap) return null;
+  return cap.length > 80 ? cap.slice(0, 77) + '…' : cap;
 }
 
 function Avatar({ user, size = 40, className = '' }) {
@@ -114,6 +123,7 @@ export default function Stories() {
             const story = group.stories[0];
             const thumb = getStoryThumbnail(story);
             const gradient = getStoryGradient(story);
+            const textCover = getStoryTextCover(story);
             const authorId = group.authorId ?? group.author?.id;
             return (
               <Link key={authorId} to={`/app/stories/view/${authorId}`} className="stories-all-card">
@@ -128,6 +138,9 @@ export default function Stories() {
                     className="stories-all-card-bg"
                     style={{ background: gradient }}
                   />
+                )}
+                {!thumb && textCover && (
+                  <div className="stories-all-card-text-cover"><span>{textCover}</span></div>
                 )}
                 <div className="stories-all-card-inner">
                   <Avatar user={group.author} size={56} className="stories-all-card-avatar" />
