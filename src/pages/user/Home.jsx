@@ -843,6 +843,9 @@ export default function Home() {
           <button type="button" className="user-app-composer-icon more" aria-label="More options">
             <MoreHorizontal size={20} />
           </button>
+          <Link to="/app/create" className="user-app-composer-post-btn" aria-label="Post">
+            Post
+          </Link>
         </div>
       </div>
 
@@ -908,10 +911,9 @@ export default function Home() {
             <span style={{ fontSize: 13, color: '#7c3aed', fontWeight: 600 }}>Find People →</span>
           </Link>
           {String(user?.role ?? '').toLowerCase() !== ROLES.AGENT && (
-            <Link to="/app/register-agent" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: 'inherit', paddingTop: 8, borderTop: '1px solid #e4e6eb' }}>
-              <Sparkles size={20} style={{ color: '#7c3aed' }} />
-              <span style={{ flex: 1, fontSize: 14 }}>Become an agent</span>
-              <span style={{ fontSize: 13, color: '#7c3aed', fontWeight: 600 }}>Register →</span>
+            <Link to="/app/register-agent" className="wk-btn-golden" style={{ marginTop: 8, width: '100%', justifyContent: 'center', boxSizing: 'border-box' }}>
+              <Sparkles size={20} />
+              <span>Become an agent</span>
             </Link>
           )}
         </div>
