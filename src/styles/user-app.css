@@ -8,7 +8,11 @@
 
 /* Desktop: scroll kubwa NJE (ukurasa), scroll ndogo NDANI (Sponsored tu) kama Facebook */
 @media (min-width: 901px) {
-  /* Scroll kubwa = ya ukurasa, ika NJE (pembe ya kulia ya browser) */
+  html, body {
+    height: 100%;
+    overflow: hidden;
+  }
+
   html {
     scrollbar-width: auto;
     scrollbar-color: rgba(0, 0, 0, 0.35) rgba(0, 0, 0, 0.06);
@@ -35,43 +39,73 @@
   }
 
   .user-app {
+    height: 100vh;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
   }
 
   .user-app-body {
     display: grid;
     grid-template-columns: 1fr minmax(0, 680px) 1fr;
+    grid-template-rows: 1fr;
     gap: 24px;
     padding: 20px;
-    padding-top: calc(56px + env(safe-area-inset-top, 0) + 20px);
+    padding-top: calc(56px + env(safe-area-inset-top, 0) + 8px);
     max-width: 1280px;
     margin: 0 auto;
     width: 100%;
-    align-items: start;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    align-items: stretch;
   }
 
-  /* Feed: hauna scroll yake – inascroll na ukurasa (scroll kubwa nje) */
+  /* Center only scrolls; left/right have their own scroll */
   .user-app-body .user-app-main {
     padding-bottom: 24px;
-    overflow: visible;
-    min-height: 0;
-  }
-
-  /* Sidebar kushoto: inaenda na ukurasa */
-  .user-app-body .user-app-sidebar:first-child {
-    position: sticky;
-    top: calc(56px + env(safe-area-inset-top, 0) + 20px);
-    overflow: visible;
-  }
-
-  /* Sidebar kulia (Sponsored): scroll NDANI tu, scrollbar ndogo */
-  .user-app-body .user-app-sidebar:last-child {
-    position: sticky;
-    top: calc(56px + env(safe-area-inset-top, 0) + 20px);
-    max-height: calc(100vh - 56px - env(safe-area-inset-top, 0) - 40px);
     overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Left sidebar: constrained by grid so it scrolls; visible scrollbar (override base height: fit-content) */
+  .user-app-body .user-app-sidebar:first-child {
+    position: relative;
+    height: 100%;
+    min-height: 0;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.25) transparent;
+  }
+
+  .user-app-body .user-app-sidebar:first-child::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .user-app-body .user-app-sidebar:first-child::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .user-app-body .user-app-sidebar:first-child::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 3px;
+  }
+
+  .user-app-body .user-app-sidebar:first-child::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.4);
+  }
+
+  /* Right sidebar: constrained by grid so it scrolls; visible scrollbar */
+  .user-app-body .user-app-sidebar:last-child {
+    position: relative;
+    height: 100%;
+    min-height: 0;
+    overflow-y: scroll;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
@@ -1028,6 +1062,10 @@
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+}
+
+.feed-post-body-clickable {
+  cursor: pointer;
 }
 
 /* Media: full-width, no inner radius (kama Facebook – picha zifikie mwisho wa kadi) */
@@ -3055,6 +3093,25 @@
   overflow: hidden;
 }
 
+/* Vertical scroll container: one reel per viewport, scroll moves the list (Facebook-style) */
+.reels-scroll-container {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.reels-scroll-slide-wrap {
+  height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  position: relative;
+}
+
 /* Mobile: keep top and bottom nav visible when watching a reel */
 @media (max-width: 768px) {
   .reels-page-feed {
@@ -4316,6 +4373,209 @@
   opacity: 0.9;
 }
 
+/* Image post viewer overlay: Facebook-style fullscreen when clicking image post */
+.image-post-viewer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.98);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
+}
+
+.image-post-viewer-close {
+  position: absolute;
+  top: calc(12px + env(safe-area-inset-top, 0));
+  right: calc(12px + env(safe-area-inset-right, 0));
+  z-index: 10;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-post-viewer-close:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.image-post-viewer-content {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}
+
+.image-post-viewer-image-wrap {
+  max-width: 100%;
+  max-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-post-viewer-image {
+  max-width: 100%;
+  max-height: calc(100vh - 140px);
+  object-fit: contain;
+  display: block;
+}
+
+.image-post-viewer-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+}
+
+.image-post-viewer-nav:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.image-post-viewer-nav-prev {
+  left: 12px;
+}
+
+.image-post-viewer-nav-next {
+  right: 12px;
+}
+
+.image-post-viewer-dots {
+  position: absolute;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-post-viewer-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  padding: 0;
+}
+
+.image-post-viewer-dot.active {
+  background: #fff;
+  transform: scale(1.2);
+}
+
+.image-post-viewer-actions {
+  position: absolute;
+  right: 12px;
+  bottom: 100px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.image-post-viewer-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.image-post-viewer-action:hover {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.image-post-viewer-action.active {
+  color: #7c3aed;
+}
+
+.image-post-viewer-action svg {
+  flex-shrink: 0;
+}
+
+.image-post-viewer-info {
+  position: absolute;
+  left: 12px;
+  right: 60px;
+  bottom: 24px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.image-post-viewer-info-author {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.image-post-viewer-info-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.image-post-viewer-info-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.image-post-viewer-info-username {
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.image-post-viewer-info-caption {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  opacity: 0.95;
+}
+
 /* Video fullscreen overlay: reels-style layout (video + right actions + bottom-left info) */
 .video-fullscreen-overlay {
   position: fixed;
@@ -4407,6 +4667,196 @@
 
 .video-fullscreen-action-btn svg {
   flex-shrink: 0;
+}
+
+/* Feed video reels: one slide per video (scroll container in Home) */
+.feed-video-reels-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+}
+
+.feed-video-reels-close {
+  position: absolute;
+  top: calc(12px + env(safe-area-inset-top, 0));
+  left: 12px;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 14px;
+  border-radius: 9999px;
+  border: none;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+.feed-video-reels-close:hover {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.feed-video-reels-scroll {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.feed-video-reels-slide-wrap {
+  height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  position: relative;
+}
+
+.feed-video-reel-slide {
+  position: absolute;
+  inset: 0;
+  background: #000;
+}
+
+.feed-video-reel-slide-video-wrap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.feed-video-reel-slide-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+.feed-video-reel-slide-video::-webkit-media-controls {
+  display: none !important;
+}
+
+.feed-video-reel-slide-play-btn {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.25);
+  color: #fff;
+  pointer-events: none;
+}
+
+.feed-video-reel-slide-actions {
+  position: absolute;
+  right: 12px;
+  bottom: 100px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.feed-video-reel-slide-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.feed-video-reel-slide-action:hover {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.feed-video-reel-slide-action.active {
+  color: #7c3aed;
+}
+
+.feed-video-reel-slide-info {
+  position: absolute;
+  left: 12px;
+  right: 72px;
+  bottom: 48px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.feed-video-reel-slide-info-author {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.feed-video-reel-slide-info-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.feed-video-reel-slide-info-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.feed-video-reel-slide-info-username {
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.feed-video-reel-slide-info-caption {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  opacity: 0.95;
+}
+
+.feed-video-reel-slide-progress-wrap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.2);
+  z-index: 2;
+}
+
+.feed-video-reel-slide-progress-bar {
+  height: 100%;
+  background: #7c3aed;
+  transition: width 0.15s linear;
 }
 
 /* Reels-style: bottom-left author + caption */

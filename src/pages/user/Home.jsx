@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ImagePlus, Users, Video, MoreHorizontal, Plus, ThumbsUp, Heart, MessageCircle, Share2, Play, Sparkles, Globe, Lock, Film, TrendingUp } from 'lucide-react';
 import { UserProfileMenu } from '@/components/ui/UserProfileMenu';
 import { CommentItem } from '@/components/social/CommentItem';
 import { VideoFullscreenOverlay } from '@/components/social/VideoFullscreenOverlay';
-import { ReelCommentsDrawer, ReelShareMenu } from '@/pages/user/Reels';
+import { ImagePostViewerOverlay } from '@/components/social/ImagePostViewerOverlay';
 import { useAuthStore } from '@/store/auth.store';
 import { getFeed, getPublicFeed, getStories, likePost, reactToPost, unlikePost, savePost, unsavePost, sharePostToStory, getComments, addComment, deleteComment, createPost, likeComment, unlikeComment } from '@/lib/api/posts';
 import { followUser, unfollowUser } from '@/lib/api/friends';
@@ -112,6 +112,7 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], vi
   const [replyText, setReplyText] = useState('');
   const [commentsCount, setCommentsCount] = useState(initialCommentsCount);
   const [videoFullscreenOpen, setVideoFullscreenOpen] = useState(false);
+  const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [feedVideoPlaying, setFeedVideoPlaying] = useState(false);
   const feedVideoRef = useRef(null);
   const feedVideoWrapRef = useRef(null);
@@ -471,12 +472,19 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], vi
         </div>
       )}
       {(media?.length > 0) && (
-        <div className="feed-post-body">
+        <div
+          className={`feed-post-body ${!hasSingleVideo ? 'feed-post-body-clickable' : ''}`}
+          role={!hasSingleVideo ? 'button' : undefined}
+          tabIndex={!hasSingleVideo ? 0 : undefined}
+          onClick={!hasSingleVideo ? () => setImageViewerOpen(true) : undefined}
+          onKeyDown={!hasSingleVideo ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setImageViewerOpen(true); } } : undefined}
+          aria-label={!hasSingleVideo ? 'View post' : undefined}
+        >
           {hasSingleVideo ? (
             <div
               ref={feedVideoWrapRef}
               className="feed-post-video-wrap"
-              onClick={() => { if (onOpenVideo != null && videoIndex != null) onOpenVideo(videoIndex); else setVideoFullscreenOpen(true); }}
+              onClick={(e) => { e.stopPropagation(); if (onOpenVideo != null && videoIndex != null) onOpenVideo(videoIndex); else setVideoFullscreenOpen(true); }}
               role="button"
               tabIndex={0}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (onOpenVideo != null && videoIndex != null) onOpenVideo(videoIndex); else setVideoFullscreenOpen(true); } }}
@@ -504,7 +512,7 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], vi
               const isVideo = typeof item === 'object' && item?.isVideo;
               if (!url) return null;
               return isVideo ? (
-                <video key={i} src={url} controls playsInline className="feed-post-video" />
+                <video key={i} src={url} controls playsInline className="feed-post-video" onClick={(e) => e.stopPropagation()} />
               ) : (
                 <img key={i} src={url} alt="" loading="lazy" />
               );
@@ -527,6 +535,24 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], vi
           onLike={() => handleReact('LIKE')}
           onComment={() => { setVideoFullscreenOpen(false); handleCommentClick(); }}
           onShare={() => { setVideoFullscreenOpen(false); setShareOpen(true); }}
+          onSave={handleSaveClick}
+        />
+      )}
+      {!hasSingleVideo && media?.length > 0 && (
+        <ImagePostViewerOverlay
+          isOpen={imageViewerOpen}
+          onClose={() => setImageViewerOpen(false)}
+          media={media}
+          description={description}
+          author={author}
+          postId={id}
+          liked={!!userReaction}
+          likesCount={likesCount}
+          commentsCount={commentsCount}
+          saved={saved}
+          onLike={() => handleReact('LIKE')}
+          onComment={() => { setImageViewerOpen(false); handleCommentClick(); }}
+          onShare={() => { setImageViewerOpen(false); setShareOpen(true); }}
           onSave={handleSaveClick}
         />
       )}
@@ -745,24 +771,19 @@ function isSingleVideoPost(post) {
 
 export default function Home() {
   const { user } = useAuthStore();
+  const navigate = useNavigate();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [storyGroups, setStoryGroups] = useState([]);
   const [storiesLoading, setStoriesLoading] = useState(true);
-  const [videoOverlayOpen, setVideoOverlayOpen] = useState(false);
-  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
-  const [videoCommentsPostId, setVideoCommentsPostId] = useState(null);
-  const [videoSharePost, setVideoSharePost] = useState(null);
 
   const videoPosts = posts.filter(isSingleVideoPost);
 
-  useEffect(() => {
-    if (!videoOverlayOpen) {
-      setVideoCommentsPostId(null);
-      setVideoSharePost(null);
-    }
-  }, [videoOverlayOpen]);
+  const openVideoInReels = useCallback((idx) => {
+    const post = videoPosts[idx];
+    if (post) navigate('/app/reels', { state: { fromFeedVideo: post } });
+  }, [videoPosts, navigate]);
 
   useEffect(() => {
     let cancelled = false;
@@ -920,74 +941,11 @@ export default function Home() {
             authorIsFollowed={p.authorIsFollowed}
             isSponsored={p.isSponsored}
             videoIndex={videoIndex >= 0 ? videoIndex : undefined}
-            onOpenVideo={videoIndex >= 0 ? (idx) => { setCurrentVideoIndex(idx); setVideoOverlayOpen(true); } : undefined}
+            onOpenVideo={videoIndex >= 0 ? openVideoInReels : undefined}
           />
         );
       })}
 
-      {videoOverlayOpen && videoPosts.length > 0 && (() => {
-        const current = videoPosts[currentVideoIndex];
-        if (!current) return null;
-        const videoUrl = getVideoUrl(current);
-        if (!videoUrl) return null;
-        const handleOverlayLike = async () => {
-          const nextReaction = current.userReaction === 'LIKE' ? null : 'LIKE';
-          const countDelta = nextReaction ? (current.userReaction ? 0 : 1) : -1;
-          setPosts((prev) => prev.map((p) => (p.id === current.id ? { ...p, userReaction: nextReaction, liked: !!nextReaction, likesCount: Math.max(0, p.likesCount + countDelta) } : p)));
-          try {
-            if (nextReaction) await reactToPost(current.id, 'LIKE');
-            else await unlikePost(current.id);
-          } catch (_) {}
-        };
-        const handleOverlaySave = async () => {
-          setPosts((prev) => prev.map((p) => (p.id === current.id ? { ...p, saved: !p.saved } : p)));
-          try {
-            if (current.saved) await unsavePost(current.id);
-            else await savePost(current.id);
-          } catch (_) {}
-        };
-        const handleOverlayCommentCount = (postId, newCount) => {
-          setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, commentsCount: newCount } : p)));
-        };
-        return (
-          <>
-            <VideoFullscreenOverlay
-              key={current.id}
-              isOpen={videoOverlayOpen}
-              onClose={() => setVideoOverlayOpen(false)}
-              videoUrl={videoUrl}
-              description={current.description}
-              author={current.author}
-              postId={current.id}
-              liked={current.liked}
-              likesCount={current.likesCount}
-              commentsCount={current.commentsCount}
-              saved={current.saved}
-              onLike={handleOverlayLike}
-              onComment={() => setVideoCommentsPostId(current.id)}
-              onShare={() => setVideoSharePost(current)}
-              onSave={handleOverlaySave}
-              hasNext={currentVideoIndex < videoPosts.length - 1}
-              hasPrev={currentVideoIndex > 0}
-              onSwipeUp={() => setCurrentVideoIndex((i) => Math.min(i + 1, videoPosts.length - 1))}
-              onSwipeDown={() => setCurrentVideoIndex((i) => Math.max(0, i - 1))}
-            />
-            {videoCommentsPostId && (
-              <ReelCommentsDrawer
-                postId={videoCommentsPostId}
-                onClose={() => setVideoCommentsPostId(null)}
-                onCommentCountChange={handleOverlayCommentCount}
-              />
-            )}
-            {videoSharePost && (
-              <ReelShareMenu
-                item={videoSharePost}
-                onClose={() => setVideoSharePost(null)}
-              />
-            )}
-          </>
-        );
-      })()}
     </>
   );
 }
