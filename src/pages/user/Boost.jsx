@@ -165,13 +165,17 @@ export default function Boost() {
     }
   };
 
-  const handleCancelPromo = async (id) => {
-    if (!window.confirm('Una uhakika unataka kufuta kampeni hii?')) return;
+  const handleCancelPromo = async (id, status) => {
+    const isRemove = ['CANCELLED', 'REJECTED'].includes(status);
+    const message = isRemove
+      ? 'Una uhakika unataka kuondoa kampeni hii kwenye orodha?'
+      : 'Una uhakika unataka kufuta kampeni hii?';
+    if (!window.confirm(message)) return;
     setActionLoading(id);
     try {
       await cancelPromotion(id);
       loadAnalytics();
-      setSuccess('Kampeni imefutwa.');
+      setSuccess(isRemove ? 'Kampeni imeondolewa.' : 'Kampeni imefutwa.');
       setViewPromo(null);
     } catch (err) {
       setError(getApiErrorMessage(err, 'Imeshindwa kufuta'));
@@ -511,13 +515,13 @@ export default function Boost() {
                                   {actionLoading === promo.id ? <Zap size={16} className="icon-spin" /> : <Play size={16} />}
                                 </button>
                               )}
-                              {['PENDING', 'PAUSED', 'PENDING_APPROVAL', 'ACTIVE'].includes(promo.status) && (
+                              {(['PENDING', 'PAUSED', 'PENDING_APPROVAL', 'ACTIVE', 'CANCELLED', 'REJECTED'].includes(promo.status)) && (
                                 <button
                                   type="button"
                                   className="boost-promo-btn boost-promo-btn-delete"
-                                  onClick={() => handleCancelPromo(promo.id)}
+                                  onClick={() => handleCancelPromo(promo.id, promo.status)}
                                   disabled={actionLoading === promo.id}
-                                  title="Futa"
+                                  title={['CANCELLED', 'REJECTED'].includes(promo.status) ? 'Ondoa kwenye orodha' : 'Futa'}
                                 >
                                   <Trash2 size={16} />
                                 </button>
@@ -630,14 +634,14 @@ export default function Boost() {
                         <Play size={18} /> Endeleza
                       </button>
                     )}
-                    {['PENDING', 'PAUSED', 'PENDING_APPROVAL', 'ACTIVE'].includes(viewPromo.status) && (
+                    {['PENDING', 'PAUSED', 'PENDING_APPROVAL', 'ACTIVE', 'CANCELLED', 'REJECTED'].includes(viewPromo.status) && (
                       <button
                         type="button"
                         className="boost-promo-btn-full boost-promo-btn-delete"
-                        onClick={() => handleCancelPromo(viewPromo.id)}
+                        onClick={() => handleCancelPromo(viewPromo.id, viewPromo.status)}
                         disabled={actionLoading === viewPromo.id}
                       >
-                        <Trash2 size={18} /> Futa Kampeni
+                        <Trash2 size={18} /> {['CANCELLED', 'REJECTED'].includes(viewPromo.status) ? 'Ondoa kampeni' : 'Futa Kampeni'}
                       </button>
                     )}
                   </div>
