@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { ThumbsUp, MessageCircle, Share2, MoreHorizontal, Plus, Play, X, Bookmark, Radio, ChevronLeft, BarChart2, Volume2, VolumeX, Heart } from 'lucide-react';
 import { getReels, recordReelView, getPostInsights, likePost, unlikePost, savePost, unsavePost, getComments, addComment, deleteComment, likeComment, unlikeComment, sharePostToStory, createPost } from '@/lib/api/posts';
 import { followUser, unfollowUser } from '@/lib/api/friends';
@@ -849,6 +849,7 @@ function ReelSlide({ item, isActive, onLikeChange, onSaveChange, onCommentClick,
 }
 
 export default function Reels() {
+  const location = useLocation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -860,6 +861,8 @@ export default function Reels() {
   const [commentsPostId, setCommentsPostId] = useState(null);
   const [shareItem, setShareItem] = useState(null);
   const loadMoreRef = useRef(null);
+  const scrollContainerRef = useRef(null);
+  const slideHeightRef = useRef(0);
 
   const loadPage = useCallback((pageNum) => {
     return getReels({ page: pageNum, size: 20 }).then((list) => {
@@ -870,15 +873,24 @@ export default function Reels() {
 
   useEffect(() => {
     let cancelled = false;
+    const fromFeedVideo = location.state?.fromFeedVideo;
     setLoading(true);
     setError('');
     loadPage(0)
       .then((list) => {
         if (!cancelled) {
-          setItems(list);
-          setHasMore(list.length >= 20);
+          if (fromFeedVideo) {
+            const first = normalizeReel(fromFeedVideo);
+            const rest = (Array.isArray(list) ? list : []).filter((i) => i.id !== first.id);
+            setItems([first, ...rest]);
+            setViewMode('player');
+            setCurrentIndex(0);
+          } else {
+            setItems(Array.isArray(list) ? list : []);
+          }
+          setHasMore((Array.isArray(list) ? list : []).length >= 20);
           setPage(1);
-          setCurrentIndex(0);
+          if (!fromFeedVideo) setCurrentIndex(0);
         }
       })
       .catch((err) => {
@@ -930,6 +942,26 @@ export default function Reels() {
   }, []);
   const openComments = useCallback((item) => setCommentsPostId(item?.id ?? null), []);
   const openShare = useCallback((item) => setShareItem(item ?? null), []);
+
+  // Player scroll container: update currentIndex when user scrolls (must run every render)
+  const handleReelsScroll = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el || items.length === 0) return;
+    const h = slideHeightRef.current || el.clientHeight;
+    if (!h) return;
+    const index = Math.round(el.scrollTop / h);
+    const clamped = Math.max(0, Math.min(index, items.length - 1));
+    if (clamped !== currentIndex) setCurrentIndex(clamped);
+  }, [items.length, currentIndex]);
+
+  // Scroll to current reel when entering player or currentIndex changes
+  useEffect(() => {
+    if (viewMode !== 'player' || !scrollContainerRef.current || items.length === 0) return;
+    const el = scrollContainerRef.current;
+    const h = el.clientHeight;
+    slideHeightRef.current = h;
+    el.scrollTo({ top: currentIndex * h, behavior: 'instant' });
+  }, [viewMode, currentIndex, items.length]);
 
   if (loading) {
     return (
@@ -1032,9 +1064,7 @@ export default function Reels() {
     );
   }
 
-  // Player view: full-screen reel with swipe, back to list
-  const current = items[currentIndex];
-
+  // Player view: vertical scroll container (Facebook-style) – scroll moves the reel container, one reel per viewport
   return (
     <>
     <div className="reels-page reels-page-feed">
@@ -1049,19 +1079,28 @@ export default function Reels() {
           <span>Reels</span>
         </button>
       </header>
-      <ReelSlide
-        key={current.id}
-        item={current}
-        isActive
-        onLikeChange={handleLikeChange}
-        onSaveChange={handleSaveChange}
-        onCommentClick={openComments}
-        onShareClick={openShare}
-        onFollowChange={handleFollowChange}
-        onNext={currentIndex < items.length - 1 ? () => setCurrentIndex((i) => i + 1) : undefined}
-        onPrev={currentIndex > 0 ? () => setCurrentIndex((i) => i - 1) : undefined}
-      />
-      <div ref={loadMoreRef} className="reels-load-more-sentinel" aria-hidden />
+      <div
+        ref={scrollContainerRef}
+        className="reels-scroll-container"
+        onScroll={handleReelsScroll}
+      >
+        {items.map((item, index) => (
+          <div key={item.id} className="reels-scroll-slide-wrap">
+            <ReelSlide
+              item={item}
+              isActive={index === currentIndex}
+              onLikeChange={handleLikeChange}
+              onSaveChange={handleSaveChange}
+              onCommentClick={openComments}
+              onShareClick={openShare}
+              onFollowChange={handleFollowChange}
+              onNext={undefined}
+              onPrev={undefined}
+            />
+          </div>
+        ))}
+        <div ref={loadMoreRef} className="reels-load-more-sentinel" aria-hidden />
+      </div>
     </div>
     {commentsPostId && (
       <ReelCommentsDrawer
