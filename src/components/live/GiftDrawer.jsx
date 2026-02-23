@@ -10,15 +10,20 @@ export function GiftDrawer({ open, onClose, hostId, hostName, liveStreamId, onGi
   const [wallet, setWallet] = useState(null);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [sentSuccess, setSentSuccess] = useState(null); // { newBalance, cost } – onyesha balance imepungua
   const [selected, setSelected] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setSentSuccess(null);
+      return;
+    }
     setSelected(null);
     setQuantity(1);
     setMessage('');
+    setSentSuccess(null);
     setLoading(true);
     Promise.all([getGifts(), getWallet()])
       .then(([gList, w]) => {
@@ -42,6 +47,7 @@ export function GiftDrawer({ open, onClose, hostId, hostName, liveStreamId, onGi
   const handleSend = async () => {
     if (!canSend || !hostId || !selected) return;
     setSending(true);
+    setSentSuccess(null);
     try {
       await sendGift({
         receiverId: hostId,
@@ -54,7 +60,11 @@ export function GiftDrawer({ open, onClose, hostId, hostName, liveStreamId, onGi
       setWallet((w) => (w ? { ...w, coinBalance: newBalance } : null));
       onBalanceChange?.(newBalance);
       onGiftSent?.({ gift: selected, quantity: quantityCapped });
-      onClose();
+      setSentSuccess({ newBalance, cost });
+      setTimeout(() => {
+        setSentSuccess(null);
+        onClose();
+      }, 1600);
     } catch (e) {
       console.error(e);
     } finally {
@@ -120,6 +130,13 @@ export function GiftDrawer({ open, onClose, hostId, hostName, liveStreamId, onGi
           {loading ? (
             <div className="flex-1 flex items-center justify-center py-12">
               <div className="w-8 h-8 border-2 border-pink-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : sentSuccess ? (
+            <div className="flex-1 flex flex-col items-center justify-center py-8 px-4 text-center">
+              <p className="text-green-400 font-semibold text-lg mb-1">Gift imetumwa!</p>
+              <p className="text-white/90 text-sm mb-2">Ulikatwa <strong className="text-amber-400">{sentSuccess.cost} coins</strong></p>
+              <p className="text-white font-medium">Balance yako sasa: <strong className="text-amber-400">{sentSuccess.newBalance}</strong> coins</p>
+              <p className="text-white/60 text-xs mt-2">Kisha drawer itafungwa...</p>
             </div>
           ) : (
             <>

@@ -264,7 +264,7 @@ export default function LiveViewer() {
     return () => { cancelled = true; };
   }, [id, live?.id]);
 
-  // SSE for real-time comments, likes, gifts when live; fallback to polling when SSE not connected
+  // SSE: comments, like, gift_sent – viewers NA creator/host wote wanapata (kama TikTok: like zikipita, gift pop)
   useEffect(() => {
     if (!id || !live?.id || live?.status !== 'LIVE') return;
     const unsub = subscribeLiveComments(
@@ -331,11 +331,18 @@ export default function LiveViewer() {
     };
   }, [id, live?.id, live?.status, isHost]);
 
-  // Viewer coin balance (show on screen, updates after gift)
+  // Viewer coin balance – onyesha kwenye live; inapungua mara unapotuma gift (onBalanceChange + refresh)
   useEffect(() => {
     if (!live?.id || isHost) return;
     getWallet().then((w) => setCoinBalance(w?.coinBalance ?? null)).catch(() => {});
   }, [live?.id, isHost]);
+
+  // Pamoja na refresh balance wakati gift drawer unafungua (ili balance iwe fresh)
+  useEffect(() => {
+    if (giftOpen && !isHost) {
+      getWallet().then((w) => setCoinBalance(w?.coinBalance ?? null)).catch(() => {});
+    }
+  }, [giftOpen, isHost]);
 
   // Playback: WHEP (WebRTC) first for low latency, fallback to HLS
   useEffect(() => {
@@ -744,10 +751,11 @@ export default function LiveViewer() {
 
       {/* Right strip – Like, Gift, Chat, Join, Report (zisiingiliane, mobile + web) */}
       <div className="absolute right-2 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-2 md:right-3">
-        {!isHost && coinBalance != null && (
-          <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-500/20 text-amber-400 text-xs font-semibold shrink-0" title="Your coins">
-            <Coins className="w-3.5 h-3.5" />
-            <span>{coinBalance}</span>
+        {!isHost && (
+          <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-amber-500/25 text-amber-400 text-xs font-bold shrink-0 border border-amber-400/30" title="Coins zako – zinapungua unapotuma gift">
+            <Coins className="w-4 h-4" />
+            <span>{coinBalance != null ? coinBalance : '…'}</span>
+            <span className="text-[10px] font-normal opacity-90">coins</span>
           </div>
         )}
         <button type="button" onClick={() => setShowChat((c) => !c)} className="p-2.5 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors shadow-lg shrink-0" aria-label={showChat ? 'Hide chat' : 'Show chat'} title="Chat">
