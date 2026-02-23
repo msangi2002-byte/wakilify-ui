@@ -16,6 +16,7 @@ const Checkout = lazy(() => import('@/pages/user/Checkout'));
 const Live = lazy(() => import('@/pages/user/Live'));
 const LiveViewer = lazy(() => import('@/pages/user/LiveViewer'));
 const Wallet = lazy(() => import('@/pages/user/Wallet'));
+const BuyCoins = lazy(() => import('@/pages/user/BuyCoins'));
 const Messages = lazy(() => import('@/pages/user/Messages'));
 const Chat = lazy(() => import('@/pages/user/Chat'));
 const Profile = lazy(() => import('@/pages/user/Profile'));
@@ -39,6 +40,7 @@ export function UserRoutes() {
       <Route path="live" element={<SuspenseWrapper><Live /></SuspenseWrapper>} />
       <Route path="live/:id" element={<SuspenseWrapper><LiveViewer /></SuspenseWrapper>} />
       <Route path="wallet" element={<SuspenseWrapper><Wallet /></SuspenseWrapper>} />
+      <Route path="wallet/buy-coins" element={<SuspenseWrapper><BuyCoins /></SuspenseWrapper>} />
       <Route path="messages" element={<SuspenseWrapper><Messages /></SuspenseWrapper>} />
       <Route path="chat/:id" element={<SuspenseWrapper><Chat /></SuspenseWrapper>} />
       <Route path="profile" element={<SuspenseWrapper><Profile /></SuspenseWrapper>} />

@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Coins } from 'lucide-react';
 import { getGifts, getWallet, sendGift } from '@/lib/api/gifts';
+import { getGiftEmoji, getGiftCardTheme } from './giftIcons';
 
-export function GiftDrawer({ open, onClose, hostId, hostName, liveStreamId }) {
+export function GiftDrawer({ open, onClose, hostId, hostName, liveStreamId, onGiftSent }) {
   const [gifts, setGifts] = useState([]);
   const [wallet, setWallet] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -31,8 +32,11 @@ export function GiftDrawer({ open, onClose, hostId, hostName, liveStreamId }) {
   }, [open]);
 
   const balance = wallet?.coinBalance ?? 0;
-  const cost = selected ? (selected.coinValue ?? 0) * quantity : 0;
-  const canSend = selected && quantity >= 1 && cost <= balance && !sending;
+  const coinPerGift = selected?.coinValue ?? 0;
+  const maxAffordable = coinPerGift > 0 ? Math.max(1, Math.floor(balance / coinPerGift)) : 1;
+  const quantityCapped = Math.min(quantity, maxAffordable);
+  const cost = selected ? coinPerGift * quantityCapped : 0;
+  const canSend = selected && quantityCapped >= 1 && cost <= balance && !sending;
 
   const handleSend = async () => {
     if (!canSend || !hostId || !selected) return;
@@ -42,10 +46,11 @@ export function GiftDrawer({ open, onClose, hostId, hostName, liveStreamId }) {
         receiverId: hostId,
         giftId: selected.id,
         liveStreamId: liveStreamId || undefined,
-        quantity,
+        quantity: quantityCapped,
         message: message.trim() || undefined,
       });
       setWallet((w) => (w ? { ...w, coinBalance: (w.coinBalance ?? 0) - cost } : null));
+      onGiftSent?.({ gift: selected, quantity: quantityCapped });
       onClose();
     } catch (e) {
       console.error(e);
@@ -99,43 +104,83 @@ export function GiftDrawer({ open, onClose, hostId, hostName, liveStreamId }) {
           ) : (
             <>
               <div className="flex-1 overflow-y-auto p-4">
-                <div className="grid grid-cols-4 gap-3">
-                  {gifts.map((g) => (
-                    <button
-                      key={g.id}
-                      type="button"
-                      onClick={() => setSelected(g)}
-                      className={`rounded-xl p-3 border-2 transition-all ${
-                        selected?.id === g.id
-                          ? 'border-pink-500 bg-pink-500/20'
-                          : 'border-white/10 bg-white/5 hover:border-white/20'
-                      }`}
-                    >
-                      {g.iconUrl ? (
-                        <img src={g.iconUrl} alt="" className="w-12 h-12 mx-auto object-contain rounded-lg" />
-                      ) : (
-                        <div className="w-12 h-12 mx-auto rounded-lg bg-white/10 flex items-center justify-center text-2xl">
-                          🎁
+                <div className="grid grid-cols-4 gap-3" style={{ perspective: '800px' }}>
+                  {gifts.map((g, i) => {
+                    const emoji = g.iconUrl ? null : getGiftEmoji(g);
+                    const theme = getGiftCardTheme(g.level);
+                    const isSelected = selected?.id === g.id;
+                    return (
+                      <motion.button
+                        key={g.id}
+                        type="button"
+                        onClick={() => setSelected(g)}
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.03 }}
+                        className={`
+                          gift-card-3d rounded-2xl p-2.5 border-2 transition-all duration-300
+                          bg-gradient-to-br ${theme}
+                          ${isSelected
+                            ? 'gift-card-selected ring-2 ring-pink-400 ring-offset-2 ring-offset-[#1a1a1a] scale-[1.02] shadow-lg shadow-pink-500/25'
+                            : 'hover:scale-[1.03] hover:shadow-xl hover:shadow-black/30 active:scale-[0.98]'
+                          }
+                        `}
+                      >
+                        <div className="gift-card-inner relative w-full aspect-square rounded-xl flex items-center justify-center overflow-hidden">
+                          {g.iconUrl ? (
+                            <img src={g.iconUrl} alt="" className="w-full h-full object-contain p-1" />
+                          ) : (
+                            <span
+                              className="gift-emoji text-3xl sm:text-4xl drop-shadow-lg filter select-none"
+                              style={{
+                                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.4)) drop-shadow(0 0 12px rgba(255,255,255,0.15))',
+                              }}
+                            >
+                              {emoji}
+                            </span>
+                          )}
                         </div>
-                      )}
-                      <p className="text-xs text-white/80 mt-1 truncate">{g.name}</p>
-                      <p className="text-xs text-amber-400">{g.coinValue ?? 0} coins</p>
-                    </button>
-                  ))}
+                        <p className="text-[11px] font-medium text-white/90 mt-1 truncate leading-tight">{g.name}</p>
+                        {g.level && (
+                          <span className="text-[9px] text-white/60 uppercase tracking-wider font-semibold block truncate">
+                            {g.level}
+                          </span>
+                        )}
+                        <p className="text-[11px] text-amber-400 font-bold mt-0.5">{g.coinValue ?? 0} coins</p>
+                      </motion.button>
+                    );
+                  })}
                 </div>
 
                 {selected && (
                   <div className="mt-4 space-y-3">
+                    <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/10">
+                      <span
+                        className="w-14 h-14 flex items-center justify-center text-4xl rounded-xl bg-gradient-to-br from-white/15 to-white/5 shrink-0"
+                        style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.3))' }}
+                      >
+                        {selected.iconUrl ? (
+                          <img src={selected.iconUrl} alt="" className="w-full h-full object-contain p-1" />
+                        ) : (
+                          getGiftEmoji(selected)
+                        )}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-white truncate">{selected.name}</p>
+                        <p className="text-amber-400 text-sm font-medium">{selected.coinValue ?? 0} coins each</p>
+                      </div>
+                    </div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-white/70">Quantity:</span>
                       <input
                         type="number"
                         min={1}
-                        max={99}
-                        value={quantity}
-                        onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                        max={maxAffordable}
+                        value={quantityCapped}
+                        onChange={(e) => setQuantity(Math.max(1, Math.min(maxAffordable, parseInt(e.target.value, 10) || 1)))}
                         className="w-20 rounded-lg bg-white/10 border border-white/20 px-2 py-1 text-white text-center"
                       />
+                      <span className="text-xs text-white/50">max {maxAffordable} (by coins)</span>
                     </div>
                     <input
                       type="text"
@@ -169,6 +214,21 @@ export function GiftDrawer({ open, onClose, hostId, hostName, liveStreamId }) {
           )}
         </motion.div>
       </motion.div>
+      <style>{`
+        .gift-card-3d {
+          transform-style: preserve-3d;
+          backface-visibility: hidden;
+        }
+        .gift-card-3d:not(.gift-card-selected):hover {
+          transform: perspective(800px) rotateX(-4deg) rotateY(2deg) scale(1.03);
+        }
+        .gift-card-3d:active {
+          transform: perspective(800px) scale(0.98);
+        }
+        .gift-card-inner {
+          min-height: 56px;
+        }
+      `}</style>
     </AnimatePresence>
   );
 }

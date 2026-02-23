@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Wallet as WalletIcon, Coins, Banknote, History, CreditCard } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Wallet as WalletIcon, Coins, Gem, History, CreditCard } from 'lucide-react';
 import { getWallet, getMyWithdrawals, requestWithdraw } from '@/lib/api/gifts';
 import { getMyPayments } from '@/lib/api/payments';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
@@ -54,17 +55,31 @@ export default function Wallet() {
     return () => { cancelled = true; };
   }, []);
 
+  const withdrawableTzs = Number(wallet?.withdrawableTzs ?? 0);
+  const minTzs = Number(wallet?.minWithdrawalTzs ?? 1000);
+  const maxTzs = Number(wallet?.maxWithdrawalTzs ?? 5000000);
+  const diamondBalance = Number(wallet?.diamondBalance ?? 0);
+  const rate = Number(wallet?.diamondToTzsRate ?? 43);
+  const coinToTzsBuy = Number(wallet?.coinToTzsBuyRate ?? 43);
+
   const handleWithdraw = async (e) => {
     e.preventDefault();
     const amount = Number(withdrawAmount);
     const phone = (withdrawPhone || '').trim();
     if (!amount || amount <= 0 || !phone) {
-      setWithdrawError('Enter amount and phone number.');
+      setWithdrawError('Ingiza kiasi na nambari ya simu.');
       return;
     }
-    const cash = wallet?.cashBalance ?? 0;
-    if (amount > cash) {
-      setWithdrawError('Amount exceeds your cash balance.');
+    if (amount < minTzs) {
+      setWithdrawError(`Kiwango cha chini ni ${minTzs.toLocaleString()} TZS.`);
+      return;
+    }
+    if (amount > maxTzs) {
+      setWithdrawError(`Kiwango cha juu kwa ombi moja ni ${maxTzs.toLocaleString()} TZS.`);
+      return;
+    }
+    if (amount > withdrawableTzs) {
+      setWithdrawError(`Unaweza kutoa hadi ${withdrawableTzs.toLocaleString()} TZS (diamonds: ${diamondBalance}).`);
       return;
     }
     setWithdrawing(true);
@@ -78,13 +93,12 @@ export default function Wallet() {
       const w = await getWallet();
       setWallet(w ?? null);
     } catch (err) {
-      setWithdrawError(getApiErrorMessage(err, 'Withdrawal request failed.'));
+      setWithdrawError(getApiErrorMessage(err, 'Ombi la kutoa pesa limeshindwa.'));
     } finally {
       setWithdrawing(false);
     }
   };
 
-  const cashBalance = wallet?.cashBalance ?? 0;
   const coinBalance = wallet?.coinBalance ?? 0;
 
   if (loading) {
@@ -104,55 +118,58 @@ export default function Wallet() {
           <WalletIcon size={24} />
           Wallet
         </h1>
-        <p className="wallet-subtitle">Coins for gifts · Cash from live (withdraw via Haraka Pay)</p>
+        <p className="wallet-subtitle">Coins for gifts · Diamonds from live (convert to TZS and withdraw)</p>
       </header>
 
       <div className="wallet-balances">
-        <div className="wallet-balance-card">
+        <div className="wallet-balance-card coins">
           <Coins size={28} />
           <span className="wallet-balance-label">Coins</span>
           <span className="wallet-balance-value">{Number(coinBalance).toLocaleString()}</span>
-          <span className="wallet-balance-hint">Send gifts on live</span>
+          <span className="wallet-balance-hint">Send gifts on live · 1 coin ≈ {coinToTzsBuy} TZS</span>
+          <Link to="/wallet/buy-coins" className="wallet-buy-coins">Nunua coins</Link>
         </div>
-        <div className="wallet-balance-card">
-          <Banknote size={28} />
-          <span className="wallet-balance-label">Cash balance</span>
-          <span className="wallet-balance-value">{Number(cashBalance).toLocaleString()} TZS</span>
-          <span className="wallet-balance-hint">Earned from gifts · withdraw to phone</span>
+        <div className="wallet-balance-card diamonds">
+          <Gem size={28} />
+          <span className="wallet-balance-label">Diamonds (mapato)</span>
+          <span className="wallet-balance-value">{diamondBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+          <span className="wallet-balance-hint">1 diamond = {rate} TZS · Withdrawable: {withdrawableTzs.toLocaleString(undefined, { maximumFractionDigits: 0 })} TZS</span>
         </div>
       </div>
 
-      {cashBalance > 0 && (
+      {withdrawableTzs > 0 && (
         <section className="wallet-section wallet-withdraw">
-          <h2 className="wallet-section-title">Withdraw cash</h2>
+          <h2 className="wallet-section-title">Toa pesa (diamonds → TZS)</h2>
+          <p className="wallet-withdraw-hint">Min {minTzs.toLocaleString()} TZS · Max {maxTzs.toLocaleString()} TZS kwa ombi</p>
           <form onSubmit={handleWithdraw} className="wallet-withdraw-form">
             <div className="wallet-field">
-              <label htmlFor="withdraw-amount">Amount (TZS)</label>
+              <label htmlFor="withdraw-amount">Kiasi (TZS)</label>
               <input
                 id="withdraw-amount"
                 type="number"
-                min="1"
+                min={minTzs}
+                max={Math.min(maxTzs, withdrawableTzs)}
                 step="1"
                 value={withdrawAmount}
                 onChange={(e) => setWithdrawAmount(e.target.value)}
-                placeholder="0"
+                placeholder={minTzs.toString()}
               />
             </div>
             <div className="wallet-field">
-              <label htmlFor="withdraw-phone">Phone (for Haraka Pay)</label>
+              <label htmlFor="withdraw-phone">Simu (Haraka Pay)</label>
               <input
                 id="withdraw-phone"
                 type="tel"
                 value={withdrawPhone}
                 onChange={(e) => setWithdrawPhone(e.target.value)}
-                placeholder="+255712345678"
+                placeholder="255712345678"
               />
             </div>
             {withdrawError && (
               <p className="wallet-error" role="alert">{withdrawError}</p>
             )}
             <button type="submit" className="wallet-btn wallet-btn-primary" disabled={withdrawing}>
-              {withdrawing ? 'Requesting…' : 'Request withdrawal'}
+              {withdrawing ? 'Inatumwa…' : 'Omba kutoa pesa'}
             </button>
           </form>
         </section>
@@ -227,6 +244,9 @@ export default function Wallet() {
         .wallet-balance-card .wallet-balance-label { font-size: 0.8125rem; color: #6b21a8; font-weight: 500; }
         .wallet-balance-card .wallet-balance-value { font-size: 1.5rem; font-weight: 700; color: #050505; }
         .wallet-balance-card .wallet-balance-hint { font-size: 0.75rem; color: #65676b; }
+        .wallet-buy-coins { display: inline-block; margin-top: 8px; font-size: 0.8125rem; font-weight: 600; color: #7c3aed; text-decoration: none; }
+        .wallet-buy-coins:hover { text-decoration: underline; }
+        .wallet-withdraw-hint { margin: 0 0 12px 0; font-size: 0.8125rem; color: #65676b; }
         .wallet-section { margin-bottom: 24px; }
         .wallet-section-title { margin: 0 0 12px 0; font-size: 1rem; font-weight: 600; }
         .wallet-withdraw-form { display: flex; flex-direction: column; gap: 12px; max-width: 320px; }

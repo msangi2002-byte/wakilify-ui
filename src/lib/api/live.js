@@ -1,4 +1,7 @@
 import { api } from './client';
+import { getToken } from '@/store/auth.store';
+
+const baseURL = import.meta.env.VITE_API_URL || '/api/v1';
 
 function unwrap(res) {
   const data = res?.data;
@@ -12,9 +15,11 @@ export async function getLiveConfig() {
   return unwrap({ data }) ?? data;
 }
 
-/** GET /api/v1/live/active?limit=20 – list of active live streams */
-export async function getActiveLives(limit = 20) {
-  const { data } = await api.get('/live/active', { params: { limit } });
+/** GET /api/v1/live/active?limit=20&category=gaming – list of active live streams (category: all, just_chatting, gaming, music, irl) */
+export async function getActiveLives(limit = 20, category = null) {
+  const params = { limit };
+  if (category && category !== 'all') params.category = category;
+  const { data } = await api.get('/live/active', { params });
   const out = unwrap({ data });
   return Array.isArray(out) ? out : [];
 }
@@ -25,9 +30,11 @@ export async function getLiveById(liveId) {
   return unwrap({ data }) ?? data;
 }
 
-/** POST /api/v1/live/start – start live (auth) */
-export async function startLive({ title, description } = {}) {
-  const { data } = await api.post('/live/start', { title: title ?? 'Live', description: description ?? '' });
+/** POST /api/v1/live/start – start live (auth). category: all, just_chatting, gaming, music, irl */
+export async function startLive({ title, description, category } = {}) {
+  const body = { title: title ?? 'Live', description: description ?? '' };
+  if (category) body.category = category;
+  const { data } = await api.post('/live/start', body);
   return unwrap({ data }) ?? data;
 }
 
@@ -115,4 +122,75 @@ export async function getMyJoinRequest(liveId) {
   const { data } = await api.get(`/live/${liveId}/my-join-request`);
   const out = unwrap({ data });
   return out ?? null;
+}
+
+/**
+ * Subscribe to live comments via SSE (real-time). Uses fetch + auth header.
+ * Returns an unsubscribe function.
+ * onComment(commentResponse) for each "comment" event.
+ * onConnected() when SSE connection is established (so caller can disable polling).
+ * onViewerCount(count) for each "viewer_count" event (real-time viewer count).
+ */
+export function subscribeLiveComments(liveId, onComment, onConnected, onViewerCount) {
+  const token = getToken();
+  if (!token || !liveId) return () => {};
+
+  const url = `${baseURL.replace(/\/$/, '')}/live/${liveId}/comments/stream`;
+  const controller = new AbortController();
+
+  (async () => {
+    try {
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
+      });
+      if (!res.ok || !res.body) return;
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let currentEvent = null;
+      let connectedCalled = false;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split(/\r?\n/);
+        buffer = lines.pop() || '';
+
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          if (line.startsWith('event:')) {
+            currentEvent = line.slice(6).trim();
+          } else if (line.startsWith('data:')) {
+            const data = line.slice(5).trim();
+            if (currentEvent === 'connected') {
+              if (!connectedCalled && onConnected) {
+                connectedCalled = true;
+                onConnected();
+              }
+            } else if (currentEvent === 'comment' && data) {
+              try {
+                const comment = JSON.parse(data);
+                onComment(comment);
+              } catch (_) {}
+            } else if (currentEvent === 'viewer_count' && data) {
+              const count = parseInt(data, 10);
+              if (!Number.isNaN(count) && onViewerCount) onViewerCount(count);
+            }
+            currentEvent = null;
+          } else if (line === '') {
+            currentEvent = null;
+          }
+        }
+      }
+    } catch (e) {
+      if (e?.name !== 'AbortError') {
+        console.warn('Live comments SSE failed, use polling:', e?.message);
+      }
+    }
+  })();
+
+  return () => controller.abort();
 }

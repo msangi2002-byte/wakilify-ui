@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
   Eye,
@@ -14,6 +14,10 @@ import {
   Check,
   Video,
   MessageCircle,
+  MoreVertical,
+  Flag,
+  Coins,
+  Clock,
 } from 'lucide-react';
 import Hls from 'hls.js';
 import {
@@ -27,13 +31,16 @@ import {
   getLiveComments,
   addLiveComment,
   getMyJoinRequest,
+  subscribeLiveComments,
 } from '@/lib/api/live';
 import { startWhipPublish } from '@/lib/whip';
 import { startWhepPlay } from '@/lib/whep';
 import { useAuthStore } from '@/store/auth.store';
 import { GiftDrawer } from '@/components/live/GiftDrawer';
+import { FloatingGift } from '@/components/live/FloatingGift';
 import { JoinRequestsPanel } from '@/components/live/JoinRequestsPanel';
 import { LiveChat } from '@/components/live/LiveChat';
+import { ReportModal } from '@/components/live/ReportModal';
 
 function mapCommentToMessage(c) {
   const author = c.author ?? c.user ?? {};
@@ -141,6 +148,17 @@ export default function LiveViewer() {
   const [guestWhipStarting, setGuestWhipStarting] = useState(false);
   const [guestWhipError, setGuestWhipError] = useState(null);
   const [floatingLikes, setFloatingLikes] = useState([]);
+  const [floatingGifts, setFloatingGifts] = useState([]);
+  const FLOATING_LIKES_MAX = 8;
+  const FLOATING_GIFTS_MAX = 5;
+  const [obsDrawerOpen, setObsDrawerOpen] = useState(false);
+  const [hostMenuOpen, setHostMenuOpen] = useState(false);
+  const [reportStreamOpen, setReportStreamOpen] = useState(false);
+  const [reportCommentTarget, setReportCommentTarget] = useState(null);
+  const [summaryModalOpen, setSummaryModalOpen] = useState(false);
+  const [endStreamSummary, setEndStreamSummary] = useState(null);
+  const [sseActive, setSseActive] = useState(false);
+  const sseUnsubscribeRef = useRef(null);
   const guestPcRef = useRef(null);
   const guestStreamRef = useRef(null);
   const guestPreviewRef = useRef(null);
@@ -243,9 +261,26 @@ export default function LiveViewer() {
     return () => { cancelled = true; };
   }, [id, live?.id]);
 
-  // Real-time comments: poll every 3s so everyone sees new messages
+  // SSE for real-time comments when live; fallback to polling when SSE not connected
   useEffect(() => {
     if (!id || !live?.id || live?.status !== 'LIVE') return;
+    const unsub = subscribeLiveComments(
+      id,
+      (comment) => setMessages((prev) => [...prev, mapCommentToMessage(comment)]),
+      () => setSseActive(true),
+      (count) => setLive((prev) => (prev ? { ...prev, viewerCount: count } : null))
+    );
+    sseUnsubscribeRef.current = unsub;
+    return () => {
+      if (sseUnsubscribeRef.current) sseUnsubscribeRef.current();
+      sseUnsubscribeRef.current = null;
+      setSseActive(false);
+    };
+  }, [id, live?.id, live?.status]);
+
+  // Polling fallback when SSE is not active (e.g. connection failed or not yet connected)
+  useEffect(() => {
+    if (!id || !live?.id || live?.status !== 'LIVE' || sseActive) return;
     const poll = () => {
       getLiveComments(id)
         .then((list) => {
@@ -253,9 +288,9 @@ export default function LiveViewer() {
         })
         .catch(() => {});
     };
-    const interval = setInterval(poll, 3000);
+    const interval = setInterval(poll, 5500);
     return () => clearInterval(interval);
-  }, [id, live?.id, live?.status]);
+  }, [id, live?.id, live?.status, sseActive]);
 
   // Poll my join request when viewer has sent a request (so we know when host accepted)
   useEffect(() => {
@@ -313,7 +348,7 @@ export default function LiveViewer() {
       if (!streamUrl || !streamUrl.includes('.m3u8')) return;
       const onError = () => setVideoLoadError(true);
       if (Hls.isSupported()) {
-        hls = new Hls({ maxBufferLength: 30, maxMaxBufferLength: 60 });
+        hls = new Hls({ maxBufferLength: 12, maxMaxBufferLength: 15 });
         hls.on(Hls.Events.ERROR, (_, data) => {
           if (data.fatal) setVideoLoadError(true);
         });
@@ -352,10 +387,17 @@ export default function LiveViewer() {
         setLiked(true);
         setLive((prev) => (prev ? { ...prev, likesCount: (prev.likesCount ?? 0) + 1 } : null));
         const item = { key: Date.now(), userId: user?.id, userName: user?.name, userProfilePic: user?.profilePic };
-        setFloatingLikes((prev) => [...prev, item]);
+        setFloatingLikes((prev) => {
+          const next = [...prev, item].slice(-FLOATING_LIKES_MAX);
+          return next;
+        });
         setTimeout(() => setFloatingLikes((p) => p.filter((x) => x.key !== item.key)), 4000);
       })
       .catch(() => {});
+  };
+
+  const handleVideoDoubleTap = () => {
+    handleLike();
   };
 
   const handleRequestToJoin = () => {
@@ -416,7 +458,10 @@ export default function LiveViewer() {
     if (!id || !isHost) return;
     stopWhipPublish();
     endLive(id)
-      .then(() => navigate('/app/live'))
+      .then((stream) => {
+        setEndStreamSummary(stream);
+        setSummaryModalOpen(true);
+      })
       .catch(() => {});
   };
 
@@ -427,6 +472,12 @@ export default function LiveViewer() {
       const newMsg = mapCommentToMessage(created ?? { id: Date.now(), author: user, content: text });
       setMessages((prev) => [...prev, newMsg]);
     } catch (_) {}
+  };
+
+  const handleGiftSent = ({ gift, quantity }) => {
+    const key = Date.now();
+    setFloatingGifts((prev) => [...prev.slice(-(FLOATING_GIFTS_MAX - 1)), { key, gift, quantity, senderName: user?.name }]);
+    setTimeout(() => setFloatingGifts((p) => p.filter((x) => x.key !== key)), 2500);
   };
 
   if (loading && !live) {
@@ -457,8 +508,11 @@ export default function LiveViewer() {
 
   return (
     <div className="fixed inset-0 z-40 bg-black">
-      {/* Video */}
-      <div className="absolute inset-0">
+      {/* Video – double-tap to like (TikTok-style) */}
+      <div
+        className="absolute inset-0"
+        onDoubleClick={!isHost ? handleVideoDoubleTap : undefined}
+      >
         <video
           ref={videoRef}
           className="w-full h-full object-contain bg-black"
@@ -501,43 +555,19 @@ export default function LiveViewer() {
                       className="w-48 h-36 object-cover rounded-xl border-2 border-white/30 mx-auto mb-4"
                     />
                   )}
-                  <p className="text-white/60 text-xs mb-2">Au tumia OBS:</p>
-                  <div className="space-y-3 text-left bg-black/50 rounded-xl p-4">
-                    <div>
-                      <p className="text-white/70 text-xs mb-1">Server (OBS → Settings → Stream → Service: Custom):</p>
-                      <div className="flex items-center gap-2">
-                        <p className="text-white text-sm font-mono flex-1 break-all">{rtmpServer}</p>
-                        <button
-                          type="button"
-                          onClick={() => copyToClipboard(rtmpServer, 'server')}
-                          className="shrink-0 p-2 rounded-lg bg-white/20 hover:bg-white/30 text-white"
-                          title="Copy"
-                        >
-                          {copied === 'server' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-white/70 text-xs mb-1">Stream key:</p>
-                      <div className="flex items-center gap-2">
-                        <p className="text-white text-sm font-mono flex-1 break-all">{streamKey}</p>
-                        <button
-                          type="button"
-                          onClick={() => copyToClipboard(streamKey, 'key')}
-                          className="shrink-0 p-2 rounded-lg bg-white/20 hover:bg-white/30 text-white"
-                          title="Copy"
-                        >
-                          {copied === 'key' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                  <p className="text-white/50 text-xs mt-3">OBS: Start Streaming. Baada ya sekunde chache video itaonekana hapa na kwa viewers.</p>
+                  <button
+                    type="button"
+                    onClick={() => setObsDrawerOpen(true)}
+                    className="mx-auto flex items-center gap-2 px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white text-sm font-medium"
+                  >
+                    <Copy className="w-4 h-4" />
+                    Stream setup (OBS)
+                  </button>
                   {videoLoadError && (
                     <button
                       type="button"
                       onClick={() => setRetryCount((c) => c + 1)}
-                      className="mt-4 px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white text-sm font-medium"
+                      className="mt-4 ml-2 px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white text-sm font-medium"
                     >
                       Jaribu tena (baada ya kuanza OBS)
                     </button>
@@ -595,6 +625,18 @@ export default function LiveViewer() {
           />
         </div>
       )}
+
+      {/* Gift animation: floats toward host area */}
+      {floatingGifts.map((item, i) => (
+        <div key={item.key} className="absolute bottom-32 left-1/2 z-30 pointer-events-none" style={{ transform: `translateX(calc(-50% + ${i * 8}px))` }}>
+          <FloatingGift
+            gift={item.gift}
+            quantity={item.quantity}
+            senderName={item.senderName}
+            onComplete={() => setFloatingGifts((p) => p.filter((x) => x.key !== item.key))}
+          />
+        </div>
+      ))}
 
       {/* Like animation: pill floats up with user who liked, clickable → profile */}
       {floatingLikes.length > 0 && (
@@ -666,107 +708,90 @@ export default function LiveViewer() {
         </div>
       </div>
 
-      {/* Bottom overlay */}
-      <div className="absolute bottom-0 left-0 right-0 z-10 p-4 pb-8 bg-gradient-to-t from-black/85 to-transparent">
-        <div className="flex items-end justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <Avatar user={host} size={48} />
+      {/* Bottom bar – one clean row: host (left), viewers + like + gift + join (right) */}
+      <div className="absolute bottom-0 left-0 right-0 z-10 px-3 py-3 pb-6 md:px-4 md:pb-8 bg-gradient-to-t from-black/85 to-transparent">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <Avatar user={host} size={44} />
             <div className="min-w-0">
-              <p className="text-white font-semibold truncate">{host?.name || 'Host'}</p>
-              <p className="text-white/80 text-sm truncate">{live?.title || 'Live'}</p>
+              <p className="text-white font-semibold truncate text-sm md:text-base">{host?.name || 'Host'}</p>
+              <p className="text-white/80 text-xs truncate">{live?.title || 'Live'}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/50 text-white text-sm">
-              <Eye className="w-4 h-4" />
+          <div className="flex items-center gap-1.5 shrink-0">
+            {isHost && live?.totalGiftsValue != null && Number(live.totalGiftsValue) > 0 && (
+              <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-amber-500/20 text-amber-400 text-xs font-medium">
+                <Coins className="w-3.5 h-3.5" />
+                <span>{Number(live.totalGiftsValue)}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-black/50 text-white text-xs md:text-sm">
+              <Eye className="w-3.5 h-3.5 md:w-4 md:h-4" />
               <span>{viewerCount >= 1000 ? `${(viewerCount / 1000).toFixed(1)}K` : viewerCount}</span>
             </div>
-            <motion.button
-              type="button"
-              whileTap={{ scale: 0.95 }}
-              onClick={handleLike}
-              className={`p-2.5 rounded-full transition-colors ${
-                liked ? 'bg-pink-500/80 text-white' : 'bg-black/50 text-white hover:bg-black/70'
-              }`}
-              aria-label="Like"
-            >
+            <motion.button type="button" whileTap={{ scale: 0.95 }} onClick={handleLike} className={`p-2 rounded-full transition-colors ${liked ? 'bg-pink-500/80 text-white' : 'bg-black/50 text-white hover:bg-black/70'}`} aria-label="Like">
               <Heart className={`w-5 h-5 ${liked ? 'fill-current' : ''}`} />
             </motion.button>
             {!isHost && (
               <>
-                <motion.button
-                  type="button"
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setGiftOpen(true)}
-                  className="p-2.5 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
-                  aria-label="Gift"
-                >
+                <motion.button type="button" whileTap={{ scale: 0.95 }} onClick={() => setGiftOpen(true)} className="p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors" aria-label="Gift">
                   <Gift className="w-5 h-5" />
                 </motion.button>
-                <motion.button
-                  type="button"
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleRequestToJoin}
-                  disabled={joinRequestSent}
-                  className={`p-2.5 rounded-full transition-colors ${
-                    joinRequestSent
-                      ? 'bg-green-500/50 text-white cursor-default'
-                      : 'bg-black/50 text-white hover:bg-black/70'
-                  }`}
-                  aria-label="Request to join"
-                  title={joinRequestSent ? 'Request sent' : 'Request to join'}
-                >
+                <motion.button type="button" whileTap={{ scale: 0.95 }} onClick={handleRequestToJoin} disabled={joinRequestSent} className={`p-2 rounded-full transition-colors ${joinRequestSent ? 'bg-green-500/50 text-white cursor-default' : 'bg-black/50 text-white hover:bg-black/70'}`} aria-label="Request to join" title={joinRequestSent ? 'Request sent' : 'Request to join'}>
                   <UserPlusIcon className="w-5 h-5" />
                 </motion.button>
               </>
             )}
+            {!isHost && (
+              <button type="button" onClick={() => setReportStreamOpen(true)} className="p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors" aria-label="Report stream" title="Report">
+                <Flag className="w-5 h-5" />
+              </button>
+            )}
+            {isHost && (
+              <div className="relative">
+                <button type="button" onClick={() => setHostMenuOpen((o) => !o)} className="p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors" aria-label="Host menu">
+                  <MoreVertical className="w-5 h-5" />
+                </button>
+                <AnimatePresence>
+                  {hostMenuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-10" aria-hidden onClick={() => setHostMenuOpen(false)} />
+                      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="absolute right-0 bottom-full mb-1 z-20 py-1 min-w-[180px] rounded-xl bg-black/90 border border-white/10 shadow-xl">
+                        <button type="button" onClick={() => { setJoinPanelOpen(true); setHostMenuOpen(false); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-white hover:bg-white/10 text-sm">
+                          <UserPlus className="w-4 h-4" /> Join requests
+                        </button>
+                        <button type="button" onClick={() => { handleEndLive(); setHostMenuOpen(false); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-red-400 hover:bg-red-500/20 text-sm font-medium">
+                          <Square className="w-4 h-4" /> End live
+                        </button>
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
           </div>
         </div>
-
-        {/* Host: End live + Join requests */}
-        {isHost && (
-          <div className="mt-3 flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setJoinPanelOpen((o) => !o)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-sm font-medium"
-            >
-              <UserPlus className="w-4 h-4" />
-              Join requests
-            </button>
-            <button
-              type="button"
-              onClick={handleEndLive}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/90 hover:bg-red-500 text-white text-sm font-semibold"
-            >
-              <Square className="w-4 h-4" />
-              End live
-            </button>
-          </div>
-        )}
       </div>
 
-      {/* Live chat: solid dark background, messages clear; click name → profile */}
-      {showChat && (
-        <div className="absolute bottom-20 left-2 right-2 top-auto z-20 max-h-56 rounded-xl overflow-hidden shadow-xl border border-white/10 md:left-auto md:right-4 md:top-24 md:bottom-24 md:max-h-[50vh] md:w-80">
-          <LiveChat
-            messages={messages}
-            onSendMessage={handleSendMessage}
-            onAuthorClick={(u) => u?.id && navigate(`/app/profile/${u.id}`)}
-            solidBackground={true}
-            showInput={true}
-            className="h-full"
-          />
-        </div>
-      )}
-      <button
-        type="button"
-        onClick={() => setShowChat((c) => !c)}
-        className="absolute right-4 bottom-24 z-30 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 md:bottom-4"
-        aria-label={showChat ? 'Hide chat' : 'Show chat'}
-      >
-        <MessageCircle className="w-5 h-5" />
-      </button>
+      {/* Chat: collapsible strip – icon when closed; right-side strip when open */}
+      <div className="absolute right-3 bottom-20 z-30 md:right-4 md:bottom-6 flex flex-col items-end gap-1">
+        <button type="button" onClick={() => setShowChat((c) => !c)} className="p-2.5 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors shadow-lg" aria-label={showChat ? 'Hide chat' : 'Show chat'}>
+          <MessageCircle className="w-5 h-5" />
+        </button>
+        <AnimatePresence>
+          {showChat && (
+            <motion.div
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 'auto', opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+              className="overflow-hidden rounded-xl border border-white/10 bg-black/95 shadow-xl md:max-h-[50vh] w-[280px] md:w-80 h-[240px] md:h-[320px] flex flex-col"
+            >
+              <LiveChat messages={messages} onSendMessage={handleSendMessage} onAuthorClick={(u) => u?.id && navigate(`/app/profile/${u.id}`)} onReportComment={(msg) => setReportCommentTarget(msg)} solidBackground={true} showInput={true} className="h-full min-h-0" />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
       <GiftDrawer
         open={giftOpen}
@@ -774,7 +799,48 @@ export default function LiveViewer() {
         hostId={host?.id}
         hostName={host?.name}
         liveStreamId={live?.id}
+        onGiftSent={handleGiftSent}
       />
+
+      <ReportModal open={reportStreamOpen} onClose={() => setReportStreamOpen(false)} type="LIVE_STREAM" targetId={id} title="Report live stream" />
+      <ReportModal open={!!reportCommentTarget} onClose={() => setReportCommentTarget(null)} type="LIVE_COMMENT" targetId={reportCommentTarget?.id} title="Report comment" />
+
+      {/* Stream summary modal after host ends live */}
+      <AnimatePresence>
+        {summaryModalOpen && endStreamSummary && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm" onClick={() => { setSummaryModalOpen(false); setEndStreamSummary(null); navigate('/app/live'); }} />
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-[#1a1a1a] border border-white/10 shadow-2xl p-6">
+              <h3 className="text-xl font-bold text-white mb-4">Stream summary</h3>
+              <div className="space-y-3 text-white/90">
+                <div className="flex items-center gap-3">
+                  <Clock className="w-5 h-5 text-pink-400" />
+                  <span>Duration: <strong>{endStreamSummary.durationSeconds != null ? `${Math.floor(endStreamSummary.durationSeconds / 60)}m ${endStreamSummary.durationSeconds % 60}s` : '—'}</strong></span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Eye className="w-5 h-5 text-pink-400" />
+                  <span>Peak viewers: <strong>{endStreamSummary.peakViewers ?? 0}</strong></span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Heart className="w-5 h-5 text-pink-400" />
+                  <span>Likes: <strong>{endStreamSummary.likesCount ?? 0}</strong></span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Coins className="w-5 h-5 text-amber-400" />
+                  <span>Earnings: <strong className="text-amber-400">{Number(endStreamSummary.totalGiftsValue ?? 0)} coins</strong></span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <MessageCircle className="w-5 h-5 text-pink-400" />
+                  <span>Comments: <strong>{endStreamSummary.commentsCount ?? 0}</strong></span>
+                </div>
+              </div>
+              <button type="button" onClick={() => { setSummaryModalOpen(false); setEndStreamSummary(null); navigate('/app/live'); }} className="mt-6 w-full py-3 rounded-xl bg-gradient-to-r from-pink-500 to-violet-600 text-white font-semibold">
+                Back to Live
+              </button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {isHost && (
         <JoinRequestsPanel
@@ -784,6 +850,57 @@ export default function LiveViewer() {
           isHost={true}
         />
       )}
+
+      {/* Host: OBS / Stream setup drawer – keeps video area clean */}
+      <AnimatePresence>
+        {isHost && obsDrawerOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
+              onClick={() => setObsDrawerOpen(false)}
+            />
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+              className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-md bg-[#1a1a1a] border-l border-white/10 shadow-2xl flex flex-col"
+            >
+              <div className="p-4 border-b border-white/10 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-white">Stream setup (OBS)</h3>
+                <button type="button" onClick={() => setObsDrawerOpen(false)} className="p-2 rounded-full hover:bg-white/10 text-white">
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-4 space-y-4 overflow-y-auto flex-1">
+                <p className="text-white/70 text-sm">OBS → Settings → Stream → Service: Custom</p>
+                <div>
+                  <p className="text-white/70 text-xs mb-1">Server URL</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-white text-sm font-mono flex-1 break-all">{rtmpServer}</p>
+                    <button type="button" onClick={() => copyToClipboard(rtmpServer, 'server')} className="shrink-0 p-2 rounded-lg bg-white/20 hover:bg-white/30 text-white" title="Copy">
+                      {copied === 'server' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-white/70 text-xs mb-1">Stream key</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-white text-sm font-mono flex-1 break-all">{streamKey}</p>
+                    <button type="button" onClick={() => copyToClipboard(streamKey, 'key')} className="shrink-0 p-2 rounded-lg bg-white/20 hover:bg-white/30 text-white" title="Copy">
+                      {copied === 'key' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                <p className="text-white/50 text-xs">OBS: Start Streaming. Baada ya sekunde chache video itaonekana kwa viewers.</p>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
