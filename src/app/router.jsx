@@ -31,6 +31,7 @@ const ProductDetails = lazy(() => import('@/pages/user/ProductDetails'));
 const Cart = lazy(() => import('@/pages/user/Cart'));
 const Checkout = lazy(() => import('@/pages/user/Checkout'));
 const Orders = lazy(() => import('@/pages/user/Orders'));
+const Inquiries = lazy(() => import('@/pages/user/Inquiries'));
 const Live = lazy(() => import('@/pages/user/Live'));
 const LiveViewer = lazy(() => import('@/pages/user/LiveViewer'));
 const Wallet = lazy(() => import('@/pages/user/Wallet'));
@@ -132,6 +133,7 @@ const router = createBrowserRouter([
           { path: 'shop/:id', element: <Suspense fallback={<Fallback />}><ProductDetails /></Suspense> },
           { path: 'boost', element: <Suspense fallback={<Fallback />}><Boost /></Suspense> },
           { path: 'orders', element: <Suspense fallback={<Fallback />}><Orders /></Suspense> },
+          { path: 'inquiries', element: <Suspense fallback={<Fallback />}><Inquiries /></Suspense> },
           { path: 'notifications', element: <Suspense fallback={<Fallback />}><Notifications /></Suspense> },
           { path: 'cart', element: <Suspense fallback={<Fallback />}><Cart /></Suspense> },
           { path: 'checkout', element: <Suspense fallback={<Fallback />}><Checkout /></Suspense> },
