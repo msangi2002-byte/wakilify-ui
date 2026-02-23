@@ -33,6 +33,7 @@ import {
   getMyJoinRequest,
   subscribeLiveComments,
 } from '@/lib/api/live';
+import { getWallet } from '@/lib/api/gifts';
 import { startWhipPublish } from '@/lib/whip';
 import { startWhepPlay } from '@/lib/whep';
 import { useAuthStore } from '@/store/auth.store';
@@ -159,6 +160,7 @@ export default function LiveViewer() {
   const [summaryModalOpen, setSummaryModalOpen] = useState(false);
   const [endStreamSummary, setEndStreamSummary] = useState(null);
   const [sseActive, setSseActive] = useState(false);
+  const [coinBalance, setCoinBalance] = useState(null); // viewer coin balance (updates after gift)
   const sseUnsubscribeRef = useRef(null);
   const guestPcRef = useRef(null);
   const guestStreamRef = useRef(null);
@@ -262,14 +264,25 @@ export default function LiveViewer() {
     return () => { cancelled = true; };
   }, [id, live?.id]);
 
-  // SSE for real-time comments when live; fallback to polling when SSE not connected
+  // SSE for real-time comments, likes, gifts when live; fallback to polling when SSE not connected
   useEffect(() => {
     if (!id || !live?.id || live?.status !== 'LIVE') return;
     const unsub = subscribeLiveComments(
       id,
       (comment) => setMessages((prev) => [...prev, mapCommentToMessage(comment)]),
       () => setSseActive(true),
-      (count) => setLive((prev) => (prev ? { ...prev, viewerCount: count } : null))
+      (count) => setLive((prev) => (prev ? { ...prev, viewerCount: count } : null)),
+      (payload) => {
+        const item = { key: Date.now(), userId: payload.userId, userName: payload.userName, userProfilePic: payload.userProfilePic };
+        setFloatingLikes((prev) => [...prev.slice(-(FLOATING_LIKES_MAX - 1)), item]);
+        setTimeout(() => setFloatingLikes((p) => p.filter((x) => x.key !== item.key)), 4000);
+      },
+      (payload) => {
+        const key = Date.now();
+        const gift = payload.gift ? { id: payload.gift.id, name: payload.gift.name, iconUrl: payload.gift.iconUrl, coinValue: payload.gift.coinValue } : {};
+        setFloatingGifts((prev) => [...prev.slice(-(FLOATING_GIFTS_MAX - 1)), { key, gift, quantity: payload.quantity ?? 1, senderName: payload.senderName }]);
+        setTimeout(() => setFloatingGifts((p) => p.filter((x) => x.key !== key)), 2800);
+      }
     );
     sseUnsubscribeRef.current = unsub;
     return () => {
@@ -317,6 +330,12 @@ export default function LiveViewer() {
       leaveLive(id).catch(() => {});
     };
   }, [id, live?.id, live?.status, isHost]);
+
+  // Viewer coin balance (show on screen, updates after gift)
+  useEffect(() => {
+    if (!live?.id || isHost) return;
+    getWallet().then((w) => setCoinBalance(w?.coinBalance ?? null)).catch(() => {});
+  }, [live?.id, isHost]);
 
   // Playback: WHEP (WebRTC) first for low latency, fallback to HLS
   useEffect(() => {
@@ -390,12 +409,7 @@ export default function LiveViewer() {
       .then(() => {
         setLiked(true);
         setLive((prev) => (prev ? { ...prev, likesCount: (prev.likesCount ?? 0) + 1 } : null));
-        const item = { key: Date.now(), userId: user?.id, userName: user?.name, userProfilePic: user?.profilePic };
-        setFloatingLikes((prev) => {
-          const next = [...prev, item].slice(-FLOATING_LIKES_MAX);
-          return next;
-        });
-        setTimeout(() => setFloatingLikes((p) => p.filter((x) => x.key !== item.key)), 4000);
+        // Like pill shown to everyone via SSE broadcast (onLike callback)
       })
       .catch(() => {});
   };
@@ -478,11 +492,9 @@ export default function LiveViewer() {
     } catch (_) {}
   };
 
-  const handleGiftSent = ({ gift, quantity }) => {
-    const key = Date.now();
-    setFloatingGifts((prev) => [...prev.slice(-(FLOATING_GIFTS_MAX - 1)), { key, gift, quantity, senderName: user?.name }]);
-    // onComplete from FloatingGift removes; fallback cleanup after duration
-    setTimeout(() => setFloatingGifts((p) => p.filter((x) => x.key !== key)), 2800);
+  const handleGiftSent = () => {
+    // Gift pop shown to everyone (including sender) via SSE broadcast (onGiftSent callback)
+    getWallet().then((w) => setCoinBalance(w?.coinBalance ?? null)).catch(() => {});
   };
 
   if (loading && !live) {
@@ -731,6 +743,12 @@ export default function LiveViewer() {
 
       {/* Right strip – Like, Gift, Chat, Join, Report (zisiingiliane, mobile + web) */}
       <div className="absolute right-2 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-2 md:right-3">
+        {!isHost && coinBalance != null && (
+          <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-500/20 text-amber-400 text-xs font-semibold shrink-0" title="Your coins">
+            <Coins className="w-3.5 h-3.5" />
+            <span>{coinBalance}</span>
+          </div>
+        )}
         <button type="button" onClick={() => setShowChat((c) => !c)} className="p-2.5 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors shadow-lg shrink-0" aria-label={showChat ? 'Hide chat' : 'Show chat'} title="Chat">
           <MessageCircle className="w-5 h-5" />
         </button>
@@ -823,6 +841,7 @@ export default function LiveViewer() {
         hostName={host?.name}
         liveStreamId={live?.id}
         onGiftSent={handleGiftSent}
+        onBalanceChange={(balance) => setCoinBalance(balance)}
       />
 
       <ReportModal open={reportStreamOpen} onClose={() => setReportStreamOpen(false)} type="LIVE_STREAM" targetId={id} title="Report live stream" />

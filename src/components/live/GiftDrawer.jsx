@@ -5,7 +5,7 @@ import { X, Coins, PlusCircle } from 'lucide-react';
 import { getGifts, getWallet, sendGift } from '@/lib/api/gifts';
 import { getGiftEmoji, getGiftCardTheme } from './giftIcons';
 
-export function GiftDrawer({ open, onClose, hostId, hostName, liveStreamId, onGiftSent }) {
+export function GiftDrawer({ open, onClose, hostId, hostName, liveStreamId, onGiftSent, onBalanceChange }) {
   const [gifts, setGifts] = useState([]);
   const [wallet, setWallet] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -50,7 +50,9 @@ export function GiftDrawer({ open, onClose, hostId, hostName, liveStreamId, onGi
         quantity: quantityCapped,
         message: message.trim() || undefined,
       });
-      setWallet((w) => (w ? { ...w, coinBalance: (w.coinBalance ?? 0) - cost } : null));
+      const newBalance = (wallet?.coinBalance ?? 0) - cost;
+      setWallet((w) => (w ? { ...w, coinBalance: newBalance } : null));
+      onBalanceChange?.(newBalance);
       onGiftSent?.({ gift: selected, quantity: quantityCapped });
       onClose();
     } catch (e) {
@@ -77,11 +79,11 @@ export function GiftDrawer({ open, onClose, hostId, hostName, liveStreamId, onGi
           animate={{ y: 0 }}
           exit={{ y: '100%' }}
           transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-          className="relative w-full max-w-lg rounded-t-3xl bg-[#1a1a1a] border border-white/10 shadow-2xl max-h-[85vh] flex flex-col"
+          className="relative w-full max-w-md rounded-t-2xl bg-[#1a1a1a] border border-white/10 shadow-2xl max-h-[72vh] flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center justify-between p-4 border-b border-white/10">
-            <h3 className="text-lg font-semibold text-white">Send gift to {hostName || 'host'}</h3>
+          <div className="flex items-center justify-between px-3 py-2.5 border-b border-white/10">
+            <h3 className="text-base font-semibold text-white truncate">Send gift to {hostName || 'host'}</h3>
             <button
               type="button"
               onClick={onClose}
@@ -92,26 +94,22 @@ export function GiftDrawer({ open, onClose, hostId, hostName, liveStreamId, onGi
             </button>
           </div>
 
-          {/* Wallet balance + Recharge CTA – wazi ili mtumiaji ajue wapi kununua coins */}
-          <div className="px-4 py-3 flex flex-col gap-2 border-b border-white/10">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 text-sm text-white/80">
-                <Coins className="w-5 h-5 text-amber-400 shrink-0" />
-                <span>Balance: <strong className="text-white text-base">{balance}</strong> coins</span>
+          {/* Wallet balance + Recharge CTA */}
+          <div className="px-3 py-2 flex flex-col gap-1.5 border-b border-white/10">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 text-sm text-white/80">
+                <Coins className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>Balance: <strong className="text-white">{balance}</strong> coins</span>
               </div>
-              <Link
-                to="/app/wallet/buy-coins"
-                onClick={onClose}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-semibold text-sm shadow-lg transition-colors shrink-0"
-              >
-                <PlusCircle className="w-4 h-4" />
+              <Link to="/app/wallet/buy-coins" onClick={onClose} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs shrink-0">
+                <PlusCircle className="w-3.5 h-3.5" />
                 Nunua coins
               </Link>
             </div>
             {balance < 10 && (
-              <p className="text-amber-300/95 text-xs font-medium flex items-center gap-1.5">
-                <Coins className="w-3.5 h-3.5" />
-                Una coins kidogo. Bofya &quot;Nunua coins&quot; ili kulipia na kupata coins, kisha rudi hapa kutuma gift.
+              <p className="text-amber-300/90 text-[11px] flex items-center gap-1">
+                <Coins className="w-3 h-3 shrink-0" />
+                Coins kidogo? Nunua hapa juu.
               </p>
             )}
           </div>
@@ -122,18 +120,13 @@ export function GiftDrawer({ open, onClose, hostId, hostName, liveStreamId, onGi
             </div>
           ) : (
             <>
-              <div className="flex-1 overflow-y-auto p-4">
-                {/* Reminder: recharge link */}
-                <Link
-                  to="/app/wallet/buy-coins"
-                  onClick={onClose}
-                  className="gift-recharge-banner flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-200 text-sm font-medium mb-3"
-                >
-                  <PlusCircle className="w-4 h-4 shrink-0" />
+              <div className="flex-1 overflow-y-auto p-3 min-h-0">
+                <Link to="/app/wallet/buy-coins" onClick={onClose} className="gift-recharge-banner flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg bg-amber-500/20 border border-amber-400/30 text-amber-200 text-xs font-medium mb-2">
+                  <PlusCircle className="w-3.5 h-3.5 shrink-0" />
                   <span>Hakuna coins? Nunua hapa</span>
                 </Link>
 
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3" style={{ perspective: '800px' }}>
+                <div className="grid grid-cols-4 sm:grid-cols-5 gap-2" style={{ perspective: '600px' }}>
                   {gifts.map((g, i) => {
                     const emoji = g.iconUrl ? null : getGiftEmoji(g);
                     const theme = getGiftCardTheme(g.level);
@@ -143,60 +136,47 @@ export function GiftDrawer({ open, onClose, hostId, hostName, liveStreamId, onGi
                         key={g.id}
                         type="button"
                         onClick={() => setSelected(g)}
-                        initial={{ opacity: 0, y: 12 }}
+                        initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.03 }}
+                        transition={{ delay: i * 0.02 }}
                         className={`
-                          gift-card-3d rounded-2xl p-3 border-2 transition-all duration-300
+                          gift-card-3d rounded-xl p-2 border-2 transition-all duration-200
                           bg-gradient-to-br ${theme}
                           ${isSelected
-                            ? 'gift-card-selected ring-2 ring-pink-400 ring-offset-2 ring-offset-[#1a1a1a] scale-[1.02] shadow-lg shadow-pink-500/25'
-                            : 'hover:scale-[1.03] hover:shadow-xl hover:shadow-black/30 active:scale-[0.98]'
+                            ? 'gift-card-selected ring-2 ring-pink-400 ring-offset-1 ring-offset-[#1a1a1a] scale-[1.02] shadow shadow-pink-500/20'
+                            : 'hover:scale-[1.02] active:scale-[0.98]'
                           }
                         `}
                       >
-                        <div className="gift-card-inner relative w-full rounded-xl flex items-center justify-center overflow-visible min-h-[64px]">
+                        <div className="gift-card-inner w-full rounded-lg flex items-center justify-center overflow-visible min-h-[44px]">
                           {g.iconUrl ? (
-                            <img src={g.iconUrl} alt="" className="w-full max-w-[56px] h-14 object-contain" />
+                            <img src={g.iconUrl} alt="" className="w-full max-w-[40px] h-10 object-contain" />
                           ) : (
-                            <span
-                              className="gift-emoji text-4xl sm:text-5xl select-none leading-none"
-                              style={{
-                                filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.45)) drop-shadow(0 0 14px rgba(255,255,255,0.12))',
-                              }}
-                            >
+                            <span className="gift-emoji text-2xl sm:text-3xl select-none leading-none" style={{ filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.4))' }}>
                               {emoji}
                             </span>
                           )}
                         </div>
-                        <p className="text-xs font-semibold text-white mt-1.5 truncate leading-tight">{g.name}</p>
-                        {g.level && (
-                          <span className="text-[10px] text-white/70 uppercase tracking-wider font-medium block truncate">
-                            {g.level}
-                          </span>
-                        )}
-                        <p className="text-xs text-amber-400 font-bold mt-0.5">{g.coinValue ?? 0} coins</p>
+                        <p className="text-[10px] font-semibold text-white mt-1 truncate leading-tight">{g.name}</p>
+                        <p className="text-[10px] text-amber-400 font-bold">{g.coinValue ?? 0}</p>
                       </motion.button>
                     );
                   })}
                 </div>
 
                 {selected && (
-                  <div className="mt-4 space-y-3">
-                    <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/10">
-                      <span
-                        className="w-14 h-14 flex items-center justify-center text-4xl rounded-xl bg-gradient-to-br from-white/15 to-white/5 shrink-0"
-                        style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.3))' }}
-                      >
+                  <div className="mt-3 space-y-2">
+                    <div className="flex items-center gap-2 p-2 rounded-xl bg-white/5 border border-white/10">
+                      <span className="w-10 h-10 flex items-center justify-center text-2xl rounded-lg bg-white/10 shrink-0">
                         {selected.iconUrl ? (
-                          <img src={selected.iconUrl} alt="" className="w-full h-full object-contain p-1" />
+                          <img src={selected.iconUrl} alt="" className="w-full h-full object-contain p-0.5" />
                         ) : (
                           getGiftEmoji(selected)
                         )}
                       </span>
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-white truncate">{selected.name}</p>
-                        <p className="text-amber-400 text-sm font-medium">{selected.coinValue ?? 0} coins each</p>
+                        <p className="font-semibold text-white text-sm truncate">{selected.name}</p>
+                        <p className="text-amber-400 text-xs">{selected.coinValue ?? 0} coins each</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -222,20 +202,11 @@ export function GiftDrawer({ open, onClose, hostId, hostName, liveStreamId, onGi
                 )}
               </div>
 
-              <div className="p-4 border-t border-white/10 flex gap-3">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex-1 py-3 rounded-xl border border-white/20 text-white font-medium"
-                >
+              <div className="p-3 border-t border-white/10 flex gap-2">
+                <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-white/20 text-white text-sm font-medium">
                   Cancel
                 </button>
-                <button
-                  type="button"
-                  onClick={handleSend}
-                  disabled={!canSend}
-                  className="flex-1 py-3 rounded-xl bg-gradient-to-r from-pink-500 to-violet-600 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                >
+                <button type="button" onClick={handleSend} disabled={!canSend} className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-violet-600 text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed">
                   {sending ? 'Sending…' : `Send ${cost} coins`}
                 </button>
               </div>
@@ -255,7 +226,7 @@ export function GiftDrawer({ open, onClose, hostId, hostName, liveStreamId, onGi
           transform: perspective(800px) scale(0.98);
         }
         .gift-card-inner {
-          min-height: 64px;
+          min-height: 44px;
         }
         .gift-recharge-banner:hover {
           background: rgba(245, 158, 11, 0.3);
