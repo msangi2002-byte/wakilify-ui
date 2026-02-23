@@ -557,7 +557,7 @@ function OrderCard({ order, onOrderUpdate }) {
                         <Truck size={16} style={{ color: '#6366f1', flexShrink: 0, marginTop: '2px' }} />
                         <div>
                           <span style={{ fontWeight: 600 }}>{ev.eventType?.replace(/_/g, ' ')}</span>
-                          {ev.note && <span style={{ color: '#65676b' }} – {ev.note}</span>}
+                          {ev.note && <span style={{ color: '#65676b' }}> - {ev.note}</span>}
                           {ev.createdAt && (
                             <div style={{ fontSize: '0.8125rem', color: '#9ca3af', marginTop: '2px' }}>{formatDate(ev.createdAt)}</div>
                           )}
