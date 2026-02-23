@@ -149,6 +149,7 @@ export default function LiveViewer() {
   const [guestWhipError, setGuestWhipError] = useState(null);
   const [floatingLikes, setFloatingLikes] = useState([]);
   const [floatingGifts, setFloatingGifts] = useState([]);
+  const [heartBurst, setHeartBurst] = useState(null); // { key } – TikTok-style center heart on double-tap
   const FLOATING_LIKES_MAX = 8;
   const FLOATING_GIFTS_MAX = 5;
   const [obsDrawerOpen, setObsDrawerOpen] = useState(false);
@@ -382,6 +383,9 @@ export default function LiveViewer() {
 
   const handleLike = () => {
     if (!id || liked) return;
+    const burstKey = Date.now();
+    setHeartBurst({ key: burstKey });
+    setTimeout(() => setHeartBurst((b) => (b?.key === burstKey ? null : b)), 900);
     likeLive(id)
       .then(() => {
         setLiked(true);
@@ -477,7 +481,8 @@ export default function LiveViewer() {
   const handleGiftSent = ({ gift, quantity }) => {
     const key = Date.now();
     setFloatingGifts((prev) => [...prev.slice(-(FLOATING_GIFTS_MAX - 1)), { key, gift, quantity, senderName: user?.name }]);
-    setTimeout(() => setFloatingGifts((p) => p.filter((x) => x.key !== key)), 2500);
+    // onComplete from FloatingGift removes; fallback cleanup after duration
+    setTimeout(() => setFloatingGifts((p) => p.filter((x) => x.key !== key)), 2800);
   };
 
   if (loading && !live) {
@@ -613,9 +618,9 @@ export default function LiveViewer() {
         </div>
       )}
 
-      {/* Guest self-view when joined */}
+      {/* Guest self-view when joined – left of right strip */}
       {!isHost && guestWhipStarted && guestStreamRef.current && (
-        <div className="absolute right-4 bottom-32 z-20 w-28 h-36 rounded-xl overflow-hidden border-2 border-white/30 bg-black shadow-lg">
+        <div className="absolute right-14 bottom-20 z-20 w-24 h-32 md:w-28 md:h-36 rounded-xl overflow-hidden border-2 border-white/30 bg-black shadow-lg">
           <video
             ref={guestPreviewRef}
             autoPlay
@@ -626,56 +631,72 @@ export default function LiveViewer() {
         </div>
       )}
 
-      {/* Gift animation: floats toward host area */}
+      {/* Heart burst – TikTok-style: double-tap shows big heart in center (wote wanaona effect) */}
+      <AnimatePresence>
+        {heartBurst && (
+          <motion.div
+            key={heartBurst.key}
+            initial={{ scale: 0, opacity: 1 }}
+            animate={{ scale: [0, 1.4, 1.2], opacity: [1, 0.95, 0.7] }}
+            exit={{ scale: 1.3, opacity: 0 }}
+            transition={{ duration: 0.85, ease: 'easeOut' }}
+            className="absolute inset-0 z-25 flex items-center justify-center pointer-events-none"
+          >
+            <Heart className="w-28 h-28 md:w-36 md:h-36 text-pink-400 fill-pink-400 drop-shadow-2xl" style={{ filter: 'drop-shadow(0 0 20px rgba(236,72,153,0.6))' }} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Gift animation: pop center then float (mtu anaeona gift aliyetumwa) */}
       {floatingGifts.map((item, i) => (
-        <div key={item.key} className="absolute bottom-32 left-1/2 z-30 pointer-events-none" style={{ transform: `translateX(calc(-50% + ${i * 8}px))` }}>
-          <FloatingGift
-            gift={item.gift}
-            quantity={item.quantity}
-            senderName={item.senderName}
-            onComplete={() => setFloatingGifts((p) => p.filter((x) => x.key !== item.key))}
-          />
-        </div>
+        <FloatingGift
+          key={item.key}
+          gift={item.gift}
+          quantity={item.quantity}
+          senderName={item.senderName}
+          onComplete={() => setFloatingGifts((p) => p.filter((x) => x.key !== item.key))}
+          index={i}
+        />
       ))}
 
-      {/* Like animation: pill floats up with user who liked, clickable → profile */}
+      {/* Like pills – float up left side (user who liked inaonekana) */}
       {floatingLikes.length > 0 && (
-        <div className="absolute left-4 bottom-44 z-30 flex flex-col gap-2 pointer-events-none md:bottom-32">
+        <div className="absolute left-3 bottom-24 md:bottom-28 z-25 flex flex-col gap-2 pointer-events-none overflow-visible">
           {floatingLikes.map((item) => (
             <motion.div
               key={item.key}
               initial={{ opacity: 1, y: 0, scale: 0.9 }}
-              animate={{ opacity: 0, y: -120, scale: 1 }}
-              transition={{ duration: 3.5, ease: 'easeOut' }}
-              className="pointer-events-auto"
+              animate={{ opacity: 0, y: -100, scale: 1 }}
+              transition={{ duration: 3.2, ease: 'easeOut' }}
+              className="pointer-events-auto shrink-0"
             >
               <button
                 type="button"
                 onClick={() => item.userId && navigate(`/app/profile/${item.userId}`)}
-                className="flex items-center gap-2 px-3 py-2 rounded-full bg-pink-500/90 hover:bg-pink-500 text-white shadow-lg border border-white/20 transition-colors"
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-full bg-pink-500/95 hover:bg-pink-500 text-white shadow-lg border border-white/20 transition-colors"
               >
-                <div className="w-7 h-7 rounded-full overflow-hidden bg-white/20 shrink-0">
+                <div className="w-6 h-6 rounded-full overflow-hidden bg-white/20 shrink-0">
                   {item.userProfilePic ? (
                     <img src={item.userProfilePic} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <span className="w-full h-full flex items-center justify-center text-xs font-bold">
+                    <span className="w-full h-full flex items-center justify-center text-[10px] font-bold">
                       {item.userName?.charAt(0).toUpperCase() || '?'}
                     </span>
                   )}
                 </div>
-                <span className="text-sm font-semibold truncate max-w-[120px]">{item.userName || 'Someone'}</span>
-                <Heart className="w-4 h-4 fill-current shrink-0" />
+                <span className="text-xs font-semibold truncate max-w-[90px]">{item.userName || 'Someone'}</span>
+                <Heart className="w-3.5 h-3.5 fill-current shrink-0" />
               </button>
             </motion.div>
           ))}
         </div>
       )}
 
-      {/* Guests on live – viewers see "yupo live" for each accepted guest */}
+      {/* Guests on live – above bottom bar so no overlap */}
       {Array.isArray(live?.guestStreams) && live.guestStreams.length > 0 && (
-        <div className="absolute left-4 bottom-28 z-20 flex flex-col gap-1.5 max-w-[calc(100vw-2rem)]">
+        <div className="absolute left-3 right-14 bottom-16 md:bottom-20 z-20 flex flex-col gap-1 max-w-[calc(100vw-5rem)]">
           <p className="text-white/90 text-xs font-semibold flex items-center gap-1.5">
-            <Radio className="w-3.5 h-3.5 text-green-400" />
+            <Radio className="w-3.5 h-3.5 text-green-400 shrink-0" />
             Wapo live
           </p>
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
@@ -691,7 +712,7 @@ export default function LiveViewer() {
       )}
 
       {/* Top bar */}
-      <div className="absolute top-0 left-0 right-0 z-10 p-4 pt-6 pb-20 bg-gradient-to-b from-black/80 to-transparent">
+      <div className="absolute top-0 left-0 right-0 z-10 p-3 pt-5 pb-16 md:p-4 md:pt-6 md:pb-20 bg-gradient-to-b from-black/80 to-transparent">
         <div className="flex items-center justify-between">
           <button
             type="button"
@@ -708,89 +729,91 @@ export default function LiveViewer() {
         </div>
       </div>
 
-      {/* Bottom bar – one clean row: host (left), viewers + like + gift + join (right) */}
-      <div className="absolute bottom-0 left-0 right-0 z-10 px-3 py-3 pb-6 md:px-4 md:pb-8 bg-gradient-to-t from-black/85 to-transparent">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <Avatar user={host} size={44} />
+      {/* Right strip – Like, Gift, Chat, Join, Report (zisiingiliane, mobile + web) */}
+      <div className="absolute right-2 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-2 md:right-3">
+        <button type="button" onClick={() => setShowChat((c) => !c)} className="p-2.5 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors shadow-lg shrink-0" aria-label={showChat ? 'Hide chat' : 'Show chat'} title="Chat">
+          <MessageCircle className="w-5 h-5" />
+        </button>
+        <motion.button type="button" whileTap={{ scale: 0.92 }} onClick={handleLike} className={`p-2.5 rounded-full transition-colors shrink-0 ${liked ? 'bg-pink-500/90 text-white' : 'bg-black/50 text-white hover:bg-black/70'}`} aria-label="Like" title="Like">
+          <Heart className={`w-5 h-5 ${liked ? 'fill-current' : ''}`} />
+        </motion.button>
+        {!isHost && (
+          <motion.button type="button" whileTap={{ scale: 0.92 }} onClick={() => setGiftOpen(true)} className="p-2.5 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors shrink-0" aria-label="Gift" title="Gift">
+            <Gift className="w-5 h-5" />
+          </motion.button>
+        )}
+        {!isHost && (
+          <motion.button type="button" whileTap={{ scale: 0.92 }} onClick={handleRequestToJoin} disabled={joinRequestSent} className={`p-2.5 rounded-full transition-colors shrink-0 ${joinRequestSent ? 'bg-green-500/60 text-white cursor-default' : 'bg-black/50 text-white hover:bg-black/70'}`} aria-label="Join" title={joinRequestSent ? 'Request sent' : 'Request to join'}>
+            <UserPlusIcon className="w-5 h-5" />
+          </motion.button>
+        )}
+        {!isHost && (
+          <button type="button" onClick={() => setReportStreamOpen(true)} className="p-2.5 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors shrink-0" aria-label="Report" title="Report">
+            <Flag className="w-5 h-5" />
+          </button>
+        )}
+        {isHost && (
+          <div className="relative shrink-0">
+            <button type="button" onClick={() => setHostMenuOpen((o) => !o)} className="p-2.5 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors" aria-label="Menu">
+              <MoreVertical className="w-5 h-5" />
+            </button>
+            <AnimatePresence>
+              {hostMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" aria-hidden onClick={() => setHostMenuOpen(false)} />
+                  <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="absolute right-0 top-full mt-1 z-20 py-1 min-w-[180px] rounded-xl bg-black/90 border border-white/10 shadow-xl">
+                    <button type="button" onClick={() => { setJoinPanelOpen(true); setHostMenuOpen(false); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-white hover:bg-white/10 text-sm">
+                      <UserPlus className="w-4 h-4" /> Join requests
+                    </button>
+                    <button type="button" onClick={() => { handleEndLive(); setHostMenuOpen(false); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-red-400 hover:bg-red-500/20 text-sm font-medium">
+                      <Square className="w-4 h-4" /> End live
+                    </button>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+      </div>
+
+      {/* Chat panel – opens to the left of right strip (mobile + web, haifichi video) */}
+      <AnimatePresence>
+        {showChat && (
+          <motion.div
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 'auto', opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+            className="absolute right-14 md:right-16 top-[50%] -translate-y-1/2 z-20 overflow-hidden rounded-xl border border-white/10 bg-black/95 shadow-xl flex flex-col w-[240px] sm:w-[260px] md:w-72 max-w-[calc(100vw-5rem)] h-[200px] sm:h-[220px] md:h-[280px]"
+          >
+            <LiveChat messages={messages} onSendMessage={handleSendMessage} onAuthorClick={(u) => u?.id && navigate(`/app/profile/${u.id}`)} onReportComment={(msg) => setReportCommentTarget(msg)} solidBackground={true} showInput={true} className="h-full min-h-0" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Bottom bar – slim: host + viewer count only (vitone si chini, ziko right strip) */}
+      <div className="absolute bottom-0 left-0 right-0 z-10 px-3 py-2 pb-4 md:px-4 md:py-3 md:pb-6 bg-gradient-to-t from-black/80 to-transparent">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <Avatar user={host} size={40} />
             <div className="min-w-0">
-              <p className="text-white font-semibold truncate text-sm md:text-base">{host?.name || 'Host'}</p>
-              <p className="text-white/80 text-xs truncate">{live?.title || 'Live'}</p>
+              <p className="text-white font-semibold truncate text-sm">{host?.name || 'Host'}</p>
+              <p className="text-white/70 text-xs truncate">{live?.title || 'Live'}</p>
             </div>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             {isHost && live?.totalGiftsValue != null && Number(live.totalGiftsValue) > 0 && (
-              <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-amber-500/20 text-amber-400 text-xs font-medium">
+              <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-500/20 text-amber-400 text-xs font-medium">
                 <Coins className="w-3.5 h-3.5" />
                 <span>{Number(live.totalGiftsValue)}</span>
               </div>
             )}
-            <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-black/50 text-white text-xs md:text-sm">
-              <Eye className="w-3.5 h-3.5 md:w-4 md:h-4" />
+            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-black/50 text-white text-xs">
+              <Eye className="w-3.5 h-3.5" />
               <span>{viewerCount >= 1000 ? `${(viewerCount / 1000).toFixed(1)}K` : viewerCount}</span>
             </div>
-            <motion.button type="button" whileTap={{ scale: 0.95 }} onClick={handleLike} className={`p-2 rounded-full transition-colors ${liked ? 'bg-pink-500/80 text-white' : 'bg-black/50 text-white hover:bg-black/70'}`} aria-label="Like">
-              <Heart className={`w-5 h-5 ${liked ? 'fill-current' : ''}`} />
-            </motion.button>
-            {!isHost && (
-              <>
-                <motion.button type="button" whileTap={{ scale: 0.95 }} onClick={() => setGiftOpen(true)} className="p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors" aria-label="Gift">
-                  <Gift className="w-5 h-5" />
-                </motion.button>
-                <motion.button type="button" whileTap={{ scale: 0.95 }} onClick={handleRequestToJoin} disabled={joinRequestSent} className={`p-2 rounded-full transition-colors ${joinRequestSent ? 'bg-green-500/50 text-white cursor-default' : 'bg-black/50 text-white hover:bg-black/70'}`} aria-label="Request to join" title={joinRequestSent ? 'Request sent' : 'Request to join'}>
-                  <UserPlusIcon className="w-5 h-5" />
-                </motion.button>
-              </>
-            )}
-            {!isHost && (
-              <button type="button" onClick={() => setReportStreamOpen(true)} className="p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors" aria-label="Report stream" title="Report">
-                <Flag className="w-5 h-5" />
-              </button>
-            )}
-            {isHost && (
-              <div className="relative">
-                <button type="button" onClick={() => setHostMenuOpen((o) => !o)} className="p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors" aria-label="Host menu">
-                  <MoreVertical className="w-5 h-5" />
-                </button>
-                <AnimatePresence>
-                  {hostMenuOpen && (
-                    <>
-                      <div className="fixed inset-0 z-10" aria-hidden onClick={() => setHostMenuOpen(false)} />
-                      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="absolute right-0 bottom-full mb-1 z-20 py-1 min-w-[180px] rounded-xl bg-black/90 border border-white/10 shadow-xl">
-                        <button type="button" onClick={() => { setJoinPanelOpen(true); setHostMenuOpen(false); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-white hover:bg-white/10 text-sm">
-                          <UserPlus className="w-4 h-4" /> Join requests
-                        </button>
-                        <button type="button" onClick={() => { handleEndLive(); setHostMenuOpen(false); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-red-400 hover:bg-red-500/20 text-sm font-medium">
-                          <Square className="w-4 h-4" /> End live
-                        </button>
-                      </motion.div>
-                    </>
-                  )}
-                </AnimatePresence>
-              </div>
-            )}
           </div>
         </div>
-      </div>
-
-      {/* Chat: collapsible strip – icon when closed; right-side strip when open */}
-      <div className="absolute right-3 bottom-20 z-30 md:right-4 md:bottom-6 flex flex-col items-end gap-1">
-        <button type="button" onClick={() => setShowChat((c) => !c)} className="p-2.5 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors shadow-lg" aria-label={showChat ? 'Hide chat' : 'Show chat'}>
-          <MessageCircle className="w-5 h-5" />
-        </button>
-        <AnimatePresence>
-          {showChat && (
-            <motion.div
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 'auto', opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-              className="overflow-hidden rounded-xl border border-white/10 bg-black/95 shadow-xl md:max-h-[50vh] w-[280px] md:w-80 h-[240px] md:h-[320px] flex flex-col"
-            >
-              <LiveChat messages={messages} onSendMessage={handleSendMessage} onAuthorClick={(u) => u?.id && navigate(`/app/profile/${u.id}`)} onReportComment={(msg) => setReportCommentTarget(msg)} solidBackground={true} showInput={true} className="h-full min-h-0" />
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
 
       <GiftDrawer
