@@ -1,9 +1,12 @@
 /**
  * Facebook-style fullscreen viewer for image posts: click image in feed to open.
  * Shows image(s) large, close button, author + caption, like/comment/share/save.
+ * Comment button opens comment section (Reels-style drawer); Share opens share menu (Copy link, Share to story, Repost).
  */
 import { useState, useEffect } from 'react';
 import { X, ThumbsUp, MessageCircle, Share2, Bookmark, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ReelCommentsDrawer } from '@/pages/user/Reels';
+import { ReelShareMenu } from '@/pages/user/Reels';
 
 export function ImagePostViewerOverlay({
   isOpen,
@@ -14,26 +17,33 @@ export function ImagePostViewerOverlay({
   postId,
   liked: initialLiked,
   likesCount: initialLikesCount = 0,
-  commentsCount = 0,
+  commentsCount: initialCommentsCount = 0,
   saved: initialSaved,
   onLike,
   onComment,
   onShare,
   onSave,
+  onCommentCountChange,
 }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [liked, setLiked] = useState(!!initialLiked);
   const [likesCount, setLikesCount] = useState(initialLikesCount);
   const [saved, setSaved] = useState(!!initialSaved);
+  const [commentsCount, setCommentsCount] = useState(initialCommentsCount);
+  const [showCommentPanel, setShowCommentPanel] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       setLiked(!!initialLiked);
       setLikesCount(initialLikesCount);
       setSaved(!!initialSaved);
+      setCommentsCount(initialCommentsCount);
       setCurrentIndex(0);
+      setShowCommentPanel(false);
+      setShowShareMenu(false);
     }
-  }, [isOpen, initialLiked, initialLikesCount, initialSaved]);
+  }, [isOpen, initialLiked, initialLikesCount, initialSaved, initialCommentsCount]);
 
   const imageUrls = media
     .filter((item) => {
@@ -144,8 +154,8 @@ export function ImagePostViewerOverlay({
         </button>
         <button
           type="button"
-          className="image-post-viewer-action"
-          onClick={(e) => { e.stopPropagation(); onComment?.(); }}
+          className={`image-post-viewer-action ${showCommentPanel ? 'active' : ''}`}
+          onClick={(e) => { e.stopPropagation(); setShowCommentPanel((v) => !v); }}
           aria-label="Comment"
         >
           <MessageCircle size={28} />
@@ -153,8 +163,8 @@ export function ImagePostViewerOverlay({
         </button>
         <button
           type="button"
-          className="image-post-viewer-action"
-          onClick={(e) => { e.stopPropagation(); onShare?.(); }}
+          className={`image-post-viewer-action ${showShareMenu ? 'active' : ''}`}
+          onClick={(e) => { e.stopPropagation(); setShowShareMenu((v) => !v); }}
           aria-label="Share"
         >
           <Share2 size={28} />
@@ -184,6 +194,30 @@ export function ImagePostViewerOverlay({
         </div>
         {description && <p className="image-post-viewer-info-caption">{description}</p>}
       </div>
+
+      {/* Comment section (Reels-style drawer) – from button to comment */}
+      {showCommentPanel && postId && (
+        <div className="image-post-viewer-comments-wrap" style={{ zIndex: 1001 }}>
+          <ReelCommentsDrawer
+            postId={postId}
+            onClose={() => setShowCommentPanel(false)}
+            onCommentCountChange={(_, count) => {
+              setCommentsCount(count);
+              onCommentCountChange?.(count);
+            }}
+          />
+        </div>
+      )}
+
+      {/* Share menu (Copy link, Share to story, Repost to feed) */}
+      {showShareMenu && postId && (
+        <div className="image-post-viewer-share-wrap" style={{ zIndex: 1001 }}>
+          <ReelShareMenu
+            item={{ id: postId }}
+            onClose={() => setShowShareMenu(false)}
+          />
+        </div>
+      )}
     </div>
   );
 }

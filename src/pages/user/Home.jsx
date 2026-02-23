@@ -567,9 +567,8 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], vi
           commentsCount={commentsCount}
           saved={saved}
           onLike={() => handleReact('LIKE')}
-          onComment={() => { setImageViewerOpen(false); handleCommentClick(); }}
-          onShare={() => { setImageViewerOpen(false); setShareOpen(true); }}
           onSave={handleSaveClick}
+          onCommentCountChange={(count) => setCommentsCount(count)}
         />
       )}
       <div className="feed-post-engagement">
