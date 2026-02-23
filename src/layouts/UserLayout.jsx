@@ -56,6 +56,7 @@ const leftNav = [
   { to: '/app/shop', icon: ShoppingBag, label: 'Marketplace', iconStyle: 'marketplace' },
   { to: '/app/boost', icon: TrendingUp, label: 'Boost', iconStyle: 'gradient' },
   { to: '/app/orders', icon: Package, label: 'My Orders', iconStyle: 'orders' },
+  { to: '/app/inquiries', icon: MessageCircle, label: 'My Inquiries', iconStyle: 'inquiries' },
   { to: '/app/notifications', icon: Bell, label: 'Notifications', iconStyle: 'notifications' },
   { to: '/app/settings', icon: Settings, label: 'Settings', iconStyle: 'settings' },
 ];

@@ -2,13 +2,15 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Package, Loader2, RefreshCw, CheckCircle, Truck, MapPin, Calendar, AlertCircle, X, ShoppingBag, Building2, Phone, User as UserIcon, Mail, Globe, MessageCircle } from 'lucide-react';
-import { getMyOrders, getOrderById, cancelOrder } from '@/lib/api/orders';
+import { getMyOrders, getOrderById, cancelOrder, confirmOrder, getOrderTracking } from '@/lib/api/orders';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import { OrdersListSkeleton } from '@/components/ui/OrdersListSkeleton';
 import { OrdersDetailSkeleton } from '@/components/ui/OrdersDetailSkeleton';
 import '@/styles/user-app.css';
 
 const ORDER_STATUSES = {
+  DRAFT: { label: 'Draft', color: '#6b7280', bg: 'rgba(107, 114, 128, 0.1)' },
+  PENDING_CONFIRMATION: { label: 'Pending confirmation', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)' },
   PENDING: { label: 'Pending', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)' },
   CONFIRMED: { label: 'Confirmed', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.1)' },
   PROCESSING: { label: 'Processing', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.1)' },
@@ -46,6 +48,7 @@ function formatDate(dateString) {
 function OrderCard({ order, onOrderUpdate }) {
   const [expanded, setExpanded] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
 
@@ -55,8 +58,16 @@ function OrderCard({ order, onOrderUpdate }) {
     enabled: expanded,
   });
 
+  const { data: trackingEvents = [] } = useQuery({
+    queryKey: ['orders', 'tracking', order.id],
+    queryFn: () => getOrderTracking(order.id),
+    enabled: expanded && ['PROCESSING', 'SHIPPED', 'DELIVERED', 'COMPLETED'].includes(orderDetails?.status || order.status),
+  });
+
   const statusInfo = ORDER_STATUSES[order.status] || ORDER_STATUSES.PENDING;
-  const canCancel = order.status === 'PENDING' || order.status === 'CONFIRMED';
+  const canCancel = ['PENDING', 'CONFIRMED', 'DRAFT', 'PENDING_CONFIRMATION'].includes(order.status);
+  const canConfirm = order.status === 'DRAFT' || order.status === 'PENDING_CONFIRMATION';
+  const canTrack = ['PROCESSING', 'SHIPPED', 'DELIVERED', 'COMPLETED'].includes(order.status);
 
   const handleExpand = () => {
     setExpanded(!expanded);
@@ -74,6 +85,18 @@ function OrderCard({ order, onOrderUpdate }) {
       alert(getApiErrorMessage(err, 'Failed to cancel order'));
     } finally {
       setCancelling(false);
+    }
+  };
+
+  const handleConfirm = async () => {
+    setConfirming(true);
+    try {
+      await confirmOrder(order.id);
+      onOrderUpdate?.();
+    } catch (err) {
+      alert(getApiErrorMessage(err, 'Failed to confirm order'));
+    } finally {
+      setConfirming(false);
     }
   };
 
@@ -118,6 +141,24 @@ function OrderCard({ order, onOrderUpdate }) {
           )}
         </div>
         <div className="orders-card-actions">
+          {canConfirm && (
+            <button
+              type="button"
+              onClick={handleConfirm}
+              disabled={confirming}
+              className="orders-card-btn orders-card-btn-primary"
+              style={{ background: '#0d9488' }}
+            >
+              {confirming ? <Loader2 size={16} className="icon-spin" /> : <CheckCircle size={16} />}
+              Confirm order
+            </button>
+          )}
+          {canTrack && (
+            <button type="button" onClick={handleExpand} className="orders-card-btn orders-card-btn-outline">
+              <MapPin size={16} />
+              Track
+            </button>
+          )}
           {canCancel && (
             <button type="button" onClick={() => setShowCancelModal(true)} className="orders-card-btn orders-card-btn-outline">
               Cancel
@@ -503,6 +544,32 @@ function OrderCard({ order, onOrderUpdate }) {
                   )}
                 </div>
               </div>
+
+              {Array.isArray(trackingEvents) && trackingEvents.length > 0 && (
+                <div className="orders-card-section">
+                  <h4 className="orders-card-section-title">
+                    <MapPin size={18} style={{ color: '#6366f1' }} />
+                    Tracking
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.875rem' }}>
+                    {trackingEvents.map((ev, idx) => (
+                      <div key={ev.id || idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                        <Truck size={16} style={{ color: '#6366f1', flexShrink: 0, marginTop: '2px' }} />
+                        <div>
+                          <span style={{ fontWeight: 600 }}>{ev.eventType?.replace(/_/g, ' ')}</span>
+                          {ev.note && <span style={{ color: '#65676b' }} – {ev.note}</span>}
+                          {ev.createdAt && (
+                            <div style={{ fontSize: '0.8125rem', color: '#9ca3af', marginTop: '2px' }}>{formatDate(ev.createdAt)}</div>
+                          )}
+                          {ev.latitude != null && ev.longitude != null && (
+                            <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Location: {ev.latitude.toFixed(4)}, {ev.longitude.toFixed(4)}</div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {orderData.customerNotes && (
                 <div className="orders-card-section orders-notes-box">

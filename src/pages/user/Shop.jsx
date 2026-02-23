@@ -1,8 +1,29 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, Settings, ShoppingBag, Image as ImageIcon, Plus, ChevronDown, MapPin, Store } from 'lucide-react';
-import { getProducts, searchProducts, getProductsByCategory, getTrendingProducts } from '@/lib/api/products';
+import {
+  Search,
+  Settings,
+  ShoppingBag,
+  Image as ImageIcon,
+  Plus,
+  ChevronDown,
+  MapPin,
+  Store,
+  TrendingUp,
+  Star,
+  Zap,
+  MessageCircle,
+  BadgeCheck,
+} from 'lucide-react';
+import {
+  getProducts,
+  searchProducts,
+  getProductsByCategory,
+  getTrendingProducts,
+  getTopSellingProducts,
+  getFeaturedProducts,
+} from '@/lib/api/products';
 import { searchBusinesses } from '@/lib/api/businesses';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import { useAuthStore } from '@/store/auth.store';
@@ -22,6 +43,7 @@ const CATEGORIES = [
 ];
 
 const SORT_OPTIONS = [
+  { id: 'popular', label: 'Popular' },
   { id: 'newest', label: 'Newest' },
   { id: 'price_asc', label: 'Price: Low to High' },
   { id: 'price_desc', label: 'Price: High to Low' },
@@ -36,7 +58,8 @@ function formatCurrency(amount) {
   }).format(amount);
 }
 
-function ProductCard({ product, size = 'normal' }) {
+/** Alibaba-style data-rich product card: Visual + Core Data + Trust Signals */
+function ProductCard({ product, size = 'normal', showSoldBadge = false }) {
   const navigate = useNavigate();
   const [imageError, setImageError] = useState(false);
 
@@ -49,18 +72,25 @@ function ProductCard({ product, size = 'normal' }) {
     return null;
   };
   const productImage = getProductImage();
-
   const isCompact = size === 'compact';
+  const isHero = size === 'hero';
+  const soldCount = product.ordersCount ?? 0;
+  const moq = product.minOrderQuantity ?? 1;
+  const biz = product.business;
+  const responseLabel = biz?.responseRate != null && biz.responseRate > 0
+    ? `${Math.round((biz.responseRate ?? 0) * 100)}% response`
+    : null;
 
   return (
     <div
-      className={`shop-mp-card ${isCompact ? 'compact' : ''}`}
+      className={`shop-mp-card shop-mp-card-alibaba ${isCompact ? 'compact' : ''} ${isHero ? 'hero' : ''}`}
       onClick={() => navigate(`/app/shop/${product.id}`)}
       onKeyDown={(e) => e.key === 'Enter' && navigate(`/app/shop/${product.id}`)}
       role="button"
       tabIndex={0}
     >
-      <div className="shop-mp-card-image">
+      {/* Visual – thumbnail with hover zoom */}
+      <div className="shop-mp-card-image shop-mp-card-image-zoom">
         {productImage && !imageError ? (
           <img
             src={productImage}
@@ -70,26 +100,70 @@ function ProductCard({ product, size = 'normal' }) {
           />
         ) : (
           <div className="shop-mp-card-placeholder">
-            <ImageIcon size={isCompact ? 24 : 32} />
+            <ImageIcon size={isCompact ? 24 : isHero ? 40 : 32} />
           </div>
         )}
+        {showSoldBadge && soldCount > 0 && (
+          <span className="shop-mp-card-sold">{soldCount} sold</span>
+        )}
       </div>
+
+      {/* Core Data – title, price range, MOQ */}
       <div className="shop-mp-card-body">
-        <span className="shop-mp-card-title">{product.name}</span>
-        <span className="shop-mp-card-seller">{product.business?.name || 'Business'}</span>
-        {(product.business?.region || product.business?.district) && (
+        <h3 className="shop-mp-card-title shop-mp-card-title-long" title={product.name}>
+          {product.name}
+        </h3>
+        <div className="shop-mp-card-price-row">
+          <span className="shop-mp-card-price">
+            {product.compareAtPrice != null && product.compareAtPrice > product.price
+              ? `${formatCurrency(product.price)} - ${formatCurrency(product.compareAtPrice)}`
+              : `From ${formatCurrency(product.price)}`}
+          </span>
+        </div>
+        {moq > 1 && (
+          <span className="shop-mp-card-moq">Min. Order: {moq} Pieces</span>
+        )}
+      </div>
+
+      {/* Trust Signals – supplier, verified, response */}
+      <div className="shop-mp-card-trust">
+        <div className="shop-mp-card-supplier">
+          {biz?.logo ? (
+            <img src={biz.logo} alt="" className="shop-mp-card-supplier-logo" />
+          ) : (
+            <span className="shop-mp-card-supplier-icon"><Store size={14} /></span>
+          )}
+          <span className="shop-mp-card-supplier-name">{biz?.name || 'Supplier'}</span>
+        </div>
+        <div className="shop-mp-card-badges">
+          {biz?.isVerified && (
+            <span className="shop-mp-card-badge shop-mp-card-badge-verified" title="Verified Supplier">
+              <BadgeCheck size={14} />
+              Verified
+            </span>
+          )}
+          {biz?.supplierLevel && (
+            <span className="shop-mp-card-badge shop-mp-card-badge-level">{biz.supplierLevel}</span>
+          )}
+          {responseLabel && (
+            <span className="shop-mp-card-badge shop-mp-card-badge-response" title="Response time">
+              <MessageCircle size={12} />
+              {responseLabel}
+            </span>
+          )}
+        </div>
+        {(biz?.region || biz?.district) && (
           <span className="shop-mp-card-location">
             <MapPin size={12} />
-            {[product.business?.district, product.business?.region].filter(Boolean).join(', ')}
+            {[biz.district, biz.region].filter(Boolean).join(', ')}
           </span>
         )}
-        <span className="shop-mp-card-price">{formatCurrency(product.price)}</span>
       </div>
     </div>
   );
 }
 
-/** Group products by business for search results (show shop info + products per shop) */
+/** Group products by business for search results */
 function groupProductsByBusiness(products) {
   const byBusiness = new Map();
   for (const p of products) {
@@ -107,6 +181,21 @@ function toProductList(data) {
   return Array.isArray(data?.content) ? data.content : Array.isArray(data) ? data : [];
 }
 
+/** Section header with icon for marketplace sections */
+function SectionHeader({ icon: Icon, title, subtitle }) {
+  return (
+    <div className="shop-mp-section-header">
+      <span className="shop-mp-section-icon">
+        <Icon size={22} strokeWidth={2.2} />
+      </span>
+      <div>
+        <h2 className="shop-mp-section-title">{title}</h2>
+        {subtitle && <p className="shop-mp-section-subtitle">{subtitle}</p>}
+      </div>
+    </div>
+  );
+}
+
 export default function Shop() {
   const { user } = useAuthStore();
   const isBusiness = String(user?.role ?? '').toLowerCase() === ROLES.BUSINESS;
@@ -114,7 +203,7 @@ export default function Shop() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [category, setCategory] = useState('all');
-  const [sortBy, setSortBy] = useState('newest');
+  const [sortBy, setSortBy] = useState('popular');
   const [sortOpen, setSortOpen] = useState(false);
 
   useEffect(() => {
@@ -138,7 +227,11 @@ export default function Shop() {
         ]);
         return {
           products: toProductList(productsRes),
-          matchingShops: Array.isArray(businessesRes?.content) ? businessesRes.content : Array.isArray(businessesRes) ? businessesRes : [],
+          matchingShops: Array.isArray(businessesRes?.content)
+            ? businessesRes.content
+            : Array.isArray(businessesRes)
+              ? businessesRes
+              : [],
         };
       }
       if (category !== 'all') {
@@ -156,79 +249,137 @@ export default function Shop() {
     select: (data) => toProductList(data),
   });
 
+  const { data: topSelling = [], isLoading: topSellingLoading } = useQuery({
+    queryKey: ['shop', 'top-selling'],
+    queryFn: () => getTopSellingProducts({ page: 0, size: 8 }),
+    select: (data) => toProductList(data),
+  });
+
+  const { data: featured = [], isLoading: featuredLoading } = useQuery({
+    queryKey: ['shop', 'featured'],
+    queryFn: () => getFeaturedProducts({ page: 0, size: 8 }),
+    select: (data) => toProductList(data),
+  });
+
   const products = productsData?.products ?? [];
   const matchingShops = productsData?.matchingShops ?? [];
-  const error = productsError ? getApiErrorMessage(productsError, 'Failed to load products') : '';
+  const rawError = productsError ? getApiErrorMessage(productsError, 'Failed to load products') : '';
+  const isNetworkError = rawError.toLowerCase().includes('network') || productsError?.message?.toLowerCase().includes('network');
+  const error = isNetworkError
+    ? 'Cannot reach the server. Make sure the backend is running (e.g. port 8080) and that VITE_API_URL in .env points to it (e.g. http://localhost:8080/api/v1).'
+    : rawError;
 
   const sortedProducts = [...products].sort((a, b) => {
+    if (sortBy === 'popular') return (b.ordersCount ?? 0) - (a.ordersCount ?? 0);
     if (sortBy === 'price_asc') return (a.price ?? 0) - (b.price ?? 0);
     if (sortBy === 'price_desc') return (b.price ?? 0) - (a.price ?? 0);
     return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
   });
 
   const sortLabel = SORT_OPTIONS.find((o) => o.id === sortBy)?.label ?? 'Sort';
+  const showHeroSections = !search.trim() && category === 'all';
 
   return (
-    <div className="shop-mp-page">
-      <aside className="shop-mp-sidebar">
-        <div className="shop-mp-sidebar-header">
-          <h1 className="shop-mp-sidebar-title">Marketplace</h1>
-          <Link
-            to={isBusiness ? '/business/products/new' : '/app/settings#marketplace'}
-            className="shop-mp-sell-btn"
-          >
-            <Plus size={20} />
-            {isBusiness ? 'List item' : 'Start selling'}
+    <div className="shop-mp-page shop-mp-kikuu">
+      {/* Top bar – Alibaba-style: title + search + actions */}
+      <header className="shop-mp-topbar">
+        <div className="shop-mp-topbar-inner">
+          <Link to="/app/shop" className="shop-mp-brand">
+            <ShoppingBag size={24} aria-hidden />
+            <span>Marketplace</span>
           </Link>
-        </div>
-
-        <nav className="shop-mp-sidebar-nav" aria-label="Product categories">
-          <span className="shop-mp-sidebar-label">Categories</span>
-          <div className="shop-mp-categories-scroll">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat.id}
-                type="button"
-                className={`shop-mp-sidebar-link ${category === cat.id ? 'active' : ''}`}
-                onClick={() => setCategory(cat.id)}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
-        </nav>
-
-      </aside>
-
-      <main className="shop-mp-main">
-        <div className="shop-mp-toolbar">
-          <div className="shop-mp-search">
-            <Search size={20} className="shop-mp-search-icon" />
+          <div className="shop-mp-search-wrap">
+            <Search size={20} className="shop-mp-search-icon" aria-hidden />
             <input
               type="search"
               className="shop-mp-search-input"
-              placeholder="Search for products or shop names"
+              placeholder="Search products or shops..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               aria-label="Search marketplace"
             />
           </div>
-          <div className="shop-mp-toolbar-right">
+          <div className="shop-mp-topbar-actions">
+            <Link
+              to={isBusiness ? '/business/products/new' : '/app/settings#marketplace'}
+              className="shop-mp-sell-btn"
+            >
+              <Plus size={18} />
+              {isBusiness ? 'List item' : 'Sell'}
+            </Link>
+            <Link to="/app/cart" className="shop-mp-topbar-icon" title="Cart">
+              <ShoppingBag size={20} />
+            </Link>
+            <Link to="/app/settings#marketplace" className="shop-mp-topbar-icon" title="Settings">
+              <Settings size={20} />
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      {/* Category strip – horizontal like Alibaba */}
+      <nav className="shop-mp-category-bar" aria-label="Categories">
+        <div className="shop-mp-category-strip">
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat.id}
+              type="button"
+              className={`shop-mp-cat-pill ${category === cat.id ? 'active' : ''}`}
+              onClick={() => setCategory(cat.id)}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
+      </nav>
+
+      <main className="shop-mp-main">
+        <div className="shop-mp-content">
+          {/* Hero – compact, only when no search */}
+          {showHeroSections && (
+            <section className="shop-mp-hero" aria-label="Marketplace hero">
+              <div className="shop-mp-hero-content">
+                <h2 className="shop-mp-hero-title">Discover. Shop. Sell.</h2>
+                <p className="shop-mp-hero-subtitle">
+                  Tanzania’s marketplace — verified businesses. Add to cart or buy now.
+                </p>
+                <div className="shop-mp-hero-actions">
+                  <Link
+                    to={isBusiness ? '/business/products' : '/app/settings#marketplace'}
+                    className="shop-mp-hero-cta"
+                  >
+                    {isBusiness ? 'Manage products' : 'Start selling'}
+                  </Link>
+                  <Link to="/app/cart" className="shop-mp-hero-cta secondary">
+                    View cart
+                  </Link>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Toolbar: sort only (search is in top bar) */}
+          <div className="shop-mp-toolbar">
+            <div className="shop-mp-toolbar-right">
             <div className="shop-mp-sort-wrap">
-              <span className="shop-mp-sort-label">Sort by</span>
+              <span className="shop-mp-sort-label">Sort</span>
               <button
                 type="button"
                 className="shop-mp-sort-btn"
                 onClick={() => setSortOpen((o) => !o)}
                 aria-expanded={sortOpen}
-                title="Order products: Newest, Price low to high, or Price high to low"
+                title="Sort products"
               >
                 {sortLabel}
                 <ChevronDown size={18} />
               </button>
               {sortOpen && (
                 <>
-                  <div className="shop-mp-sort-backdrop" onClick={() => setSortOpen(false)} aria-hidden="true" />
+                  <div
+                    className="shop-mp-sort-backdrop"
+                    onClick={() => setSortOpen(false)}
+                    aria-hidden="true"
+                  />
                   <div className="shop-mp-sort-dropdown" role="menu">
                     {SORT_OPTIONS.map((opt) => (
                       <button
@@ -248,20 +399,38 @@ export default function Shop() {
                 </>
               )}
             </div>
-            <Link
-              to="/app/settings#marketplace"
-              className="shop-mp-settings-link"
-              title="Notifications, checkout address & payment preferences"
-            >
-              <Settings size={20} />
-            </Link>
+            </div>
           </div>
-        </div>
 
-        {trending.length > 0 && !search.trim() && category === 'all' && (
-          <section className="shop-mp-section">
-            <h2 className="shop-mp-section-title">Trending</h2>
-            <div className="shop-mp-trending">
+        {/* Top Sells – only when no search, category all */}
+        {showHeroSections && (topSelling.length > 0 || topSellingLoading) && (
+          <section className="shop-mp-section shop-mp-section-highlight" aria-label="Top selling products">
+            <SectionHeader
+              icon={Zap}
+              title="Top Sells"
+              subtitle="Best sellers this period"
+            />
+            <div className="shop-mp-trending shop-mp-row-scroll">
+              {topSellingLoading ? (
+                <ShopTrendingSkeleton cards={6} />
+              ) : (
+                topSelling.map((p) => (
+                  <ProductCard key={p.id} product={p} size="compact" showSoldBadge />
+                ))
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* Top Trends – only when no search, category all */}
+        {showHeroSections && (trending.length > 0 || trendingLoading) && (
+          <section className="shop-mp-section" aria-label="Trending products">
+            <SectionHeader
+              icon={TrendingUp}
+              title="Top Trends"
+              subtitle="Most viewed right now"
+            />
+            <div className="shop-mp-trending shop-mp-row-scroll">
               {trendingLoading ? (
                 <ShopTrendingSkeleton cards={6} />
               ) : (
@@ -273,9 +442,34 @@ export default function Shop() {
           </section>
         )}
 
-        <section className="shop-mp-section">
+        {/* Featured / Picked for you */}
+        {showHeroSections && (featured.length > 0 || featuredLoading) && (
+          <section className="shop-mp-section" aria-label="Featured products">
+            <SectionHeader
+              icon={Star}
+              title="Picked for you"
+              subtitle="Featured by sellers"
+            />
+            <div className="shop-mp-trending shop-mp-row-scroll">
+              {featuredLoading ? (
+                <ShopTrendingSkeleton cards={6} />
+              ) : (
+                featured.map((p) => (
+                  <ProductCard key={p.id} product={p} size="compact" />
+                ))
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* All listings / Search results */}
+        <section className="shop-mp-section" aria-label="All products">
           <h2 className="shop-mp-section-title">
-            {search.trim() ? 'Search results' : category === 'all' ? 'All listings' : category}
+            {search.trim()
+              ? 'Search results'
+              : category === 'all'
+                ? 'All listings'
+                : category}
           </h2>
 
           {loading ? (
@@ -318,7 +512,9 @@ export default function Shop() {
                 <div className="shop-mp-search-by-shop">
                   {matchingShops.length > 0 && (
                     <div className="shop-mp-shop-block">
-                      <h3 className="shop-mp-section-title" style={{ marginBottom: '12px' }}>Shops</h3>
+                      <h3 className="shop-mp-section-title" style={{ marginBottom: '12px' }}>
+                        Shops
+                      </h3>
                       <div className="shop-mp-shops-row">
                         {matchingShops.map((biz) => (
                           <Link
@@ -350,7 +546,13 @@ export default function Shop() {
                     </div>
                   )}
                   {byShop.length > 0 && (
-                    <h3 className="shop-mp-section-title" style={{ marginBottom: '12px', marginTop: matchingShops.length > 0 ? '24px' : 0 }}>
+                    <h3
+                      className="shop-mp-section-title"
+                      style={{
+                        marginBottom: '12px',
+                        marginTop: matchingShops.length > 0 ? '24px' : 0,
+                      }}
+                    >
                       Products by shop
                     </h3>
                   )}
@@ -382,7 +584,11 @@ export default function Shop() {
                       </div>
                       <div className="shop-mp-grid shop-mp-shop-grid">
                         {shopProducts.map((product) => (
-                          <ProductCard key={product.id} product={product} />
+                          <ProductCard
+                            key={product.id}
+                            product={product}
+                            showSoldBadge
+                          />
                         ))}
                       </div>
                     </div>
@@ -393,11 +599,12 @@ export default function Shop() {
           ) : (
             <div className="shop-mp-grid">
               {sortedProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
+                <ProductCard key={product.id} product={product} showSoldBadge />
               ))}
             </div>
           )}
         </section>
+        </div>
       </main>
     </div>
   );
