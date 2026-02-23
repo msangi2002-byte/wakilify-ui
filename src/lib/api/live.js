@@ -130,8 +130,10 @@ export async function getMyJoinRequest(liveId) {
  * onComment(commentResponse) for each "comment" event.
  * onConnected() when SSE connection is established (so caller can disable polling).
  * onViewerCount(count) for each "viewer_count" event (real-time viewer count).
+ * onLike({ userId, userName, userProfilePic }) when someone likes – so all see like on screen.
+ * onGiftSent({ senderName, gift: { id, name, iconUrl, coinValue }, quantity }) when someone sends gift.
  */
-export function subscribeLiveComments(liveId, onComment, onConnected, onViewerCount) {
+export function subscribeLiveComments(liveId, onComment, onConnected, onViewerCount, onLike, onGiftSent) {
   const token = getToken();
   if (!token || !liveId) return () => {};
 
@@ -178,6 +180,16 @@ export function subscribeLiveComments(liveId, onComment, onConnected, onViewerCo
             } else if (currentEvent === 'viewer_count' && data) {
               const count = parseInt(data, 10);
               if (!Number.isNaN(count) && onViewerCount) onViewerCount(count);
+            } else if (currentEvent === 'like' && data && onLike) {
+              try {
+                const payload = JSON.parse(data);
+                onLike(payload);
+              } catch (_) {}
+            } else if (currentEvent === 'gift_sent' && data && onGiftSent) {
+              try {
+                const payload = JSON.parse(data);
+                onGiftSent(payload);
+              } catch (_) {}
             }
             currentEvent = null;
           } else if (line === '') {
