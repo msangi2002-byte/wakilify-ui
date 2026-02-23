@@ -94,12 +94,15 @@ export function GiftDrawer({ open, onClose, hostId, hostName, liveStreamId, onGi
             </button>
           </div>
 
-          {/* Wallet balance + Recharge CTA */}
+          {/* Wallet balance + Recharge CTA (balance inapungua kiasi cha gift unachotuma) */}
           <div className="px-3 py-2 flex flex-col gap-1.5 border-b border-white/10">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5 text-sm text-white/80">
                 <Coins className="w-4 h-4 text-amber-400 shrink-0" />
                 <span>Balance: <strong className="text-white">{balance}</strong> coins</span>
+                {cost > 0 && (
+                  <span className="text-amber-300 text-xs">→ <strong>{balance - cost}</strong> baada ya kutuma</span>
+                )}
               </div>
               <Link to="/app/wallet/buy-coins" onClick={onClose} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs shrink-0">
                 <PlusCircle className="w-3.5 h-3.5" />
@@ -207,7 +210,7 @@ export function GiftDrawer({ open, onClose, hostId, hostName, liveStreamId, onGi
                   Cancel
                 </button>
                 <button type="button" onClick={handleSend} disabled={!canSend} className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-violet-600 text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed">
-                  {sending ? 'Sending…' : `Send ${cost} coins`}
+                  {sending ? 'Sending…' : `Tuma gift (utakatiwa ${cost} coins)`}
                 </button>
               </div>
             </>

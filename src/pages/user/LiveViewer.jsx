@@ -671,13 +671,13 @@ export default function LiveViewer() {
         />
       ))}
 
-      {/* Like pills – float up left side (user who liked inaonekana) */}
+      {/* Like pills – TikTok style: left side, majina ya user walio like zikipita (wote + creator wanaona) */}
       {floatingLikes.length > 0 && (
-        <div className="absolute left-3 bottom-24 md:bottom-28 z-25 flex flex-col gap-2 pointer-events-none overflow-visible">
+        <div className="absolute left-2 sm:left-3 bottom-20 md:bottom-24 z-25 flex flex-col gap-1.5 pointer-events-none overflow-visible">
           {floatingLikes.map((item) => (
             <motion.div
               key={item.key}
-              initial={{ opacity: 1, y: 0, scale: 0.9 }}
+              initial={{ opacity: 1, y: 0, scale: 0.95 }}
               animate={{ opacity: 0, y: -100, scale: 1 }}
               transition={{ duration: 3.2, ease: 'easeOut' }}
               className="pointer-events-auto shrink-0"
@@ -685,19 +685,20 @@ export default function LiveViewer() {
               <button
                 type="button"
                 onClick={() => item.userId && navigate(`/app/profile/${item.userId}`)}
-                className="flex items-center gap-2 px-2.5 py-1.5 rounded-full bg-pink-500/95 hover:bg-pink-500 text-white shadow-lg border border-white/20 transition-colors"
+                className="flex items-center gap-2 px-3 py-2 rounded-full bg-pink-500/95 hover:bg-pink-500 text-white shadow-xl border border-white/30 transition-colors"
               >
-                <div className="w-6 h-6 rounded-full overflow-hidden bg-white/20 shrink-0">
+                <div className="w-7 h-7 rounded-full overflow-hidden bg-white/25 shrink-0 ring-1 ring-white/50">
                   {item.userProfilePic ? (
                     <img src={item.userProfilePic} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <span className="w-full h-full flex items-center justify-center text-[10px] font-bold">
+                    <span className="w-full h-full flex items-center justify-center text-xs font-bold">
                       {item.userName?.charAt(0).toUpperCase() || '?'}
                     </span>
                   )}
                 </div>
-                <span className="text-xs font-semibold truncate max-w-[90px]">{item.userName || 'Someone'}</span>
-                <Heart className="w-3.5 h-3.5 fill-current shrink-0" />
+                <span className="text-sm font-semibold truncate max-w-[100px]">{item.userName || 'Someone'}</span>
+                <span className="text-[10px] text-white/90 uppercase">liked</span>
+                <Heart className="w-4 h-4 fill-current shrink-0" />
               </button>
             </motion.div>
           ))}
