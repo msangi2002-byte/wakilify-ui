@@ -15,9 +15,13 @@ export async function getGifts() {
 
 /** POST /api/v1/gifts/send – send gift (receiverId, giftId, quantity, message?, liveStreamId?) */
 export async function sendGift({ receiverId, giftId, liveStreamId = null, quantity = 1, message = '' }) {
-  const body = { receiverId, giftId, quantity };
-  if (message) body.message = message;
-  if (liveStreamId) body.liveStreamId = liveStreamId;
+  const body = {
+    receiverId: receiverId != null ? String(receiverId) : undefined,
+    giftId: giftId != null ? String(giftId) : undefined,
+    quantity: Math.max(1, Math.min(Number(quantity) || 1, 999)),
+  };
+  if (message) body.message = String(message);
+  if (liveStreamId != null && liveStreamId !== '') body.liveStreamId = String(liveStreamId);
   await api.post('/gifts/send', body);
 }
 

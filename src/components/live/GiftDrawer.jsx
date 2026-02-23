@@ -11,6 +11,7 @@ export function GiftDrawer({ open, onClose, hostId, hostName, liveStreamId, onGi
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [sentSuccess, setSentSuccess] = useState(null); // { newBalance, cost } – onyesha balance imepungua
+  const [sendError, setSendError] = useState(null); // error message from API
   const [selected, setSelected] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [message, setMessage] = useState('');
@@ -24,6 +25,7 @@ export function GiftDrawer({ open, onClose, hostId, hostName, liveStreamId, onGi
     setQuantity(1);
     setMessage('');
     setSentSuccess(null);
+    setSendError(null);
     setLoading(true);
     Promise.all([getGifts(), getWallet()])
       .then(([gList, w]) => {
@@ -45,7 +47,15 @@ export function GiftDrawer({ open, onClose, hostId, hostName, liveStreamId, onGi
   const canSend = selected && quantityCapped >= 1 && cost <= balance && !sending;
 
   const handleSend = async () => {
-    if (!canSend || !hostId || !selected) return;
+    setSendError(null);
+    if (!hostId || !selected) {
+      setSendError(hostId ? 'Chagua gift.' : 'Host hajulikani. Fungua live tena.');
+      return;
+    }
+    if (quantityCapped < 1 || cost > balance) {
+      setSendError(cost > balance ? `Coins haitoshi. Unahitaji ${cost} coins (una ${balance}).` : 'Chagua idadi.');
+      return;
+    }
     setSending(true);
     setSentSuccess(null);
     try {
@@ -66,7 +76,9 @@ export function GiftDrawer({ open, onClose, hostId, hostName, liveStreamId, onGi
         onClose();
       }, 1600);
     } catch (e) {
-      console.error(e);
+      const msg = e?.response?.data?.message || e?.message || 'Imeshindwa kutuma gift. Jaribu tena.';
+      setSendError(msg);
+      console.error('Send gift error:', e);
     } finally {
       setSending(false);
     }
@@ -222,12 +234,22 @@ export function GiftDrawer({ open, onClose, hostId, hostName, liveStreamId, onGi
                 )}
               </div>
 
+              {sendError && (
+                <p className="px-3 py-2 mx-3 rounded-xl bg-red-500/20 text-red-300 text-sm" role="alert">
+                  {sendError}
+                </p>
+              )}
               <div className="p-3 border-t border-white/10 flex gap-2">
                 <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-white/20 text-white text-sm font-medium">
                   Cancel
                 </button>
-                <button type="button" onClick={handleSend} disabled={!canSend} className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-violet-600 text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed">
-                  {sending ? 'Sending…' : `Tuma gift (utakatiwa ${cost} coins)`}
+                <button
+                  type="button"
+                  onClick={handleSend}
+                  disabled={sending || !selected || quantityCapped < 1 || cost > balance}
+                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-violet-600 text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {sending ? 'Inatumwa…' : selected ? `Tuma gift (utakatiwa ${cost} coins)` : 'Chagua gift'}
                 </button>
               </div>
             </>
