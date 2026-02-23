@@ -34,6 +34,7 @@ const Orders = lazy(() => import('@/pages/user/Orders'));
 const Live = lazy(() => import('@/pages/user/Live'));
 const LiveViewer = lazy(() => import('@/pages/user/LiveViewer'));
 const Wallet = lazy(() => import('@/pages/user/Wallet'));
+const BuyCoins = lazy(() => import('@/pages/user/BuyCoins'));
 const Messages = lazy(() => import('@/pages/user/Messages'));
 const Chat = lazy(() => import('@/pages/user/Chat'));
 const Call = lazy(() => import('@/pages/user/Call'));
@@ -137,6 +138,7 @@ const router = createBrowserRouter([
           { path: 'live', element: <Suspense fallback={<Fallback />}><Live /></Suspense> },
           { path: 'live/:id', element: <Suspense fallback={<Fallback />}><LiveViewer /></Suspense> },
           { path: 'wallet', element: <Suspense fallback={<Fallback />}><Wallet /></Suspense> },
+          { path: 'wallet/buy-coins', element: <Suspense fallback={<Fallback />}><BuyCoins /></Suspense> },
           { path: 'messages', element: <Suspense fallback={<Fallback />}><Messages /></Suspense> },
           { path: 'chat/:id', element: <Suspense fallback={<Fallback />}><Chat /></Suspense> },
           { path: 'call', element: <Suspense fallback={<Fallback />}><Call /></Suspense> },

@@ -111,8 +111,8 @@ export default function BuyCoins() {
           <h2>Umepata coins!</h2>
           <p>Umepokea <strong>{Number(success.coins).toLocaleString()}</strong> coins ({success.packageName}).</p>
           <div className="buy-coins-success-actions">
-            <Link to="/wallet" className="wallet-btn wallet-btn-primary">Angalia Wallet</Link>
-            <button type="button" className="wallet-btn wallet-btn-secondary" onClick={() => navigate('/live')}>
+            <Link to="/app/wallet" className="wallet-btn wallet-btn-primary">Angalia Wallet</Link>
+            <button type="button" className="wallet-btn wallet-btn-secondary" onClick={() => navigate('/app/live')}>
               Nenda Live
             </button>
           </div>
@@ -135,7 +135,7 @@ export default function BuyCoins() {
   return (
     <div className="user-app-card buy-coins-page">
       <header className="buy-coins-header">
-        <Link to="/wallet" className="buy-coins-back">
+        <Link to="/app/wallet" className="buy-coins-back">
           <ArrowLeft size={20} /> Wallet
         </Link>
         <h1 className="buy-coins-title">

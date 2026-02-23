@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Coins } from 'lucide-react';
+import { X, Coins, PlusCircle } from 'lucide-react';
 import { getGifts, getWallet, sendGift } from '@/lib/api/gifts';
 import { getGiftEmoji, getGiftCardTheme } from './giftIcons';
 
@@ -91,10 +92,28 @@ export function GiftDrawer({ open, onClose, hostId, hostName, liveStreamId, onGi
             </button>
           </div>
 
-          {/* Wallet balance */}
-          <div className="px-4 py-2 flex items-center gap-2 text-sm text-white/70">
-            <Coins className="w-4 h-4 text-amber-400" />
-            <span>Balance: <strong className="text-white">{balance}</strong> coins</span>
+          {/* Wallet balance + Recharge CTA – wazi ili mtumiaji ajue wapi kununua coins */}
+          <div className="px-4 py-3 flex flex-col gap-2 border-b border-white/10">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-sm text-white/80">
+                <Coins className="w-5 h-5 text-amber-400 shrink-0" />
+                <span>Balance: <strong className="text-white text-base">{balance}</strong> coins</span>
+              </div>
+              <Link
+                to="/app/wallet/buy-coins"
+                onClick={onClose}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-semibold text-sm shadow-lg transition-colors shrink-0"
+              >
+                <PlusCircle className="w-4 h-4" />
+                Nunua coins
+              </Link>
+            </div>
+            {balance < 10 && (
+              <p className="text-amber-300/95 text-xs font-medium flex items-center gap-1.5">
+                <Coins className="w-3.5 h-3.5" />
+                Una coins kidogo. Bofya &quot;Nunua coins&quot; ili kulipia na kupata coins, kisha rudi hapa kutuma gift.
+              </p>
+            )}
           </div>
 
           {loading ? (
@@ -104,7 +123,17 @@ export function GiftDrawer({ open, onClose, hostId, hostName, liveStreamId, onGi
           ) : (
             <>
               <div className="flex-1 overflow-y-auto p-4">
-                <div className="grid grid-cols-4 gap-3" style={{ perspective: '800px' }}>
+                {/* Reminder: recharge link */}
+                <Link
+                  to="/app/wallet/buy-coins"
+                  onClick={onClose}
+                  className="gift-recharge-banner flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-200 text-sm font-medium mb-3"
+                >
+                  <PlusCircle className="w-4 h-4 shrink-0" />
+                  <span>Hakuna coins? Nunua hapa</span>
+                </Link>
+
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3" style={{ perspective: '800px' }}>
                   {gifts.map((g, i) => {
                     const emoji = g.iconUrl ? null : getGiftEmoji(g);
                     const theme = getGiftCardTheme(g.level);
@@ -118,7 +147,7 @@ export function GiftDrawer({ open, onClose, hostId, hostName, liveStreamId, onGi
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.03 }}
                         className={`
-                          gift-card-3d rounded-2xl p-2.5 border-2 transition-all duration-300
+                          gift-card-3d rounded-2xl p-3 border-2 transition-all duration-300
                           bg-gradient-to-br ${theme}
                           ${isSelected
                             ? 'gift-card-selected ring-2 ring-pink-400 ring-offset-2 ring-offset-[#1a1a1a] scale-[1.02] shadow-lg shadow-pink-500/25'
@@ -126,27 +155,27 @@ export function GiftDrawer({ open, onClose, hostId, hostName, liveStreamId, onGi
                           }
                         `}
                       >
-                        <div className="gift-card-inner relative w-full aspect-square rounded-xl flex items-center justify-center overflow-hidden">
+                        <div className="gift-card-inner relative w-full rounded-xl flex items-center justify-center overflow-visible min-h-[64px]">
                           {g.iconUrl ? (
-                            <img src={g.iconUrl} alt="" className="w-full h-full object-contain p-1" />
+                            <img src={g.iconUrl} alt="" className="w-full max-w-[56px] h-14 object-contain" />
                           ) : (
                             <span
-                              className="gift-emoji text-3xl sm:text-4xl drop-shadow-lg filter select-none"
+                              className="gift-emoji text-4xl sm:text-5xl select-none leading-none"
                               style={{
-                                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.4)) drop-shadow(0 0 12px rgba(255,255,255,0.15))',
+                                filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.45)) drop-shadow(0 0 14px rgba(255,255,255,0.12))',
                               }}
                             >
                               {emoji}
                             </span>
                           )}
                         </div>
-                        <p className="text-[11px] font-medium text-white/90 mt-1 truncate leading-tight">{g.name}</p>
+                        <p className="text-xs font-semibold text-white mt-1.5 truncate leading-tight">{g.name}</p>
                         {g.level && (
-                          <span className="text-[9px] text-white/60 uppercase tracking-wider font-semibold block truncate">
+                          <span className="text-[10px] text-white/70 uppercase tracking-wider font-medium block truncate">
                             {g.level}
                           </span>
                         )}
-                        <p className="text-[11px] text-amber-400 font-bold mt-0.5">{g.coinValue ?? 0} coins</p>
+                        <p className="text-xs text-amber-400 font-bold mt-0.5">{g.coinValue ?? 0} coins</p>
                       </motion.button>
                     );
                   })}
@@ -226,7 +255,10 @@ export function GiftDrawer({ open, onClose, hostId, hostName, liveStreamId, onGi
           transform: perspective(800px) scale(0.98);
         }
         .gift-card-inner {
-          min-height: 56px;
+          min-height: 64px;
+        }
+        .gift-recharge-banner:hover {
+          background: rgba(245, 158, 11, 0.3);
         }
       `}</style>
     </AnimatePresence>

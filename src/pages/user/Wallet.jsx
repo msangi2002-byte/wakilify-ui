@@ -127,7 +127,7 @@ export default function Wallet() {
           <span className="wallet-balance-label">Coins</span>
           <span className="wallet-balance-value">{Number(coinBalance).toLocaleString()}</span>
           <span className="wallet-balance-hint">Send gifts on live · 1 coin ≈ {coinToTzsBuy} TZS</span>
-          <Link to="/wallet/buy-coins" className="wallet-buy-coins">Nunua coins</Link>
+          <Link to="/app/wallet/buy-coins" className="wallet-buy-coins">Nunua coins</Link>
         </div>
         <div className="wallet-balance-card diamonds">
           <Gem size={28} />
