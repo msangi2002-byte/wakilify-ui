@@ -517,6 +517,19 @@
   color: #fff;
 }
 
+[data-theme="dark"] .settings-section-collapse .settings-section-header {
+  color: #e4e6eb;
+  border-bottom-color: #3e4042;
+}
+
+[data-theme="dark"] .settings-section-collapse .settings-section-header:hover {
+  color: #a78bfa;
+}
+
+[data-theme="dark"] .settings-section-collapse .settings-section-chevron {
+  color: #b0b3b8;
+}
+
 [data-theme="dark"] .settings-row-title {
   color: #fff;
 }

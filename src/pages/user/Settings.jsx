@@ -47,6 +47,7 @@ import {
   MousePointerClick,
   Star,
   List,
+  ChevronDown,
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
@@ -76,6 +77,36 @@ function Toggle({ checked, onChange, ariaLabel }) {
     >
       <span className="settings-toggle-thumb" />
     </button>
+  );
+}
+
+/** Collapsible settings section: click header to expand/collapse. */
+function SettingsSectionCollapse({ title, icon: Icon, defaultOpen = false, className = '', id: sectionId, children }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <section
+      id={sectionId}
+      className={`user-app-card settings-section settings-section-collapse ${open ? '' : 'settings-section-collapsed'} ${className}`.trim()}
+    >
+      <button
+        type="button"
+        className="settings-section-header"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-controls={sectionId ? `settings-section-body-${sectionId}` : undefined}
+      >
+        {Icon && <Icon size={20} className="settings-section-header-icon" />}
+        <span className="settings-section-header-title">{title}</span>
+        <ChevronDown size={20} className="settings-section-chevron" aria-hidden />
+      </button>
+      <div
+        id={sectionId ? `settings-section-body-${sectionId}` : undefined}
+        className="settings-section-body"
+        hidden={!open}
+      >
+        {children}
+      </div>
+    </section>
   );
 }
 
@@ -389,11 +420,7 @@ export default function Settings() {
         <p className="settings-subtitle">Manage your account and preferences</p>
       </header>
 
-      <section className="user-app-card settings-section">
-        <h2 className="settings-section-title">
-          <Camera size={20} />
-          Profile photos
-        </h2>
+      <SettingsSectionCollapse title="Profile photos" icon={Camera}>
         <input
           type="file"
           ref={avatarInputRef}
@@ -451,13 +478,9 @@ export default function Settings() {
             {photoError}
           </p>
         )}
-      </section>
+      </SettingsSectionCollapse>
 
-      <section className="user-app-card settings-section">
-        <h2 className="settings-section-title">
-          <User size={20} />
-          Account & profile
-        </h2>
+      <SettingsSectionCollapse title="Account & profile" icon={User}>
         <SettingRow label="Display name" description="Name shown on your profile">
           <input
             type="text"
@@ -592,13 +615,9 @@ export default function Settings() {
             {profileSaving ? 'Saving…' : 'Save changes'}
           </button>
         </div>
-      </section>
+      </SettingsSectionCollapse>
 
-      <section className="user-app-card settings-section">
-        <h2 className="settings-section-title">
-          <Moon size={20} />
-          Appearance
-        </h2>
+      <SettingsSectionCollapse title="Appearance" icon={Moon}>
         <SettingRow
           label="Dark mode"
           description="Use a dark theme across the app"
@@ -613,13 +632,9 @@ export default function Settings() {
           <span className="settings-theme-icon">{theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}</span>
           <span>{theme === 'dark' ? 'Dark' : 'Light'} mode</span>
         </div>
-      </section>
+      </SettingsSectionCollapse>
 
-      <section className="user-app-card settings-section">
-        <h2 className="settings-section-title">
-          <Bell size={20} />
-          Notifications
-        </h2>
+      <SettingsSectionCollapse title="Notifications" icon={Bell}>
         <SettingRow
           label="Posts and activity"
           description="When friends post or react"
@@ -650,13 +665,9 @@ export default function Settings() {
             ariaLabel="Marketing notifications"
           />
         </SettingRow>
-      </section>
+      </SettingsSectionCollapse>
 
-      <section className="user-app-card settings-section">
-        <h2 className="settings-section-title">
-          <TrendingUp size={20} />
-          Boost Your Posts
-        </h2>
+      <SettingsSectionCollapse title="Boost Your Posts" icon={TrendingUp}>
         <p className="settings-row-desc" style={{ marginBottom: 12 }}>
           Tangaza post yako kwa watu zaidi. Chagua objective, audience, na budget.
         </p>
@@ -664,14 +675,10 @@ export default function Settings() {
           <TrendingUp size={18} style={{ marginRight: 8 }} />
           Nenda kwenye Boost
         </Link>
-      </section>
+      </SettingsSectionCollapse>
 
       {String(user?.role ?? '').toLowerCase() === ROLES.BUSINESS && (
-        <section className="user-app-card settings-section">
-          <h2 className="settings-section-title">
-            <Building2 size={20} />
-            Business Dashboard
-          </h2>
+        <SettingsSectionCollapse title="Business Dashboard" icon={Building2}>
           <p className="settings-row-desc" style={{ marginBottom: 12 }}>
             Manage your business, products, orders, and analytics.
           </p>
@@ -685,15 +692,11 @@ export default function Settings() {
               Go to Business Dashboard
             </Link>
           </div>
-        </section>
+        </SettingsSectionCollapse>
       )}
 
       {String(user?.role ?? '').toLowerCase() === ROLES.USER && (
-        <section className="user-app-card settings-section">
-          <h2 className="settings-section-title">
-            <Building2 size={20} />
-            Become a business
-          </h2>
+        <SettingsSectionCollapse title="Become a business" icon={Building2}>
           <p className="settings-row-desc" style={{ marginBottom: 12 }}>
             Request to open a business on Wakilfy. Choose a plan (fee), fill details and send – no payment here. Request goes to your agent with your location; they will visit, then complete registration and payment.
           </p>
@@ -707,14 +710,10 @@ export default function Settings() {
               Request to become a business
             </button>
           </div>
-        </section>
+        </SettingsSectionCollapse>
       )}
 
-      <section id="marketplace" className="user-app-card settings-section">
-        <h2 className="settings-section-title">
-          <ShoppingBag size={20} />
-          Marketplace
-        </h2>
+      <SettingsSectionCollapse id="marketplace" title="Marketplace" icon={ShoppingBag}>
         <SettingRow
           label="New listings"
           description="When sellers you follow list new items"
@@ -796,13 +795,9 @@ export default function Settings() {
             Browse marketplace
           </Link>
         </div>
-      </section>
+      </SettingsSectionCollapse>
 
-      <section className="user-app-card settings-section">
-        <h2 className="settings-section-title">
-          <Shield size={20} />
-          Privacy & security
-        </h2>
+      <SettingsSectionCollapse title="Privacy & security" icon={Shield}>
         <SettingRow
           label="Profile visibility"
           description="Who can see your profile and posts"
@@ -841,13 +836,9 @@ export default function Settings() {
             Set up 2FA
           </button>
         </SettingRow>
-      </section>
+      </SettingsSectionCollapse>
 
-      <section className="user-app-card settings-section">
-        <h2 className="settings-section-title">
-          <UserX size={20} />
-          Blocked users
-        </h2>
+      <SettingsSectionCollapse title="Blocked users" icon={UserX}>
         <p className="settings-row-desc" style={{ marginBottom: 12 }}>
           Watu uliofunga. Hauona posts/stories zao; wao hawanaona zako.
         </p>
@@ -874,13 +865,9 @@ export default function Settings() {
             ))}
           </ul>
         )}
-      </section>
+      </SettingsSectionCollapse>
 
-      <section className="user-app-card settings-section">
-        <h2 className="settings-section-title">
-          <EyeOff size={20} />
-          Restricted users
-        </h2>
+      <SettingsSectionCollapse title="Restricted users" icon={EyeOff}>
         <p className="settings-row-desc" style={{ marginBottom: 12 }}>
           Watu uliozuia. Wanaona posts zako za public tu.
         </p>
@@ -916,13 +903,9 @@ export default function Settings() {
             ))}
           </ul>
         )}
-      </section>
+      </SettingsSectionCollapse>
 
-      <section className="user-app-card settings-section">
-        <h2 className="settings-section-title">
-          <MapPin size={20} />
-          Login activity
-        </h2>
+      <SettingsSectionCollapse title="Login activity" icon={MapPin}>
         <p className="settings-row-desc" style={{ marginBottom: 12 }}>
           Recent logins (device, browser, IP).
         </p>
@@ -942,13 +925,9 @@ export default function Settings() {
             ))}
           </ul>
         )}
-      </section>
+      </SettingsSectionCollapse>
 
-      <section className="user-app-card settings-section settings-section-danger">
-        <h2 className="settings-section-title">
-          <Trash2 size={20} />
-          Account actions
-        </h2>
+      <SettingsSectionCollapse title="Account actions" icon={Trash2} className="settings-section-danger">
         <SettingRow
           label="Delete account"
           description="Permanently delete your account and all data. This cannot be undone."
@@ -957,7 +936,7 @@ export default function Settings() {
             Delete account
           </button>
         </SettingRow>
-      </section>
+      </SettingsSectionCollapse>
 
       {businessRequestOpen && (
         <div className="settings-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="business-request-title">
