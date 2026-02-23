@@ -143,7 +143,10 @@ export function subscribeLiveComments(liveId, onComment, onConnected, onViewerCo
   (async () => {
     try {
       const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'text/event-stream',
+        },
         signal: controller.signal,
       });
       if (!res.ok || !res.body) return;
@@ -192,9 +195,8 @@ export function subscribeLiveComments(liveId, onComment, onConnected, onViewerCo
               } catch (_) {}
             }
             currentEvent = null;
-          } else if (line === '') {
-            currentEvent = null;
           }
+          // Don't clear currentEvent on blank line – next line may be data for this event
         }
       }
     } catch (e) {
