@@ -10,6 +10,7 @@ import {
   Share2,
   UserCheck,
   Users,
+  Radio,
 } from 'lucide-react';
 import { getNotifications, markNotificationRead, markAllNotificationsRead } from '@/lib/api/notifications';
 import { formatPostTime } from '@/lib/utils/dateUtils';
@@ -23,6 +24,7 @@ const ICON_BY_TYPE = {
   FRIEND_ACCEPT: UserCheck,
   FOLLOW: UserPlus,
   COMMUNITY_INVITE: Users,
+  LIVE_STARTED: Radio,
   SYSTEM: Bell,
 };
 
@@ -30,6 +32,7 @@ function linkForNotification(n) {
   if (n.type === 'FOLLOW' && n.actor?.id) return `/app/profile/${n.actor.id}`;
   if (n.type === 'FRIEND_REQUEST' || n.type === 'FRIEND_ACCEPT') return '/app/friends';
   if (n.type === 'COMMUNITY_INVITE' && n.entityId) return `/app/groups/${n.entityId}`;
+  if (n.type === 'LIVE_STARTED' && n.entityId) return `/app/live/${n.entityId}`;
   if ((n.type === 'LIKE' || n.type === 'COMMENT' || n.type === 'SHARE') && n.entityId) return `/app`;
   if (n.type === 'SYSTEM') return '/app';
   return '/app';

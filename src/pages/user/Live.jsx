@@ -26,6 +26,7 @@ export default function Live() {
   const [modalOpen, setModalOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('just_chatting');
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState(null);
 
@@ -42,7 +43,7 @@ export default function Live() {
     setLoading(true);
     setError(null);
     try {
-      const list = await getActiveLives(24);
+      const list = await getActiveLives(24, activeCategory === 'all' ? null : activeCategory);
       setLives(list);
     } catch (e) {
       setError(e?.response?.data?.message || e?.message || 'Could not load lives');
@@ -56,7 +57,7 @@ export default function Live() {
     fetchLives();
     const t = setInterval(fetchLives, 30000);
     return () => clearInterval(t);
-  }, []);
+  }, [activeCategory]);
 
   const fetchMyStreams = async () => {
     setMyStreamsLoading(true);
@@ -127,7 +128,7 @@ export default function Live() {
     setCreating(true);
     setCreateError(null);
     try {
-      const stream = await startLive({ title: trimmedTitle, description: description.trim() || '' });
+      const stream = await startLive({ title: trimmedTitle, description: description.trim() || '', category: selectedCategory });
       handleCloseModal(); // Clean up stream before navigating
       if (stream?.id) {
         fetchLives();
@@ -272,65 +273,62 @@ export default function Live() {
           </div>
         )}
 
-        {/* Content */}
+        {/* Content – vertical scroll: one big featured, then 1–2 column list (TikTok/FB style) */}
         {!loading && lives.length > 0 && (
-          <div className="animate-fade-in space-y-8">
-            {/* Hero / Featured */}
+          <div className="animate-fade-in pb-8">
+            {/* Featured – one big hero */}
             {featuredStream && (
-              <section className="relative rounded-3xl overflow-hidden aspect-video md:aspect-[21/9] group cursor-pointer border border-gray-200 hover:border-gray-300 transition-all shadow-2xl" onClick={() => navigate(`/app/live/${featuredStream.id}`)}>
+              <section className="relative mb-6 rounded-2xl overflow-hidden aspect-video md:aspect-[21/9] group cursor-pointer border border-gray-200 hover:border-gray-300 transition-all shadow-xl" onClick={() => navigate(`/app/live/${featuredStream.id}`)}>
                 <div className="absolute inset-0 bg-gray-900">
                   {featuredStream.thumbnailUrl ? (
-                    <img src={featuredStream.thumbnailUrl} className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-700" />
+                    <img src={featuredStream.thumbnailUrl} className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-700" alt="" />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-purple-900 to-black" />
                   )}
                 </div>
-
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-10" />
-
-                <div className="absolute top-4 left-4 z-20">
-                  <span className="bg-red-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-2 animate-pulse shadow-lg shadow-red-600/20">
-                    <span className="w-2 h-2 bg-white rounded-full"></span>
-                    LIVE NOW
-                  </span>
-                </div>
-
-                <div className="absolute top-4 right-4 z-20 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10 flex items-center gap-2">
-                  <Users size={14} className="text-pink-500" />
-                  <span className="text-xs font-bold text-white">{featuredStream.viewerCount || 0} watching</span>
-                </div>
-
-                <div className="absolute bottom-0 left-0 p-6 md:p-10 z-20 w-full md:w-2/3">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 rounded-full p-0.5 bg-gradient-to-tr from-pink-500 to-violet-500">
-                      <img src={featuredStream.host?.profilePic} className="w-full h-full rounded-full object-cover border-2 border-black" />
-                    </div>
-                    <div>
-                      <span className="font-bold text-white block text-lg leading-none mb-1">{featuredStream.host?.name}</span>
-                      <span className="text-white/60 text-xs font-semibold uppercase tracking-wider">Host</span>
-                    </div>
+                <div className="relative z-20 -mt-full pointer-events-none h-full flex flex-col justify-end p-4 md:p-8">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="bg-red-600 text-white text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5 animate-pulse">
+                      <span className="w-1.5 h-1.5 bg-white rounded-full" />
+                      LIVE NOW
+                    </span>
+                    <span className="bg-black/50 text-white text-xs font-medium px-2.5 py-1 rounded-full flex items-center gap-1">
+                      <Users size={12} className="text-pink-400" />
+                      {featuredStream.viewerCount || 0} watching
+                    </span>
                   </div>
-                  <h3 className="text-2xl md:text-4xl font-black text-white leading-tight mb-3 drop-shadow-xl">{featuredStream.title || 'Untitled Stream'}</h3>
-                  <p className="text-white/70 line-clamp-2 mb-6 max-w-xl text-lg hidden md:block">{featuredStream.description || 'Join the conversation!'}</p>
-
-                  <button className="px-8 py-3.5 bg-white text-black rounded-xl font-bold flex items-center gap-2 hover:bg-gray-100 transition-all active:scale-95 shadow-lg shadow-white/10">
-                    <Play size={20} fill="currentColor" /> Watch Stream
-                  </button>
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-white/80">
+                      {featuredStream.host?.profilePic ? (
+                        <img src={featuredStream.host.profilePic} className="w-full h-full object-cover" alt="" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-pink-500 to-violet-500 flex items-center justify-center text-white font-bold text-sm">
+                          {featuredStream.host?.name?.charAt(0) || 'H'}
+                        </div>
+                      )}
+                    </div>
+                    <span className="font-bold text-white text-lg drop-shadow-md">{featuredStream.host?.name}</span>
+                  </div>
+                  <h3 className="text-xl md:text-3xl font-black text-white leading-tight drop-shadow-lg">{featuredStream.title || 'Untitled Stream'}</h3>
+                  <p className="text-white/80 text-sm line-clamp-2 mt-1 max-w-xl hidden md:block">{featuredStream.description || 'Join the conversation!'}</p>
+                  <div className="mt-3 pointer-events-auto">
+                    <span className="inline-flex items-center gap-2 px-4 py-2.5 bg-white text-black rounded-xl font-bold text-sm hover:bg-gray-100 transition-colors">
+                      <Play size={18} fill="currentColor" /> Watch
+                    </span>
+                  </div>
                 </div>
               </section>
             )}
 
-            {/* Grid */}
+            {/* List – 1 col mobile, 2 cols md+ (vertical scroll feel) */}
             <section>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                  <Flame className="text-orange-500" size={24} />
-                  Recommended Channels
-                </h2>
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {(lives.length > 0 ? (otherStreams.length > 0 ? otherStreams : lives) : []).map((live, i) => (
+              <h2 className="text-base font-bold text-gray-900 flex items-center gap-2 mb-4">
+                <Flame className="text-orange-500" size={20} />
+                Live now
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {(otherStreams.length > 0 ? otherStreams : lives).map((live, i) => (
                   <LiveCard key={live.id} live={live} index={i} />
                 ))}
               </div>
@@ -426,7 +424,12 @@ export default function Live() {
                           <button
                             key={cat.id}
                             type="button"
-                            className="px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 hover:text-gray-900 hover:border-gray-300 transition-all"
+                            onClick={() => setSelectedCategory(cat.id)}
+                            className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-all ${
+                              selectedCategory === cat.id
+                                ? 'bg-pink-500 text-white border-pink-500'
+                                : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-gray-900 hover:border-gray-300'
+                            }`}
                           >
                             {cat.label}
                           </button>

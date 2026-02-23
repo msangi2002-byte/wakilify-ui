@@ -41,9 +41,12 @@ export async function getGiftsForLive(liveStreamId) {
   return Array.isArray(out) ? out : [];
 }
 
-/** POST /api/v1/wallet/withdraw – request cash withdrawal (host); body: { amount, phone } */
-export async function requestWithdraw({ amount, phone }) {
-  const { data } = await api.post('/wallet/withdraw', { amount: Number(amount), phone: String(phone || '').trim() });
+/** POST /api/v1/wallet/withdraw – request withdrawal (diamonds → TZS); body: { amount, paymentPhone, paymentMethod?, paymentName? } */
+export async function requestWithdraw({ amount, phone, paymentMethod = 'M-PESA', paymentName }) {
+  const body = { amount: Number(amount), paymentPhone: String(phone || '').trim() };
+  if (paymentMethod) body.paymentMethod = paymentMethod;
+  if (paymentName) body.paymentName = paymentName;
+  const { data } = await api.post('/wallet/withdraw', body);
   return unwrap({ data }) ?? data;
 }
 

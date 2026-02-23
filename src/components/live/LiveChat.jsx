@@ -1,10 +1,53 @@
-import { useState, useRef, useEffect } from 'react';
-import { Send, Smile, User } from 'lucide-react';
+import { useState, useRef, useEffect, memo } from 'react';
+import { Send, Smile, User, Flag } from 'lucide-react';
+
+/** Memoized single message row – reduces re-renders when polling/SSE updates list */
+const ChatMessageItem = memo(function ChatMessageItem({ msg, isDark, onAuthorClick, onReport }) {
+    return (
+        <div className={`group flex items-start gap-2 text-left rounded-lg p-2 -mx-1 hover:bg-white/10 transition-colors`}>
+        <button
+            type="button"
+            onClick={() => msg.user?.id && onAuthorClick?.(msg.user)}
+            className={`flex-1 min-w-0 flex items-start gap-2 text-left ${!msg.user?.id ? 'cursor-default' : 'cursor-pointer'}`}
+        >
+            <div className={`w-8 h-8 rounded-full overflow-hidden shrink-0 border-2 ${isDark ? 'border-white/30' : 'border-gray-200'} bg-gray-800 flex-shrink-0`}>
+                {msg.user?.profilePic ? (
+                    <img src={msg.user.profilePic} alt={msg.user.name} className="w-full h-full object-cover" />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-pink-500 to-violet-500 font-bold text-xs text-white">
+                        {msg.user?.name?.charAt(0).toUpperCase() || 'U'}
+                    </div>
+                )}
+            </div>
+            <div className="min-w-0 flex-1">
+                <div className="flex items-baseline gap-2 flex-wrap">
+                    <span className={`font-semibold text-sm truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{msg.user?.name}</span>
+                    {msg.user?.isHost && (
+                        <span className="text-[10px] bg-pink-500 px-1.5 py-0.5 rounded text-white font-bold shrink-0">HOST</span>
+                    )}
+                </div>
+                <p className={`text-sm leading-tight break-words ${isDark ? 'text-white/95' : 'text-gray-700'}`}>
+                    {msg.text}
+                </p>
+            </div>
+            {msg.user?.id && onAuthorClick && (
+                <User className="w-4 h-4 shrink-0 text-white/40 mt-1.5" aria-hidden />
+            )}
+        </button>
+        {onReport && (
+            <button type="button" onClick={(e) => { e.stopPropagation(); onReport(msg); }} className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-white/10 text-white/50 hover:text-red-400 transition-all shrink-0" aria-label="Report comment" title="Report">
+                <Flag className="w-3.5 h-3.5" />
+            </button>
+        )}
+        </div>
+    );
+});
 
 export function LiveChat({
     messages = [],
     onSendMessage,
     onAuthorClick,
+    onReportComment,
     isTransparent = false,
     solidBackground = true,
     showInput = true,
@@ -38,36 +81,7 @@ export function LiveChat({
                 )}
 
                 {messages.map((msg) => (
-                    <button
-                        key={msg.id}
-                        type="button"
-                        onClick={() => msg.user?.id && onAuthorClick?.(msg.user)}
-                        className={`w-full flex items-start gap-2 text-left rounded-lg p-2 -mx-1 hover:bg-white/10 transition-colors ${!msg.user?.id ? 'cursor-default' : 'cursor-pointer'}`}
-                    >
-                        <div className={`w-8 h-8 rounded-full overflow-hidden shrink-0 border-2 ${isDark ? 'border-white/30' : 'border-gray-200'} bg-gray-800 flex-shrink-0`}>
-                            {msg.user?.profilePic ? (
-                                <img src={msg.user.profilePic} alt={msg.user.name} className="w-full h-full object-cover" />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-pink-500 to-violet-500 font-bold text-xs text-white">
-                                    {msg.user?.name?.charAt(0).toUpperCase() || 'U'}
-                                </div>
-                            )}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                            <div className="flex items-baseline gap-2 flex-wrap">
-                                <span className={`font-semibold text-sm truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{msg.user?.name}</span>
-                                {msg.user?.isHost && (
-                                    <span className="text-[10px] bg-pink-500 px-1.5 py-0.5 rounded text-white font-bold shrink-0">HOST</span>
-                                )}
-                            </div>
-                            <p className={`text-sm leading-tight break-words ${isDark ? 'text-white/95' : 'text-gray-700'}`}>
-                                {msg.text}
-                            </p>
-                        </div>
-                        {msg.user?.id && onAuthorClick && (
-                            <User className="w-4 h-4 shrink-0 text-white/40 mt-1.5" aria-hidden />
-                        )}
-                    </button>
+                    <ChatMessageItem key={msg.id} msg={msg} isDark={isDark} onAuthorClick={onAuthorClick} onReport={onReportComment} />
                 ))}
                 <div ref={bottomRef} />
             </div>
