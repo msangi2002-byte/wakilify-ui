@@ -18,6 +18,7 @@ import { SuggestedGroupsCarousel } from '@/components/feed/SuggestedGroupsCarous
 import { createReport } from '@/lib/api/reports';
 import { trackPromotionClick } from '@/lib/api/promotions';
 import { parseApiDate, formatPostTime, formatCommentTime } from '@/lib/utils/dateUtils';
+import { normalizeCtaLink, isInternalCtaLink } from '@/lib/utils/urlUtils';
 import { ROLES } from '@/types/roles';
 
 /** Reaction types for posts (must match backend ReactionType). Label + icon/emoji for picker. */
@@ -670,24 +671,28 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], vi
           </div>
         </div>
       </div>
-      {isSponsored && sponsorCtaLink && (
-        <div className="feed-post-sponsored-cta">
-          <a
-            href={sponsorCtaLink}
-            {...(sponsorCtaLink.startsWith('/') ? {} : { target: '_blank', rel: 'noopener noreferrer' })}
-            className="feed-post-sponsored-cta-btn"
-            onClick={(e) => {
-              if (promotionId) trackPromotionClick(promotionId).catch(() => {});
-              if (sponsorCtaLink.startsWith('/')) {
-                e.preventDefault();
-                navigate(sponsorCtaLink);
-              }
-            }}
-          >
-            {sponsorCtaLink.startsWith('/') ? 'Learn more' : 'Visit link'}
-          </a>
-        </div>
-      )}
+      {isSponsored && sponsorCtaLink && (() => {
+        const isInternal = isInternalCtaLink(sponsorCtaLink);
+        const href = normalizeCtaLink(sponsorCtaLink);
+        return (
+          <div className="feed-post-sponsored-cta">
+            <a
+              href={href}
+              {...(isInternal ? {} : { target: '_blank', rel: 'noopener noreferrer' })}
+              className="feed-post-sponsored-cta-btn"
+              onClick={(e) => {
+                if (promotionId) trackPromotionClick(promotionId).catch(() => {});
+                if (isInternal) {
+                  e.preventDefault();
+                  navigate(sponsorCtaLink);
+                }
+              }}
+            >
+              {isInternal ? 'Learn more' : 'Visit link'}
+            </a>
+          </div>
+        );
+      })()}
       {showComments && (
         <div className="feed-post-comments">
           {commentsLoading ? (
