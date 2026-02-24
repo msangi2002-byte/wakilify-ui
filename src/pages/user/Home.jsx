@@ -16,6 +16,7 @@ import { PeopleYouMayKnowCarousel } from '@/components/feed/PeopleYouMayKnowCaro
 import { ReelsCarousel } from '@/components/feed/ReelsCarousel';
 import { SuggestedGroupsCarousel } from '@/components/feed/SuggestedGroupsCarousel';
 import { createReport } from '@/lib/api/reports';
+import { trackPromotionClick } from '@/lib/api/promotions';
 import { parseApiDate, formatPostTime, formatCommentTime } from '@/lib/utils/dateUtils';
 import { ROLES } from '@/types/roles';
 
@@ -102,8 +103,9 @@ function Avatar({ user, size = 40, className = '' }) {
   );
 }
 
-function FeedPost({ id, author, time, description, media = [], hashtags = [], visibility, location, feelingActivity, taggedUsers = [], topReactors = [], liked: initialLiked = false, userReaction: initialUserReaction = null, likesCount: initialLikesCount = 0, commentsCount: initialCommentsCount = 0, sharesCount = 0, saved: initialSaved = false, authorIsFollowed: initialAuthorIsFollowed = false, isSponsored = false, onFollowChange, onSaveChange, videoIndex, onOpenVideo }) {
+function FeedPost({ id, author, time, description, media = [], hashtags = [], visibility, location, feelingActivity, taggedUsers = [], topReactors = [], liked: initialLiked = false, userReaction: initialUserReaction = null, likesCount: initialLikesCount = 0, commentsCount: initialCommentsCount = 0, sharesCount = 0, saved: initialSaved = false, authorIsFollowed: initialAuthorIsFollowed = false, isSponsored = false, sponsorCtaLink, promotionId, onFollowChange, onSaveChange, videoIndex, onOpenVideo }) {
   const { user: currentUser } = useAuthStore();
+  const navigate = useNavigate();
   const isSelf = currentUser?.id && author?.id && currentUser.id === author.id;
   const resolvedInitialReaction = initialUserReaction || (initialLiked ? 'LIKE' : null);
   const [userReaction, setUserReaction] = useState(resolvedInitialReaction);
@@ -668,6 +670,24 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], vi
           </div>
         </div>
       </div>
+      {isSponsored && sponsorCtaLink && (
+        <div className="feed-post-sponsored-cta">
+          <a
+            href={sponsorCtaLink}
+            {...(sponsorCtaLink.startsWith('/') ? {} : { target: '_blank', rel: 'noopener noreferrer' })}
+            className="feed-post-sponsored-cta-btn"
+            onClick={(e) => {
+              if (promotionId) trackPromotionClick(promotionId).catch(() => {});
+              if (sponsorCtaLink.startsWith('/')) {
+                e.preventDefault();
+                navigate(sponsorCtaLink);
+              }
+            }}
+          >
+            {sponsorCtaLink.startsWith('/') ? 'Learn more' : 'Visit link'}
+          </a>
+        </div>
+      )}
       {showComments && (
         <div className="feed-post-comments">
           {commentsLoading ? (
@@ -1019,6 +1039,8 @@ export default function Home() {
               saved={p.saved}
               authorIsFollowed={p.authorIsFollowed}
               isSponsored={p.isSponsored}
+              sponsorCtaLink={p.sponsorCtaLink}
+              promotionId={p.promotionId}
               videoIndex={videoIndex >= 0 ? videoIndex : undefined}
               onOpenVideo={videoIndex >= 0 ? openVideoInReels : undefined}
             />
