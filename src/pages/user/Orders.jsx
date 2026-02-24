@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { Package, Loader2, RefreshCw, CheckCircle, Truck, MapPin, Calendar, AlertCircle, X, ShoppingBag, Building2, Phone, User as UserIcon, Mail, Globe, MessageCircle } from 'lucide-react';
 import { getMyOrders, getOrderById, cancelOrder, confirmOrder, getOrderTracking } from '@/lib/api/orders';
@@ -46,6 +46,18 @@ function formatDate(dateString) {
   } catch {
     return dateString;
   }
+}
+
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
 }
 
 // Fit map bounds to markers (used inside MapContainer)
@@ -127,8 +139,12 @@ function OrderCard({ order, onOrderUpdate }) {
     );
   }, [expanded, canTrackOrder]);
 
+  const businessLocation = orderData.business?.latitude != null && orderData.business?.longitude != null
+    ? { lat: orderData.business.latitude, lng: orderData.business.longitude }
+    : null;
   const trackingPointsWithLocation = Array.isArray(trackingEvents) ? trackingEvents.filter((ev) => ev.latitude != null && ev.longitude != null) : [];
   const mapPoints = [
+    ...(businessLocation ? [businessLocation] : []),
     ...trackingPointsWithLocation.map((ev) => ({ lat: ev.latitude, lng: ev.longitude })),
     ...(userLocation ? [userLocation] : []),
   ];
@@ -139,6 +155,12 @@ function OrderCard({ order, onOrderUpdate }) {
     mapCenter.lat /= mapPoints.length;
     mapCenter.lng /= mapPoints.length;
   }
+  const distanceKm = businessLocation && userLocation
+    ? haversineKm(businessLocation.lat, businessLocation.lng, userLocation.lat, userLocation.lng).toFixed(1)
+    : null;
+  const distanceLine = businessLocation && userLocation
+    ? [[businessLocation.lat, businessLocation.lng], [userLocation.lat, userLocation.lng]]
+    : null;
 
   return (
     <div className="orders-card">
@@ -609,9 +631,14 @@ function OrderCard({ order, onOrderUpdate }) {
                 </div>
               )}
 
-              {canTrackOrder && (trackingPointsWithLocation.length > 0 || userLocation) && (
+              {canTrackOrder && (businessLocation || trackingPointsWithLocation.length > 0 || userLocation) && (
                 <div className="orders-card-section">
                   <h4 className="orders-card-section-title">Track mzigo – map</h4>
+                  {distanceKm != null && (
+                    <p style={{ marginBottom: 10, fontSize: '0.9375rem', fontWeight: 600, color: '#374151' }}>
+                      Umbali: <strong>{distanceKm} km</strong> kutoka duka hadi kwako (kwenye map mstari wa bluu).
+                    </p>
+                  )}
                   <div style={{ height: 280, borderRadius: 12, overflow: 'hidden', border: '1px solid #e5e7eb' }}>
                     <MapContainer
                       center={[mapCenter.lat, mapCenter.lng]}
@@ -624,6 +651,25 @@ function OrderCard({ order, onOrderUpdate }) {
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                       />
                       {mapPoints.length > 0 && <FitBounds points={mapPoints} />}
+                      {distanceLine && (
+                        <Polyline
+                          positions={distanceLine}
+                          pathOptions={{ color: '#2563eb', weight: 4, opacity: 0.8, dashArray: '8, 8' }}
+                        />
+                      )}
+                      {businessLocation && (
+                        <Marker
+                          position={[businessLocation.lat, businessLocation.lng]}
+                          icon={L.divIcon({
+                            className: 'orders-tracking-marker-store',
+                            html: '<div style="width:32px;height:32px;border-radius:50%;background:#dc2626;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);">Store</div>',
+                            iconSize: [32, 32],
+                            iconAnchor: [16, 16],
+                          })}
+                        >
+                          <Popup><strong>Duka (seller)</strong></Popup>
+                        </Marker>
+                      )}
                       {trackingPointsWithLocation.map((ev, idx) => (
                         <Marker
                           key={ev.id || idx}
@@ -659,7 +705,7 @@ function OrderCard({ order, onOrderUpdate }) {
                   </div>
                   {userLocation && (
                     <p style={{ marginTop: 8, fontSize: '0.8125rem', color: '#6b7280' }}>
-                      Your location is used only to show you on the map. Mteja anaweza kuona mwendo wa mzigo kwa updates za seller.
+                      Location yako inatumika kuonyesha umbali kutoka duka hadi kwako. Mstari wa bluu unaonyesha mwendo wa mzigo.
                     </p>
                   )}
                 </div>
