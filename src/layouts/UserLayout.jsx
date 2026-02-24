@@ -757,7 +757,7 @@ export default function UserLayout() {
         </div>
       </header>
 
-      <div className={`user-app-body ${location.pathname.startsWith('/app/shop') ? 'user-app-body-shop' : ''}`}>
+      <div className={`user-app-body ${location.pathname.startsWith('/app/shop') ? 'user-app-body-shop' : ''} user-app-body-hide-scrollbar`}>
         {!location.pathname.startsWith('/app/shop') && (
           <aside className="user-app-sidebar">
             <ul className="user-app-sidebar-list">
@@ -793,7 +793,9 @@ export default function UserLayout() {
           </aside>
         )}
 
-        <main className={`user-app-main ${location.pathname.startsWith('/app/shop') ? 'user-app-main-no-left-sidebar' : ''}`}>
+        <main
+          className={`user-app-main ${location.pathname.startsWith('/app/shop') ? 'user-app-main-no-left-sidebar' : ''} user-app-main-hide-scrollbar`}
+        >
           <Outlet />
         </main>
 

@@ -69,3 +69,8 @@ export async function cancelPromotion(id) {
   const { data } = await api.delete(`${base}/${id}`);
   return data?.data ?? data;
 }
+
+/** Record promotion click (for sponsored post CTA – opens ctaLink and tracks click) */
+export async function trackPromotionClick(promotionId) {
+  await api.post(`${base}/${promotionId}/click`);
+}

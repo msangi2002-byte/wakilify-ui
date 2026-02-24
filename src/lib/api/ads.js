@@ -29,7 +29,7 @@ export async function calculateAdPrice(targetReach) {
 /**
  * Boost a post - create promotion and initiate USSD payment
  * POST /api/v1/ads/boost-post
- * Body: { postId, targetReach, paymentPhone, objective?, audienceType?, targetRegions?, targetAgeMin?, targetAgeMax?, targetGender? }
+ * Body: { postId, targetReach, paymentPhone, objective?, audienceType?, targetRegions?, targetAgeMin?, targetAgeMax?, targetGender?, ctaLink? }
  */
 export async function boostPost(postId, targetReach, paymentPhone, options = {}) {
   const body = {
@@ -42,6 +42,7 @@ export async function boostPost(postId, targetReach, paymentPhone, options = {})
     ...(options.targetAgeMin != null && { targetAgeMin: options.targetAgeMin }),
     ...(options.targetAgeMax != null && { targetAgeMax: options.targetAgeMax }),
     ...(options.targetGender && { targetGender: options.targetGender }),
+    ...(options.ctaLink && { ctaLink: options.ctaLink.trim() }),
   };
   const { data } = await api.post('/ads/boost-post', body);
   return data?.data ?? data;

@@ -3,7 +3,15 @@ import { HorizontalScrollWidget } from './HorizontalScrollWidget';
 import { ReelsWidgetSkeleton } from './FeedWidgetSkeletons';
 
 function getReelThumbnail(item) {
-  return item?.thumbnailUrl ?? item?.media?.[0]?.thumbnailUrl ?? item?.media?.[0]?.url ?? null;
+  return item?.thumbnailUrl ?? item?.media?.[0]?.thumbnailUrl ?? null;
+}
+
+function getReelVideoUrl(item) {
+  const m = item?.media?.[0];
+  if (!m?.url) return null;
+  const type = (m?.type ?? '').toUpperCase();
+  if (type === 'VIDEO') return m.url;
+  return null;
 }
 
 export function ReelsCarousel({ items = [], loading, onReelClick }) {
@@ -22,6 +30,7 @@ export function ReelsCarousel({ items = [], loading, onReelClick }) {
     >
       {items.map((item) => {
         const thumb = getReelThumbnail(item);
+        const videoUrl = getReelVideoUrl(item);
         const title = (item?.caption ?? item?.description ?? item?.content ?? '').slice(0, 40) || 'Reel';
         const views = item?.viewsCount ?? item?.reactionsCount ?? item?.likesCount ?? 0;
         const handleClick = () => {
@@ -38,6 +47,15 @@ export function ReelsCarousel({ items = [], loading, onReelClick }) {
               <div className="feed-widget-reel-thumb" style={{ position: 'relative' }}>
                 {thumb ? (
                   <img src={thumb} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                ) : videoUrl ? (
+                  <video
+                    src={videoUrl}
+                    preload="metadata"
+                    muted
+                    playsInline
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                    aria-hidden
+                  />
                 ) : (
                   <div style={{ width: '100%', aspectRatio: '9/16', background: 'var(--wk-bg-alt, #e4e6eb)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Play size={32} color="#65676b" />

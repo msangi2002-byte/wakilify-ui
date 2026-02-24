@@ -139,6 +139,16 @@ body:has(.user-app) {
     background: rgba(0, 0, 0, 0.2);
   }
 
+  /* All user-app pages: hide scrollbar on main but keep content scrollable */
+  .user-app-body .user-app-main.user-app-main-hide-scrollbar {
+    scrollbar-width: none;
+  }
+  .user-app-body .user-app-main.user-app-main-hide-scrollbar::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+
   /* Space juu ya left menu na Sponsored: uitowe kabisha – sidebars songea juu */
   .user-app-body .user-app-sidebar:first-child,
   .user-app-body .user-app-sidebar:last-child {
@@ -206,6 +216,18 @@ body:has(.user-app) {
 
   .user-app-body .user-app-sidebar:last-child::-webkit-scrollbar-thumb:hover {
     background: rgba(0, 0, 0, 0.18);
+  }
+
+  /* All user-app pages: hide scrollbars on left and right sidebars too, keep scrollable */
+  .user-app-body.user-app-body-hide-scrollbar .user-app-sidebar:first-child,
+  .user-app-body.user-app-body-hide-scrollbar .user-app-sidebar:last-child {
+    scrollbar-width: none;
+  }
+  .user-app-body.user-app-body-hide-scrollbar .user-app-sidebar:first-child::-webkit-scrollbar,
+  .user-app-body.user-app-body-hide-scrollbar .user-app-sidebar:last-child::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
   }
 }
 
@@ -1173,6 +1195,29 @@ body:has(.user-app) {
 .feed-post-sponsored svg {
   width: 10px;
   height: 10px;
+}
+
+.feed-post-sponsored-cta {
+  padding: 0 16px 12px;
+  margin-top: 4px;
+}
+
+.feed-post-sponsored-cta-btn {
+  display: inline-block;
+  padding: 10px 20px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #1877F2;
+  background: transparent;
+  border: 1px solid #1877F2;
+  border-radius: var(--wk-radius-lg, 8px);
+  text-decoration: none;
+  transition: background 0.2s, color 0.2s;
+}
+
+.feed-post-sponsored-cta-btn:hover {
+  background: #1877F2;
+  color: #fff;
 }
 
 .feed-post-name {

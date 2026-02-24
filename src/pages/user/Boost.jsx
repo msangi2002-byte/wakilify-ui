@@ -72,12 +72,15 @@ export default function Boost() {
   const [targetGender, setTargetGender] = useState('ALL');
   const [targetReach, setTargetReach] = useState(1000);
   const [paymentPhone, setPaymentPhone] = useState(user?.phone || '');
+  const [ctaLink, setCtaLink] = useState('');
   const [boosting, setBoosting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [viewPromo, setViewPromo] = useState(null);
   const [viewPromoStats, setViewPromoStats] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
+
+  const needsCtaLink = objective === 'MESSAGES' || objective === 'TRAFFIC';
 
   const { data: postsRaw, isLoading: loading } = useQuery({
     queryKey: ['boost', 'posts', user?.id],
@@ -195,6 +198,10 @@ export default function Boost() {
       setError('Target reach lazima angalau 100');
       return;
     }
+    if (needsCtaLink && objective === 'TRAFFIC' && !ctaLink?.trim()) {
+      setError('Weka link ya tovuti kwa lengo la Website visits');
+      return;
+    }
     setBoosting(true);
     setError('');
     setSuccess('');
@@ -202,6 +209,7 @@ export default function Boost() {
       const options = {
         objective,
         audienceType,
+        ...(needsCtaLink && ctaLink?.trim() && { ctaLink: ctaLink.trim() }),
         ...(audienceType === 'LOCAL' && {
           targetRegions: targetRegions.length ? targetRegions : null,
           targetAgeMin,
@@ -300,6 +308,28 @@ export default function Boost() {
                 </button>
               ))}
             </div>
+            {needsCtaLink && (
+              <div style={{ marginTop: 16 }}>
+                <label className="boost-label" htmlFor="boost-cta-link">
+                  {objective === 'TRAFFIC' ? 'Link ya tovuti (Website URL)' : 'Link (optional – watu wataweza kufungua)'}
+                </label>
+                <input
+                  id="boost-cta-link"
+                  type="url"
+                  className="boost-input"
+                  value={ctaLink}
+                  onChange={(e) => setCtaLink(e.target.value)}
+                  placeholder={objective === 'TRAFFIC' ? 'https://example.com' : 'https://...'}
+                  aria-label="CTA link"
+                  style={{ marginTop: 6, width: '100%' }}
+                />
+                {objective === 'TRAFFIC' && (
+                  <p className="boost-muted" style={{ marginTop: 6, fontSize: 13 }}>
+                    Wakati watu wakibofya tangazo, wataelekezwa kwenye link hii.
+                  </p>
+                )}
+              </div>
+            )}
           </section>
 
           {/* Step 3: Audience */}
@@ -434,7 +464,7 @@ export default function Boost() {
               type="button"
               className="boost-submit"
               onClick={handleBoost}
-              disabled={boosting || !selectedPostId || !paymentPhone?.trim() || !calculatedPrice}
+              disabled={boosting || !selectedPostId || !paymentPhone?.trim() || !calculatedPrice || (objective === 'TRAFFIC' && needsCtaLink && !ctaLink?.trim())}
             >
               {boosting ? 'Inaendesha...' : 'Boost Post'}
             </button>
