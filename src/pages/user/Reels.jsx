@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ThumbsUp, MessageCircle, Share2, MoreHorizontal, Plus, Play, X, Bookmark, Radio, ChevronLeft, BarChart2, Volume2, VolumeX, Heart } from 'lucide-react';
 import { getReels, recordReelView, getPostInsights, likePost, unlikePost, savePost, unsavePost, getComments, addComment, deleteComment, likeComment, unlikeComment, sharePostToStory, createPost } from '@/lib/api/posts';
 import { followUser, unfollowUser } from '@/lib/api/friends';
+import { trackPromotionClick } from '@/lib/api/promotions';
 import { formatPostTime, formatCommentTime } from '@/lib/utils/dateUtils';
+import { normalizeCtaLink, isInternalCtaLink } from '@/lib/utils/urlUtils';
 import { CommentItem } from '@/components/social/CommentItem';
 import { ReelsSkeleton } from '@/components/ui/ReelsSkeleton';
 import { useAuthStore } from '@/store/auth.store';
@@ -26,6 +28,10 @@ function normalizeReel(post) {
     liked: !!post.userReaction,
     saved: !!post.saved,
     authorIsFollowed: !!post.authorIsFollowed,
+    isSponsored: !!post.isSponsored,
+    sponsorCtaLink: post.sponsorCtaLink ?? post.sponsor_cta_link ?? null,
+    sponsorObjective: post.sponsorObjective ?? post.sponsor_objective ?? null,
+    promotionId: post.promotionId ?? post.promotion_id ?? null,
   };
 }
 
@@ -431,6 +437,7 @@ function ReelCard({ item, index, onPlay, onLikeChange, onSaveChange, onCommentCo
         <div className="reels-card-meta">
           <div className="reels-card-meta-row">
             <span className="reels-card-username">{item.author?.name ?? 'User'}</span>
+            {item.isSponsored && <span className="reels-sponsored-badge">Sponsored</span>}
             {!isSelf && (
               <button type="button" className={`reels-card-follow-btn ${followed ? 'following' : ''}`} onClick={handleFollow} disabled={followLoading}>
                 {followed ? 'Following' : 'Follow'}
@@ -547,7 +554,7 @@ function ReelCard({ item, index, onPlay, onLikeChange, onSaveChange, onCommentCo
   );
 }
 
-function ReelSlide({ item, isActive, onLikeChange, onSaveChange, onCommentClick, onShareClick, onFollowChange, onNext, onPrev }) {
+function ReelSlide({ item, isActive, onLikeChange, onSaveChange, onCommentClick, onShareClick, onFollowChange, onNext, onPrev, navigate }) {
   const { user: currentUser } = useAuthStore();
   const videoRef = useRef(null);
   const watchTimeRef = useRef({ currentTime: 0, duration: 0 });
@@ -840,6 +847,7 @@ function ReelSlide({ item, isActive, onLikeChange, onSaveChange, onCommentClick,
         <div className="reels-info-author">
           <Avatar user={item.author} size={40} className="reels-info-avatar" />
           <span className="reels-info-username">{item.author?.name ?? 'User'}</span>
+          {item.isSponsored && <span className="reels-sponsored-badge">Sponsored</span>}
           {!isSelf && (
             <button type="button" className={`reels-info-follow ${followed ? 'following' : ''}`} onClick={handleFollow} disabled={followLoading}>
               {followed ? 'Following' : 'Follow'}
@@ -847,6 +855,25 @@ function ReelSlide({ item, isActive, onLikeChange, onSaveChange, onCommentClick,
           )}
         </div>
         {item.description && <p className="reels-info-caption">{item.description}</p>}
+        {item.isSponsored && (item.sponsorObjective === 'ENGAGEMENT' || !item.sponsorObjective) && (
+          <button type="button" className="reels-sponsored-cta" onClick={() => { if (item.promotionId) trackPromotionClick(item.promotionId).catch(() => {}); onCommentClick?.(item); }}>
+            Comment & share
+          </button>
+        )}
+        {item.isSponsored && item.sponsorCtaLink && item.sponsorObjective !== 'ENGAGEMENT' && (
+          <a
+            href={normalizeCtaLink(item.sponsorCtaLink)}
+            target={isInternalCtaLink(item.sponsorCtaLink) ? undefined : '_blank'}
+            rel={isInternalCtaLink(item.sponsorCtaLink) ? undefined : 'noopener noreferrer'}
+            className="reels-sponsored-cta"
+            onClick={(e) => {
+              if (item.promotionId) trackPromotionClick(item.promotionId).catch(() => {});
+              if (isInternalCtaLink(item.sponsorCtaLink) && navigate) { e.preventDefault(); navigate(item.sponsorCtaLink); }
+            }}
+          >
+            Visit link
+          </a>
+        )}
       </div>
 
       <div className="reels-progress-wrap">
@@ -858,6 +885,7 @@ function ReelSlide({ item, isActive, onLikeChange, onSaveChange, onCommentClick,
 
 export default function Reels() {
   const location = useLocation();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [viewMode, setViewMode] = useState('list');
@@ -1110,6 +1138,7 @@ export default function Reels() {
               onFollowChange={handleFollowChange}
               onNext={undefined}
               onPrev={undefined}
+              navigate={navigate}
             />
           </div>
         ))}

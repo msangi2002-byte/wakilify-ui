@@ -15,8 +15,10 @@ import {
   getPostInsights,
 } from '@/lib/api/posts';
 import { sendMessage } from '@/lib/api/messages';
+import { trackPromotionClick } from '@/lib/api/promotions';
 import { useAuthStore } from '@/store/auth.store';
 import { parseApiDate, formatPostTime } from '@/lib/utils/dateUtils';
+import { normalizeCtaLink, isInternalCtaLink } from '@/lib/utils/urlUtils';
 import '@/styles/user-app.css';
 
 const STORY_DURATION_MS = 5000;
@@ -621,6 +623,7 @@ export default function StoryViewer() {
         <UserProfileMenu user={currentGroup?.author ?? null} avatarSize={40} className="story-viewer-author" />
         <div className="story-viewer-meta">
           <span className="story-viewer-name">{currentGroup?.author?.name ?? 'User'}</span>
+          {currentStory?.isSponsored && <span className="story-viewer-sponsored-badge">Sponsored</span>}
           <span className="story-viewer-time">{formatPostTime(currentStory?.createdAt)}</span>
         </div>
         <div className="story-viewer-header-actions">
@@ -774,6 +777,30 @@ export default function StoryViewer() {
       </div>
 
       {currentStory?.caption && mediaUrl && <div className="story-viewer-caption">{currentStory.caption}</div>}
+
+      {currentStory?.isSponsored && currentStory?.sponsorCtaLink && currentStory?.sponsorObjective !== 'ENGAGEMENT' && (
+        <a
+          href={normalizeCtaLink(currentStory.sponsorCtaLink)}
+          target={isInternalCtaLink(currentStory.sponsorCtaLink) ? undefined : '_blank'}
+          rel={isInternalCtaLink(currentStory.sponsorCtaLink) ? undefined : 'noopener noreferrer'}
+          className="story-viewer-sponsored-cta"
+          onClick={(e) => {
+            if (currentStory.promotionId) trackPromotionClick(currentStory.promotionId).catch(() => {});
+            if (isInternalCtaLink(currentStory.sponsorCtaLink)) { e.preventDefault(); navigate(currentStory.sponsorCtaLink); }
+          }}
+        >
+          Visit link
+        </a>
+      )}
+      {currentStory?.isSponsored && (currentStory?.sponsorObjective === 'ENGAGEMENT' || !currentStory?.sponsorObjective) && (
+        <button
+          type="button"
+          className="story-viewer-sponsored-cta"
+          onClick={(e) => { e.stopPropagation(); if (currentStory.promotionId) trackPromotionClick(currentStory.promotionId).catch(() => {}); setCommentsOpen(true); }}
+        >
+          Comment & share
+        </button>
+      )}
 
       {/* Right side: Reactions + Comment + Viewers - Facebook style */}
       {currentStory?.id && (
