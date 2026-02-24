@@ -244,7 +244,7 @@ export default function Boost() {
           {/* Hero Header */}
           <div className="boost-hero">
             <div className="boost-hero-icon">
-              <TrendingUp size={40} strokeWidth={2} />
+              <TrendingUp size={28} strokeWidth={2} />
             </div>
             <h1 className="boost-hero-title">Boost Post yako</h1>
             <p className="boost-hero-subtitle">
@@ -292,7 +292,7 @@ export default function Boost() {
                   className={`boost-option ${objective === o.id ? 'active' : ''}`}
                   onClick={() => setObjective(o.id)}
                 >
-                  <o.icon size={20} />
+                  <o.icon size={18} />
                   <div className="boost-option-text">
                     <span className="boost-option-label">{o.label}</span>
                     <span className="boost-option-desc">{o.desc}</span>
@@ -316,7 +316,7 @@ export default function Boost() {
                   className={`boost-option boost-option-wide ${audienceType === a.id ? 'active' : ''}`}
                   onClick={() => setAudienceType(a.id)}
                 >
-                  <a.icon size={20} />
+                  <a.icon size={18} />
                   <div className="boost-option-text">
                     <span className="boost-option-label">{a.label}</span>
                     <span className="boost-option-desc">{a.desc}</span>
@@ -443,7 +443,7 @@ export default function Boost() {
           {/* Analytics */}
           <section className="boost-card boost-card-analytics">
             <div className="boost-step-header">
-              <span className="boost-step-num boost-step-num-sm"><Users size={18} /></span>
+              <span className="boost-step-num boost-step-num-sm"><Users size={14} /></span>
               <h2 className="boost-section-title">Tangazo Analytics</h2>
             </div>
             {analyticsLoading ? (
@@ -552,7 +552,7 @@ export default function Boost() {
                 <div className="boost-view-modal-header">
                   <h3>{viewPromo.title || 'Kampeni'}</h3>
                   <button type="button" className="boost-view-modal-close" onClick={() => setViewPromo(null)} aria-label="Funga">
-                    <X size={20} />
+                    <X size={18} />
                   </button>
                 </div>
                 <div className="boost-view-modal-body">

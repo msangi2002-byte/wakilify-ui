@@ -14516,54 +14516,54 @@ body:has(.user-app) {
   padding-bottom: 48px;
 }
 
-/* Hero header */
+/* Hero header – compact */
 .boost-hero {
   text-align: center;
-  padding: 32px 24px 40px;
-  margin-bottom: 24px;
-  border-radius: 20px;
+  padding: 20px 16px 24px;
+  margin-bottom: 16px;
+  border-radius: 12px;
   background: linear-gradient(145deg, #7c3aed 0%, #a855f7 50%, #c084fc 100%);
   color: #fff;
-  box-shadow: 0 10px 40px -12px rgba(124, 58, 237, 0.45), 0 4px 12px -4px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 6px 24px -8px rgba(124, 58, 237, 0.4), 0 2px 8px -2px rgba(0, 0, 0, 0.06);
 }
 
 .boost-hero-icon {
-  width: 72px;
-  height: 72px;
-  margin: 0 auto 16px;
-  border-radius: 18px;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 10px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
 }
 
 .boost-hero-title {
-  font-size: 1.75rem;
+  font-size: 1.25rem;
   font-weight: 800;
-  margin: 0 0 8px 0;
+  margin: 0 0 4px 0;
   letter-spacing: -0.02em;
 }
 
 .boost-hero-subtitle {
-  font-size: 0.95rem;
+  font-size: 0.8125rem;
   margin: 0;
   opacity: 0.95;
-  max-width: 400px;
+  max-width: 360px;
   margin-left: auto;
   margin-right: auto;
-  line-height: 1.5;
+  line-height: 1.45;
 }
 
-/* Cards */
+/* Cards – compact */
 .boost-card {
   background: #fff;
-  border-radius: 16px;
-  padding: 24px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06), 0 0 1px rgba(0, 0, 0, 0.06);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.05), 0 0 1px rgba(0, 0, 0, 0.04);
   border: 1px solid rgba(0, 0, 0, 0.04);
   transition: box-shadow 0.2s;
 }
@@ -14585,22 +14585,22 @@ body:has(.user-app) {
   background: linear-gradient(180deg, #fff 0%, #faf8ff 100%);
 }
 
-/* Step header */
+/* Step header – compact */
 .boost-step-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
 .boost-step-num {
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
-  border-radius: 10px;
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  border-radius: 6px;
   background: linear-gradient(135deg, #7c3aed, #a855f7);
   color: #fff;
-  font-size: 1rem;
+  font-size: 0.8125rem;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -14608,14 +14608,14 @@ body:has(.user-app) {
 }
 
 .boost-step-num-sm {
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
   font-size: 0;
 }
 
 .boost-section-title {
-  font-size: 1.1rem;
+  font-size: 0.9375rem;
   font-weight: 700;
   color: #111827;
   margin: 0;
@@ -14623,19 +14623,19 @@ body:has(.user-app) {
 
 .boost-muted {
   color: #6b7280;
-  font-size: 0.9rem;
+  font-size: 0.8125rem;
   margin: 0;
 }
 
-/* Inputs */
+/* Inputs – compact */
 .boost-select,
 .boost-input {
   width: 100%;
   max-width: 100%;
-  padding: 14px 18px;
-  border: 1.5px solid #e5e7eb;
-  border-radius: 12px;
-  font-size: 0.95rem;
+  padding: 8px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.875rem;
   background: #fff;
   color: #111827;
   transition: border-color 0.2s, box-shadow 0.2s;
@@ -14649,24 +14649,24 @@ body:has(.user-app) {
 }
 
 .boost-input-phone {
-  max-width: 280px;
+  max-width: 220px;
 }
 
-/* Options grid */
+/* Options grid – compact */
 .boost-options {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
 }
 
 .boost-option {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 10px;
-  padding: 18px;
-  border: 2px solid #e5e7eb;
-  border-radius: 14px;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
   background: #fff;
   cursor: pointer;
   text-align: left;
@@ -14699,40 +14699,40 @@ body:has(.user-app) {
 .boost-option-text {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 .boost-option-label {
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: 0.8125rem;
   color: #111827;
 }
 
 .boost-option-desc {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: #6b7280;
-  line-height: 1.4;
+  line-height: 1.35;
 }
 
-/* Local targeting */
+/* Local targeting – compact */
 .boost-local-extra {
-  margin-top: 20px;
-  padding-top: 20px;
+  margin-top: 12px;
+  padding-top: 12px;
   border-top: 1px solid #e5e7eb;
 }
 
 .boost-regions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
 .boost-region-btn {
-  padding: 10px 16px;
-  border: 2px solid #e5e7eb;
-  border-radius: 10px;
+  padding: 6px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
   background: #fff;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
@@ -14753,47 +14753,47 @@ body:has(.user-app) {
 .boost-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 20px;
-  margin-top: 16px;
+  gap: 12px;
+  margin-top: 10px;
 }
 
 .boost-row > div {
   flex: 1;
-  min-width: 100px;
+  min-width: 80px;
 }
 
 .boost-label {
   display: block;
-  font-size: 0.8rem;
+  font-size: 0.6875rem;
   font-weight: 600;
   color: #6b7280;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
 
-/* Slider */
+/* Slider – compact */
 .boost-slider-wrap {
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .boost-slider {
   width: 100%;
-  height: 10px;
+  height: 6px;
   -webkit-appearance: none;
   appearance: none;
   background: linear-gradient(90deg, #e5e7eb 0%, #e5e7eb 100%);
-  border-radius: 5px;
+  border-radius: 3px;
 }
 
 .boost-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 24px;
-  height: 24px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: linear-gradient(135deg, #7c3aed, #a855f7);
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.4);
+  box-shadow: 0 1px 6px rgba(124, 58, 237, 0.4);
   transition: transform 0.15s;
 }
 
@@ -14806,8 +14806,8 @@ body:has(.user-app) {
 .boost-slider-labels {
   display: flex;
   justify-content: space-between;
-  margin-top: 10px;
-  font-size: 0.85rem;
+  margin-top: 6px;
+  font-size: 0.75rem;
   color: #6b7280;
 }
 
@@ -14816,62 +14816,62 @@ body:has(.user-app) {
   color: #7c3aed;
 }
 
-/* Price box */
+/* Price box – compact */
 .boost-price-box {
-  margin-top: 16px;
-  padding: 20px 24px;
+  margin-top: 10px;
+  padding: 12px 16px;
   background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
-  border-radius: 14px;
+  border-radius: 8px;
   color: #fff;
   text-align: center;
-  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.3);
+  box-shadow: 0 2px 10px rgba(124, 58, 237, 0.25);
 }
 
 .boost-price-value {
-  font-size: 1.75rem;
+  font-size: 1.25rem;
   font-weight: 800;
   letter-spacing: -0.02em;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .boost-price-per {
-  font-size: 0.9rem;
+  font-size: 0.8125rem;
   opacity: 0.9;
 }
 
-/* CTA */
+/* CTA – compact */
 .boost-error {
   color: #dc2626;
-  font-size: 0.9rem;
-  margin: 12px 0 0 0;
-  padding: 10px 14px;
+  font-size: 0.8125rem;
+  margin: 8px 0 0 0;
+  padding: 6px 10px;
   background: #fef2f2;
-  border-radius: 8px;
+  border-radius: 6px;
 }
 
 .boost-success {
   color: #059669;
-  font-size: 0.9rem;
-  margin: 12px 0 0 0;
-  padding: 10px 14px;
+  font-size: 0.8125rem;
+  margin: 8px 0 0 0;
+  padding: 6px 10px;
   background: #f0fdf4;
-  border-radius: 8px;
+  border-radius: 6px;
 }
 
 .boost-submit {
-  margin-top: 20px;
+  margin-top: 12px;
   width: 100%;
-  max-width: 320px;
-  padding: 16px 32px;
+  max-width: 260px;
+  padding: 10px 20px;
   background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
   color: #fff;
   border: none;
-  border-radius: 12px;
-  font-size: 1.05rem;
+  border-radius: 8px;
+  font-size: 0.9375rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);
+  box-shadow: 0 2px 10px rgba(124, 58, 237, 0.3);
 }
 
 @media (hover: hover) {
@@ -14891,17 +14891,17 @@ body:has(.user-app) {
   transform: none;
 }
 
-/* Analytics */
+/* Analytics – compact */
 .boost-analytics {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  gap: 8px;
 }
 
 .boost-stat {
-  padding: 20px 16px;
+  padding: 12px 10px;
   background: #fff;
-  border-radius: 12px;
+  border-radius: 8px;
   text-align: center;
   border: 1px solid #e5e7eb;
   transition: all 0.2s;
@@ -14909,42 +14909,42 @@ body:has(.user-app) {
 
 .boost-stat:hover {
   border-color: #c4b5fd;
-  box-shadow: 0 2px 12px rgba(124, 58, 237, 0.1);
+  box-shadow: 0 1px 8px rgba(124, 58, 237, 0.1);
 }
 
 .boost-stat-value {
   display: block;
-  font-size: 1.35rem;
+  font-size: 1rem;
   font-weight: 800;
   color: #111827;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .boost-stat-label {
-  font-size: 0.8rem;
+  font-size: 0.6875rem;
   color: #6b7280;
   font-weight: 500;
 }
 
 .boost-learning-section {
-  margin-top: 24px;
-  padding-top: 20px;
+  margin-top: 14px;
+  padding-top: 12px;
   border-top: 1px solid #e5e7eb;
 }
 
 .boost-section-subtitle {
-  font-size: 1rem;
+  font-size: 0.875rem;
   font-weight: 700;
-  margin: 0 0 14px 0;
+  margin: 0 0 8px 0;
   color: #111827;
 }
 
 .boost-promo-card {
-  padding: 18px 20px;
+  padding: 10px 12px;
   background: #fff;
   border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  margin-bottom: 12px;
+  border-radius: 8px;
+  margin-bottom: 8px;
   transition: border-color 0.2s;
 }
 
@@ -14956,13 +14956,13 @@ body:has(.user-app) {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 8px;
+  gap: 8px;
+  margin-bottom: 6px;
 }
 
 .boost-promo-title {
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 0.875rem;
   margin: 0;
   color: #111827;
   flex: 1;
@@ -14971,14 +14971,14 @@ body:has(.user-app) {
 
 .boost-promo-actions {
   display: flex;
-  gap: 6px;
+  gap: 4px;
   flex-shrink: 0;
 }
 
 .boost-promo-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
   border: 1px solid #e5e7eb;
   background: #fff;
   color: #6b7280;
@@ -15019,23 +15019,23 @@ body:has(.user-app) {
 .boost-learning-badge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
+  gap: 4px;
+  padding: 3px 8px;
   background: linear-gradient(135deg, #fef3c7, #fde68a);
-  border-radius: 8px;
+  border-radius: 6px;
   color: #92400e;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 600;
 }
 
 .boost-learning-desc {
-  font-size: 0.88rem;
+  font-size: 0.8125rem;
   color: #6b7280;
   margin: 0;
   line-height: 1.5;
 }
 
-/* View Kampeni Modal */
+/* View Kampeni Modal – compact */
 .boost-view-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -15044,45 +15044,45 @@ body:has(.user-app) {
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 20px;
+  padding: 12px;
 }
 
 .boost-view-modal {
   background: #fff;
-  border-radius: 16px;
-  max-width: 420px;
+  border-radius: 10px;
+  max-width: 380px;
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.18);
 }
 
 .boost-view-modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px;
+  padding: 12px 14px;
   border-bottom: 1px solid #e5e7eb;
 }
 
 .boost-view-modal-header h3 {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 0.9375rem;
   font-weight: 700;
   color: #111827;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  padding-right: 12px;
+  padding-right: 8px;
 }
 
 .boost-view-modal-close {
-  padding: 8px;
+  padding: 6px;
   border: none;
   background: transparent;
   cursor: pointer;
   color: #6b7280;
-  border-radius: 8px;
+  border-radius: 6px;
   flex-shrink: 0;
 }
 
@@ -15092,65 +15092,65 @@ body:has(.user-app) {
 }
 
 .boost-view-modal-body {
-  padding: 20px;
+  padding: 12px 14px;
 }
 
 .boost-view-status-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 20px;
+  gap: 6px;
+  margin-bottom: 12px;
 }
 
 .boost-view-trends h4 {
-  font-size: 0.95rem;
+  font-size: 0.875rem;
   font-weight: 700;
   color: #111827;
-  margin: 0 0 12px 0;
+  margin: 0 0 8px 0;
 }
 
 .boost-view-stats-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
 .boost-view-stat {
-  padding: 14px;
+  padding: 10px;
   background: #f9fafb;
-  border-radius: 10px;
+  border-radius: 8px;
   text-align: center;
 }
 
 .boost-view-stat-value {
   display: block;
-  font-size: 1.15rem;
+  font-size: 1rem;
   font-weight: 700;
   color: #111827;
   margin-bottom: 2px;
 }
 
 .boost-view-stat-label {
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   color: #6b7280;
 }
 
 .boost-view-modal-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 
 .boost-promo-btn-full {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 18px;
-  border-radius: 10px;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
   border: 1px solid #e5e7eb;
   background: #fff;
-  font-size: 0.9rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
