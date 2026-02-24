@@ -49,6 +49,7 @@ const RegisterAgent = lazy(() => import('@/pages/user/RegisterAgent'));
 const Notifications = lazy(() => import('@/pages/user/Notifications'));
 const Onboarding = lazy(() => import('@/pages/user/Onboarding'));
 const Boost = lazy(() => import('@/pages/user/Boost'));
+const PostDetail = lazy(() => import('@/pages/user/PostDetail'));
 
 const BusinessDashboard = lazy(() => import('@/pages/business/Dashboard'));
 const BusinessProducts = lazy(() => import('@/pages/business/Products'));
@@ -133,6 +134,7 @@ const router = createBrowserRouter([
           { path: 'shop/business/:id', element: <Suspense fallback={<Fallback />}><ShopBusiness /></Suspense> },
           { path: 'shop/:id', element: <Suspense fallback={<Fallback />}><ProductDetails /></Suspense> },
           { path: 'boost', element: <Suspense fallback={<Fallback />}><Boost /></Suspense> },
+          { path: 'post/:postId', element: <Suspense fallback={<Fallback />}><PostDetail /></Suspense> },
           { path: 'orders', element: <Suspense fallback={<Fallback />}><Orders /></Suspense> },
           { path: 'inquiries', element: <Suspense fallback={<Fallback />}><Inquiries /></Suspense> },
           { path: 'notifications', element: <Suspense fallback={<Fallback />}><Notifications /></Suspense> },

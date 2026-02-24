@@ -104,7 +104,7 @@ function Avatar({ user, size = 40, className = '' }) {
   );
 }
 
-function FeedPost({ id, author, time, description, media = [], hashtags = [], visibility, location, feelingActivity, taggedUsers = [], topReactors = [], liked: initialLiked = false, userReaction: initialUserReaction = null, likesCount: initialLikesCount = 0, commentsCount: initialCommentsCount = 0, sharesCount = 0, saved: initialSaved = false, authorIsFollowed: initialAuthorIsFollowed = false, isSponsored = false, sponsorCtaLink, sponsorObjective, promotionId, onFollowChange, onSaveChange, videoIndex, onOpenVideo }) {
+export function FeedPost({ id, author, time, description, media = [], hashtags = [], visibility, location, feelingActivity, taggedUsers = [], topReactors = [], liked: initialLiked = false, userReaction: initialUserReaction = null, likesCount: initialLikesCount = 0, commentsCount: initialCommentsCount = 0, sharesCount = 0, saved: initialSaved = false, authorIsFollowed: initialAuthorIsFollowed = false, isSponsored = false, sponsorCtaLink, sponsorObjective, promotionId, onFollowChange, onSaveChange, videoIndex, onOpenVideo }) {
   const { user: currentUser } = useAuthStore();
   const navigate = useNavigate();
   const isSelf = currentUser?.id && author?.id && currentUser.id === author.id;
@@ -773,7 +773,7 @@ function isVideoMedia(m) {
   return /\.(mp4|webm|ogg|mov|m4v)(\?|$)/i.test(u);
 }
 
-function normalizePost(post) {
+export function normalizePost(post) {
   const author = post.author ?? post.user ?? {};
   const name = author.name ?? author.username ?? 'User';
   const profilePic = author.profilePic ?? author.avatar ?? author.image;

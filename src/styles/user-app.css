@@ -724,6 +724,49 @@ body:has(.user-app) {
   border: none;
 }
 
+/* Single post view (e.g. /app/post/:id) */
+.post-detail-page {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 0 16px 24px;
+}
+.post-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0 16px;
+  position: sticky;
+  top: 0;
+  background: var(--user-app-bg, #f0f2f5);
+  z-index: 10;
+}
+.post-detail-back-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  color: #050505;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: background 0.2s;
+}
+.post-detail-back-btn:hover {
+  background: #fff;
+}
+.post-detail-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--user-app-fg, #050505);
+}
+.post-detail-feed-wrap .feed-post {
+  margin-bottom: 0;
+}
+
 /* Golden/Orange button – Become a Business, Wallet, premium CTAs */
 .wk-btn-golden {
   padding: 8px 20px;
