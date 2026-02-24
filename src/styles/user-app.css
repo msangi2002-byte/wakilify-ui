@@ -1581,7 +1581,8 @@ body:has(.user-app) {
 /* ========== In-feed widgets (horizontal carousels) ========== */
 .feed-widget {
   padding: 12px 0 12px 0;
-  margin-bottom: 12px;
+  margin-top: 20px;
+  margin-bottom: 20px;
   overflow: hidden;
 }
 
