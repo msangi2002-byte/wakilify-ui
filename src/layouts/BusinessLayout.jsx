@@ -15,6 +15,7 @@ import {
   User,
   LogOut,
   MessageSquare,
+  MessageCircle,
 } from 'lucide-react';
 import { APP_NAME } from '@/lib/constants/brand';
 import { useAuthStore } from '@/store/auth.store';
@@ -26,6 +27,7 @@ const navItems = [
   { to: '/business', end: true, icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/business/products', end: false, icon: Package, label: 'Products' },
   { to: '/business/orders', end: false, icon: ShoppingBag, label: 'Orders' },
+  { to: '/business/inquiries', end: false, icon: MessageCircle, label: 'Quote requests' },
   { to: '/business/feedback', end: false, icon: MessageSquare, label: 'Shop feedback' },
   { to: '/business/stats', end: false, icon: BarChart3, label: 'Analytics' },
   { to: '/business/settings', end: false, icon: Settings, label: 'Settings' },
@@ -35,6 +37,7 @@ const pathLabels = {
   '': 'Dashboard',
   products: 'Products',
   orders: 'Orders',
+  inquiries: 'Quote requests',
   feedback: 'Shop feedback',
   stats: 'Analytics',
   settings: 'Settings',

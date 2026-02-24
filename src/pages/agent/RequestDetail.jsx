@@ -66,7 +66,8 @@ export default function RequestDetail() {
   const [saveSuccess, setSaveSuccess] = useState('');
   const [approving, setApproving] = useState(false);
   const [approveSuccess, setApproveSuccess] = useState('');
-  const error = queryError ? getApiErrorMessage(queryError, 'Failed to load request') : '';
+  const [actionError, setActionError] = useState('');
+  const loadError = queryError ? getApiErrorMessage(queryError, 'Failed to load request') : '';
 
   useEffect(() => {
     if (request) {
@@ -90,7 +91,7 @@ export default function RequestDetail() {
       setSaveSuccess('Details saved.');
       queryClient.setQueryData(['agent', 'business-request', id], (prev) => (prev ? { ...prev, ...detailsForm } : prev));
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Failed to save'));
+      setActionError(getApiErrorMessage(err, 'Failed to save'));
     } finally {
       setSaving(false);
     }
@@ -100,14 +101,14 @@ export default function RequestDetail() {
     if (!id) return;
     setApproving(true);
     setApproveSuccess('');
-    setError('');
+    setActionError('');
     try {
       const updated = await approveBusinessRequest(id);
       queryClient.setQueryData(['agent', 'business-request', id], updated);
       queryClient.invalidateQueries({ queryKey: ['agent', 'business-requests'] });
       setApproveSuccess('Business registered successfully. User is now a business.');
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Failed to approve'));
+      setActionError(getApiErrorMessage(err, 'Failed to approve'));
     } finally {
       setApproving(false);
     }
@@ -116,11 +117,11 @@ export default function RequestDetail() {
   if (loading) {
     return <AgentRequestDetailSkeleton />;
   }
-  if (error && !request) {
+  if (loadError && !request) {
     return (
       <div className="agent-dashboard agent-dashboard-cards">
         <div className="agent-dashboard-card-alert agent-dashboard-card-alert-error" style={{ margin: 24 }}>
-          <AlertTriangle size={20} /> {error}
+          <AlertTriangle size={20} /> {loadError}
         </div>
         <Link to="/agent/requests" className="agent-btn-secondary" style={{ marginLeft: 24 }}><ArrowLeft size={18} /> Back to requests</Link>
       </div>
@@ -187,6 +188,7 @@ export default function RequestDetail() {
                     {approving ? <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} /> : <CheckCircle size={18} />}
                     {approving ? 'Approving…' : 'Approve & complete registration'}
                   </button>
+                  {actionError && <span className="agent-dashboard-card-alert agent-dashboard-card-alert-error" style={{ display: 'block', marginTop: 8 }} role="alert"><AlertTriangle size={18} /> {actionError}</span>}
                   {approveSuccess && <span className="agent-dashboard-card-alert-success" style={{ display: 'block', marginTop: 8 }}>{approveSuccess}</span>}
                 </div>
               )}
@@ -312,7 +314,7 @@ export default function RequestDetail() {
                 onChange={(e) => setDetailsForm((f) => ({ ...f, idBackDocumentUrl: e.target.value }))}
               />
             </div>
-            {error && <div className="agent-dashboard-card-alert agent-dashboard-card-alert-error" role="alert"><AlertTriangle size={18} /> {error}</div>}
+            {actionError && <div className="agent-dashboard-card-alert agent-dashboard-card-alert-error" role="alert"><AlertTriangle size={18} /> {actionError}</div>}
             {saveSuccess && <div className="agent-dashboard-card-alert agent-dashboard-card-alert-success" role="status">{saveSuccess}</div>}
             <button type="submit" className="agent-btn-primary" disabled={saving}>
               {saving ? <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} /> : <Save size={18} />}

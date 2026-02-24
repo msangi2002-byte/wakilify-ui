@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Package, Loader2, RefreshCw, CheckCircle, Truck, MapPin, User, Calendar, AlertCircle, ChevronDown, X, Building2, Phone, Mail, Globe } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Package, Loader2, RefreshCw, CheckCircle, Truck, MapPin, User, Calendar, AlertCircle, ChevronDown, X, Building2, Phone, Mail, Globe, MapPinned, Plus } from 'lucide-react';
 import { getBusinessOrders, updateOrderStatus, confirmOrder, shipOrder, deliverOrder } from '@/lib/api/business';
+import { getOrderTracking, addOrderTrackingEvent } from '@/lib/api/orders';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import '@/styles/business.css';
 
 const ORDER_STATUSES = {
+  DRAFT: { label: 'Draft', color: '#6b7280', bg: 'rgba(107, 114, 128, 0.1)' },
+  PENDING_CONFIRMATION: { label: 'Pending confirmation', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)' },
   PENDING: { label: 'Pending', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)' },
   CONFIRMED: { label: 'Confirmed', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.1)' },
   PROCESSING: { label: 'Processing', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.1)' },
@@ -39,13 +43,70 @@ function formatDate(dateString) {
   }
 }
 
+const TRACKING_EVENT_TYPES = [
+  { value: 'AT_STORE', label: 'At store' },
+  { value: 'PACKAGING', label: 'Packaging' },
+  { value: 'SHIPPED', label: 'Shipped' },
+  { value: 'IN_TRANSIT', label: 'In transit' },
+  { value: 'DELIVERED', label: 'Delivered' },
+];
+
 function OrderCard({ order, onStatusUpdate }) {
+  const queryClient = useQueryClient();
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [trackingNumber, setTrackingNumber] = useState('');
   const [showTrackingInput, setShowTrackingInput] = useState(false);
   const [sellerNotes, setSellerNotes] = useState('');
   const [showNotesInput, setShowNotesInput] = useState(false);
+  const [trackingEventType, setTrackingEventType] = useState('IN_TRANSIT');
+  const [trackingNote, setTrackingNote] = useState('');
+  const [addTrackingWithLocation, setAddTrackingWithLocation] = useState(false);
+  const [addingTracking, setAddingTracking] = useState(false);
+  const [trackingError, setTrackingError] = useState('');
+
+  const canAddTracking = ['CONFIRMED', 'PROCESSING', 'SHIPPED', 'PENDING', 'DRAFT', 'PENDING_CONFIRMATION'].includes(order.status);
+  const { data: trackingEvents = [], refetch: refetchTracking } = useQuery({
+    queryKey: ['orders', 'tracking', order.id],
+    queryFn: () => getOrderTracking(order.id),
+    enabled: canAddTracking,
+  });
+
+  const handleAddTrackingEvent = async () => {
+    setTrackingError('');
+    setAddingTracking(true);
+    let lat = null;
+    let lng = null;
+    if (addTrackingWithLocation && navigator.geolocation) {
+      try {
+        const pos = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 });
+        });
+        lat = pos.coords.latitude;
+        lng = pos.coords.longitude;
+      } catch (e) {
+        setTrackingError('Could not get your location. Add without location?');
+        setAddingTracking(false);
+        return;
+      }
+    }
+    try {
+      await addOrderTrackingEvent(order.id, {
+        eventType: trackingEventType,
+        note: trackingNote.trim() || undefined,
+        latitude: lat ?? undefined,
+        longitude: lng ?? undefined,
+      });
+      setTrackingNote('');
+      setAddTrackingWithLocation(false);
+      refetchTracking();
+      onStatusUpdate?.(order.id);
+    } catch (err) {
+      setTrackingError(getApiErrorMessage(err, 'Failed to add tracking update'));
+    } finally {
+      setAddingTracking(false);
+    }
+  };
 
   const statusInfo = ORDER_STATUSES[order.status] || ORDER_STATUSES.PENDING;
 
@@ -369,6 +430,85 @@ function OrderCard({ order, onStatusUpdate }) {
           <p className="business-orders-muted" style={{ margin: 0 }}>
             <strong>Notes:</strong> {order.sellerNotes}
           </p>
+        </div>
+      )}
+
+      {/* Tracking updates – status timeline + add event with optional location */}
+      {canAddTracking && (
+        <div className="business-orders-section" style={{ marginTop: 16 }}>
+          <h4 className="business-orders-block-title">
+            <Truck size={18} />
+            Track mzigo (updates for customer)
+          </h4>
+          {Array.isArray(trackingEvents) && trackingEvents.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: '0.875rem' }}>
+                {trackingEvents.map((ev, idx) => (
+                  <div key={ev.id || idx} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                    <Truck size={16} style={{ color: 'var(--business-primary-light)', flexShrink: 0, marginTop: 2 }} />
+                    <div>
+                      <span style={{ fontWeight: 600 }}>{ev.eventType?.replace(/_/g, ' ')}</span>
+                      {ev.note && <span style={{ opacity: 0.9 }}> – {ev.note}</span>}
+                      {ev.createdAt && (
+                        <div style={{ fontSize: '0.8125rem', opacity: 0.8, marginTop: 2 }}>{formatDate(ev.createdAt)}</div>
+                      )}
+                      {ev.latitude != null && ev.longitude != null && (
+                        <div style={{ fontSize: '0.75rem', opacity: 0.8 }}>Location: {ev.latitude.toFixed(4)}, {ev.longitude.toFixed(4)}</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
+            <div>
+              <label className="business-orders-input-label">Status update</label>
+              <select
+                value={trackingEventType}
+                onChange={(e) => setTrackingEventType(e.target.value)}
+                className="business-input"
+                style={{ minWidth: 140 }}
+              >
+                {TRACKING_EVENT_TYPES.map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ flex: 1, minWidth: 160 }}>
+              <label className="business-orders-input-label">Note (optional)</label>
+              <input
+                type="text"
+                value={trackingNote}
+                onChange={(e) => setTrackingNote(e.target.value)}
+                placeholder="e.g. Left store, on the way"
+                className="business-input"
+                style={{ width: '100%' }}
+              />
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.875rem' }}>
+              <input
+                type="checkbox"
+                checked={addTrackingWithLocation}
+                onChange={(e) => setAddTrackingWithLocation(e.target.checked)}
+              />
+              <MapPinned size={16} />
+              Add my location (for map)
+            </label>
+            <button
+              type="button"
+              onClick={handleAddTrackingEvent}
+              disabled={addingTracking}
+              className="business-btn-primary"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            >
+              {addingTracking ? <Loader2 size={18} className="icon-spin" /> : <Plus size={18} />}
+              Add update
+            </button>
+          </div>
+          {trackingError && (
+            <p style={{ marginTop: 8, fontSize: '0.875rem', color: '#f87171' }}>{trackingError}</p>
+          )}
         </div>
       )}
     </div>
