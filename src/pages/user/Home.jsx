@@ -795,6 +795,8 @@ function normalizePost(post) {
     saved: !!post.saved,
     authorIsFollowed: !!post.authorIsFollowed,
     isSponsored: !!post.isSponsored,
+    sponsorCtaLink: post.sponsorCtaLink ?? post.sponsor_cta_link ?? null,
+    promotionId: post.promotionId ?? post.promotion_id ?? null,
   };
 }
 

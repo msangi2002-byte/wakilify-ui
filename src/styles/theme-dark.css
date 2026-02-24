@@ -474,7 +474,8 @@
 }
 
 [data-theme="dark"] .user-app-sponsored-card .desc,
-[data-theme="dark"] .user-app-sponsored-label {
+[data-theme="dark"] .user-app-sponsored-label,
+[data-theme="dark"] .user-app-sponsored-date {
   color: #b0b3b8;
 }
 

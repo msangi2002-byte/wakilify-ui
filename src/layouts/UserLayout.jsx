@@ -27,7 +27,7 @@ import { logout as logoutApi } from '@/lib/api/auth';
 import { getIncomingCalls, answerCall, rejectCall } from '@/lib/api/calls';
 import { searchUsers, getPeopleYouMayKnow, recordActivity } from '@/lib/api/users';
 import { followUser, getMutualFollows } from '@/lib/api/friends';
-import { getActiveAds, recordImpression, recordClick } from '@/lib/api/ads';
+import { getSidebarSponsored, trackPromotionImpression, trackPromotionClick } from '@/lib/api/promotions';
 import { getAllCommunities } from '@/lib/api/communities';
 import { getUnreadCount as getNotificationUnreadCount } from '@/lib/api/notifications';
 import { getUnreadCount as getMessageUnreadCount } from '@/lib/api/messages';
@@ -35,17 +35,12 @@ import IncomingCallModal from '@/components/call/IncomingCallModal';
 import { SponsoredSkeleton } from '@/components/ui/SponsoredSkeleton';
 import { PymkSkeleton } from '@/components/ui/PymkSkeleton';
 import { APP_NAME, LOGO_PNG, LOGO_ICON } from '@/lib/constants/brand';
+import { formatPostTime } from '@/lib/utils/dateUtils';
 import { clearAuth } from '@/store/auth.store';
 import '@/styles/user-app.css';
 import '@/styles/theme-dark.css';
 
 const POLL_INTERVAL_MS = 2500;
-
-const SAMPLE_SPONSORED = [
-  { id: 'sample-1', title: 'Discover Wakilify Shop', description: 'Find products from local sellers.', imageUrl: 'https://picsum.photos/seed/ads1/240/240', targetUrl: '/app/shop' },
-  { id: 'sample-2', title: 'Join Live Streams', description: 'Watch and connect with creators.', imageUrl: 'https://picsum.photos/seed/ads2/240/240', targetUrl: '/app/live' },
-  { id: 'sample-3', title: 'Create Your Group', description: 'Connect with people who share your interests.', imageUrl: 'https://picsum.photos/seed/ads3/240/240', targetUrl: '/app/groups' },
-];
 
 /* Color coding: kila item rangi yake – vibrancy kama design original */
 const leftNav = [
@@ -121,7 +116,7 @@ export default function UserLayout() {
   const { data: sponsoredAds = [], isLoading: sponsoredLoading } = useQuery({
     queryKey: ['sidebar', 'sponsored'],
     queryFn: async () => {
-      const list = await getActiveAds({ type: 'FEED', limit: 5 });
+      const list = await getSidebarSponsored({ limit: 5 });
       return Array.isArray(list) ? list : [];
     },
   });
@@ -375,12 +370,12 @@ export default function UserLayout() {
     return () => clearTimeout(t);
   }, [searchQuery]);
 
-  const handleAdClick = (ad) => {
-    if (!ad) return;
-    if (ad.id && !String(ad.id).startsWith('sample-')) recordClick(ad.id).catch(() => {});
-    if (ad.targetUrl) {
-      if (ad.targetUrl.startsWith('/')) navigate(ad.targetUrl);
-      else window.open(ad.targetUrl, '_blank', 'noopener');
+  const handleSponsoredClick = (item) => {
+    if (!item) return;
+    if (item.id) trackPromotionClick(item.id).catch(() => {});
+    if (item.targetUrl) {
+      if (item.targetUrl.startsWith('/')) navigate(item.targetUrl);
+      else window.open(item.targetUrl, '_blank', 'noopener');
     }
   };
 
@@ -400,10 +395,10 @@ export default function UserLayout() {
     }
   };
 
-  const recordAdImpression = (adId) => {
-    if (!adId || impressedAdIds.current.has(adId)) return;
-    impressedAdIds.current.add(adId);
-    recordImpression(adId).catch(() => {});
+  const recordSponsoredImpression = (promotionId) => {
+    if (!promotionId || impressedAdIds.current.has(promotionId)) return;
+    impressedAdIds.current.add(promotionId);
+    trackPromotionImpression(promotionId).catch(() => {});
   };
 
   const handleLogout = async () => {
@@ -834,26 +829,33 @@ export default function UserLayout() {
             </div>
             {sponsoredLoading ? (
               <SponsoredSkeleton count={3} />
+            ) : sponsoredAds.length === 0 ? (
+              <div className="user-app-right-empty">No sponsored content right now</div>
             ) : (
-              (sponsoredAds.length === 0 ? SAMPLE_SPONSORED : sponsoredAds).map((ad) => (
+              sponsoredAds.map((item) => (
                 <button
-                  key={ad.id}
+                  key={item.id}
                   type="button"
                   className="user-app-sponsored-card"
-                  onClick={() => handleAdClick(ad)}
-                  ref={(el) => el && !String(ad.id).startsWith('sample-') && recordAdImpression(ad.id)}
+                  onClick={() => handleSponsoredClick(item)}
+                  ref={(el) => el && item.id && recordSponsoredImpression(item.id)}
                 >
                   <div className="thumb">
-                    {ad.imageUrl ? (
-                      <img src={ad.imageUrl} alt="" />
+                    {item.imageUrl ? (
+                      <img src={item.imageUrl} alt="" />
                     ) : (
                       <div style={{ background: 'var(--surface)', width: '100%', height: '100%' }} />
                     )}
                   </div>
-                  <div>
-                    <span className="user-app-sponsored-label">Sponsored</span>
-                    <div className="title">{ad.title}</div>
-                    <div className="desc">{ad.description || ''}</div>
+                  <div className="user-app-sponsored-card-content">
+                    <div>
+                      <span className="user-app-sponsored-label">Sponsored</span>
+                      <div className="title">{item.title}</div>
+                      <div className="desc">{item.description || ''}</div>
+                    </div>
+                    <span className="user-app-sponsored-date" aria-hidden>
+                      {item.createdAt ? formatPostTime(item.createdAt) : ''}
+                    </span>
                   </div>
                 </button>
               ))
