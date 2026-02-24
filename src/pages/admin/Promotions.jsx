@@ -16,6 +16,8 @@ import {
 import {
   getAdminPromotions,
   getAdminPromotionsStats,
+  getAdminPromotionsSettings,
+  updateAdminPromotionsSettings,
   adminPausePromotion,
   adminResumePromotion,
   adminApprovePromotion,
@@ -77,6 +79,9 @@ export default function Promotions() {
   const [totalElements, setTotalElements] = useState(0);
   const [statusFilter, setStatusFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
+  const [sponsoredFreeMode, setSponsoredFreeMode] = useState(false);
+  const [settingsLoading, setSettingsLoading] = useState(true);
+  const [settingsSaving, setSettingsSaving] = useState(false);
 
   const loadPromotions = useCallback(async () => {
     setLoading(true);
@@ -118,6 +123,35 @@ export default function Promotions() {
   useEffect(() => {
     loadStats();
   }, [loadStats]);
+
+  const loadSettings = useCallback(async () => {
+    setSettingsLoading(true);
+    try {
+      const s = await getAdminPromotionsSettings();
+      setSponsoredFreeMode(!!s?.sponsoredFreeMode);
+    } catch {
+      setSponsoredFreeMode(false);
+    } finally {
+      setSettingsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
+
+  const handleSponsoredFreeModeToggle = async (next) => {
+    setSettingsSaving(true);
+    try {
+      const s = await updateAdminPromotionsSettings({ sponsoredFreeMode: next });
+      setSponsoredFreeMode(!!s?.sponsoredFreeMode);
+      showAdminToast(next ? 'All sponsored are now free' : 'All sponsored are now paid', 'success');
+    } catch (err) {
+      showAdminToast(getApiErrorMessage(err, 'Failed to update setting'), 'error');
+    } finally {
+      setSettingsSaving(false);
+    }
+  };
 
   const handlePause = async (id) => {
     try {
@@ -198,6 +232,59 @@ export default function Promotions() {
           >
             <MegaphoneIcon size={28} />
           </div>
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '16px 0 0',
+            borderTop: '1px solid rgba(255,255,255,0.08)',
+            gap: 12,
+          }}
+        >
+          <div>
+            <div style={{ fontWeight: 600, color: '#fff', marginBottom: 2 }}>All sponsored free</div>
+            <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)' }}>
+              {sponsoredFreeMode ? 'New promotions go live without payment.' : 'Users must pay (USSD) for sponsored content.'}
+            </div>
+          </div>
+          {settingsLoading ? (
+            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.875rem' }}>Loading…</span>
+          ) : (
+            <button
+              type="button"
+              role="switch"
+              aria-checked={sponsoredFreeMode}
+              disabled={settingsSaving}
+              onClick={() => handleSponsoredFreeModeToggle(!sponsoredFreeMode)}
+              style={{
+                position: 'relative',
+                width: 44,
+                height: 24,
+                borderRadius: 12,
+                border: 'none',
+                background: sponsoredFreeMode ? '#10b981' : 'rgba(255,255,255,0.2)',
+                cursor: settingsSaving ? 'not-allowed' : 'pointer',
+                opacity: settingsSaving ? 0.7 : 1,
+                flexShrink: 0,
+              }}
+              title={sponsoredFreeMode ? 'On: all sponsored free. Click to turn off (paid).' : 'Off: all sponsored paid. Click to turn on (free).'}
+            >
+              <span
+                style={{
+                  position: 'absolute',
+                  top: 2,
+                  left: sponsoredFreeMode ? 22 : 2,
+                  width: 20,
+                  height: 20,
+                  borderRadius: '50%',
+                  background: '#fff',
+                  transition: 'left 0.2s ease',
+                }}
+              />
+            </button>
+          )}
         </div>
       </div>
 

@@ -138,6 +138,18 @@ export async function getAdminPromotionsStats() {
   return data?.data ?? data;
 }
 
+/** Get promotions settings (e.g. sponsoredFreeMode). */
+export async function getAdminPromotionsSettings() {
+  const { data } = await api.get(`${base}/promotions/settings`);
+  return data?.data ?? data;
+}
+
+/** Update promotions settings. Body: { sponsoredFreeMode: boolean } */
+export async function updateAdminPromotionsSettings(body) {
+  const { data } = await api.put(`${base}/promotions/settings`, body);
+  return data?.data ?? data;
+}
+
 export async function adminPausePromotion(promotionId) {
   const { data } = await api.post(`${base}/promotions/${promotionId}/pause`);
   return data?.data ?? data;
