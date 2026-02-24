@@ -118,17 +118,17 @@ export default function BusinessInquiries() {
   };
 
   return (
-    <div>
+    <div className="business-page">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <MessageCircle size={28} style={{ color: 'var(--business-primary-light, #818cf8)' }} />
-          <div>
-            <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700 }}>Quote requests</h1>
-            <p style={{ margin: '4px 0 0', fontSize: '0.9375rem', color: 'rgba(255,255,255,0.8)' }}>
-              Customers requested a quote. Reply with price and terms; they can then accept and pay.
-            </p>
-          </div>
-        </div>
+        <header className="business-page-header" style={{ marginBottom: 0 }}>
+          <h1 className="business-page-title">
+            <MessageCircle size={26} style={{ color: 'var(--business-primary-light, #818cf8)' }} />
+            Quote requests
+          </h1>
+          <p className="business-page-subtitle">
+            Wateja waliomba bei. Jibu na bei na masharti; wanaweza kukubali na kulipa.
+          </p>
+        </header>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.85)' }}>Filter:</span>
           <select

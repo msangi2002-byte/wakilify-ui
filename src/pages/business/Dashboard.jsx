@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, ShoppingBag, TrendingUp, DollarSign, Plus, Star, X } from 'lucide-react';
+import { Package, ShoppingBag, TrendingUp, DollarSign, Plus, Star, X, LayoutDashboard, MessageCircle } from 'lucide-react';
 import { getBusinessDashboard, getBusinessMe } from '@/lib/api/business';
 import { getMe, rateAgent } from '@/lib/api/users';
 import { setAuth, getToken } from '@/store/auth.store';
@@ -113,81 +113,76 @@ export default function Dashboard() {
     monthRevenue: 0,
   };
 
+  const businessName = business?.name || 'Biashara yako';
+
   return (
-    <div>
-      <div style={{ marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: 700, color: '#111827', margin: '0 0 8px 0' }}>
-          Business Dashboard
+    <div className="business-page">
+      <header className="business-page-header">
+        <h1 className="business-page-title">
+          <LayoutDashboard size={28} style={{ flexShrink: 0 }} />
+          Dashboard
         </h1>
-        <p style={{ color: '#6b7280', margin: 0 }}>
-          Welcome back! Here's an overview of your business performance.
+        <p className="business-page-subtitle">
+          Karibu, <strong style={{ color: 'rgba(255,255,255,0.95)' }}>{businessName}</strong>. Hii ni muhtasari wa biashara yako.
         </p>
-      </div>
+      </header>
 
-      <div className="business-grid business-grid-2" style={{ marginBottom: '32px' }}>
-        <div className="business-card">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <DollarSign size={24} color="#3b82f6" />
-              </div>
-              <div>
-                <div className="business-stat-label">Total Revenue</div>
-                <div className="business-stat-value primary">{formatCurrency(stats.totalRevenue)}</div>
-              </div>
+      <section className="business-grid business-grid-2" style={{ marginBottom: 28 }} aria-label="Stats">
+        <div className="business-card" style={{ padding: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ width: 52, height: 52, borderRadius: 14, background: 'rgba(99, 102, 241, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <DollarSign size={26} style={{ color: '#818cf8' }} />
+            </div>
+            <div>
+              <div className="business-stat-label">Jumla ya mapato</div>
+              <div className="business-stat-value primary">{formatCurrency(stats.totalRevenue)}</div>
             </div>
           </div>
         </div>
 
-        <div className="business-card">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <ShoppingBag size={24} color="#22c55e" />
-              </div>
-              <div>
-                <div className="business-stat-label">Total Orders</div>
-                <div className="business-stat-value success">{stats.totalOrders || 0}</div>
-              </div>
+        <div className="business-card" style={{ padding: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ width: 52, height: 52, borderRadius: 14, background: 'rgba(34, 197, 94, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <ShoppingBag size={26} style={{ color: '#34d399' }} />
+            </div>
+            <div>
+              <div className="business-stat-label">Maagizo yote</div>
+              <div className="business-stat-value success">{stats.totalOrders || 0}</div>
             </div>
           </div>
         </div>
 
-        <div className="business-card">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#fffbeb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <TrendingUp size={24} color="#f59e0b" />
-              </div>
-              <div>
-                <div className="business-stat-label">Pending Orders</div>
-                <div className="business-stat-value warning">{stats.pendingOrders || 0}</div>
-              </div>
+        <div className="business-card" style={{ padding: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ width: 52, height: 52, borderRadius: 14, background: 'rgba(245, 158, 11, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <TrendingUp size={26} style={{ color: '#fbbf24' }} />
+            </div>
+            <div>
+              <div className="business-stat-label">Maagizo yanayosubiri</div>
+              <div className="business-stat-value warning">{stats.pendingOrders || 0}</div>
             </div>
           </div>
         </div>
 
-        <div className="business-card">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Package size={24} color="#8b5cf6" />
-              </div>
-              <div>
-                <div className="business-stat-label">Total Products</div>
-                <div className="business-stat-value" style={{ color: '#8b5cf6' }}>{stats.totalProducts || 0}</div>
-              </div>
+        <div className="business-card" style={{ padding: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ width: 52, height: 52, borderRadius: 14, background: 'rgba(139, 92, 246, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Package size={26} style={{ color: '#a78bfa' }} />
+            </div>
+            <div>
+              <div className="business-stat-label">Bidhaa zote</div>
+              <div className="business-stat-value" style={{ color: '#a78bfa' }}>{stats.totalProducts || 0}</div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       <div className="business-card">
-        <div className="business-card-title">Quick Actions</div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+        <div className="business-card-title">Harakati za haraka</div>
+        <div className="business-quick-actions">
           <Link to="/business/products/new" className="business-btn-primary">
             <Plus size={20} />
-            Post New Product
+            Ongeza bidhaa
           </Link>
           {business?.id && (
             <button
@@ -196,20 +191,24 @@ export default function Dashboard() {
               onClick={() => setShowPromoteBusiness(true)}
             >
               <TrendingUp size={20} />
-              Promote My Business
+              Tangaza biashara
             </button>
           )}
           <Link to="/business/products" className="business-btn-secondary">
             <Package size={20} />
-            Manage Products
+            Bidhaa
           </Link>
           <Link to="/business/orders" className="business-btn-ghost">
             <ShoppingBag size={20} />
-            View Orders
+            Maagizo
+          </Link>
+          <Link to="/business/inquiries" className="business-btn-ghost">
+            <MessageCircle size={20} />
+            Quote requests
           </Link>
           <Link to="/business/stats" className="business-btn-ghost">
             <TrendingUp size={20} />
-            View Analytics
+            Takwimu
           </Link>
         </div>
       </div>

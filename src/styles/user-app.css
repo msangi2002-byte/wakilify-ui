@@ -1578,6 +1578,165 @@ body:has(.user-app) {
   margin-top: 16px;
 }
 
+/* ========== In-feed widgets (horizontal carousels) ========== */
+.feed-widget {
+  padding: 12px 0 12px 0;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.feed-widget-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px 12px;
+  gap: 12px;
+}
+
+.feed-widget-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: inherit;
+}
+
+.feed-widget-see-all {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--wk-primary, #7c3aed);
+  text-decoration: none;
+}
+
+.feed-widget-see-all:hover {
+  text-decoration: underline;
+  color: #a78bfa;
+}
+
+.feed-widget-scroll-wrap {
+  position: relative;
+  padding: 0 8px;
+}
+
+.feed-widget-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s, background 0.2s;
+}
+
+.feed-widget-arrow:hover {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.feed-widget-arrow-left {
+  left: 12px;
+}
+
+.feed-widget-arrow-right {
+  right: 12px;
+}
+
+@media (max-width: 900px) {
+  .feed-widget-arrow {
+    display: none;
+  }
+}
+
+.feed-widget-scroll {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 4px 0;
+}
+
+.feed-widget-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.feed-widget-scroll > * {
+  flex-shrink: 0;
+  scroll-snap-align: start;
+}
+
+.feed-widget-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px;
+  border-radius: 12px;
+  background: transparent;
+  box-sizing: border-box;
+}
+
+.feed-widget-card-pymk {
+  width: 160px;
+  min-width: 160px;
+}
+
+.feed-widget-card-reel {
+  width: 120px;
+  min-width: 120px;
+}
+
+.feed-widget-card-reel .feed-widget-reel-thumb {
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #e4e6eb;
+}
+
+.feed-widget-card-group {
+  width: 160px;
+  min-width: 160px;
+}
+
+.feed-widget-card-btn {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  margin-top: 8px;
+}
+
+.feed-widget-card-btn-primary {
+  background: var(--wk-primary, #7c3aed);
+  color: #fff;
+}
+
+.feed-widget-card-btn-primary:hover:not(:disabled) {
+  background: #6d28d9;
+}
+
+.feed-widget-card-btn-secondary {
+  background: #e4e6eb;
+  color: #65676b;
+}
+
+.feed-widget-card-btn-secondary:hover:not(:disabled) {
+  background: #d0d5dc;
+  color: #050505;
+}
+
 /* Line-style icons: kijivu by default, purple wakati active */
 .feed-post-action {
   display: flex;

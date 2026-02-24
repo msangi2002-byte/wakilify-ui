@@ -300,6 +300,50 @@
   color: #a78bfa;
 }
 
+[data-theme="dark"] .feed-widget-title {
+  color: #fff;
+}
+
+[data-theme="dark"] .feed-widget-see-all {
+  color: #a78bfa;
+}
+
+[data-theme="dark"] .feed-widget-see-all:hover {
+  color: #c4b5fd;
+}
+
+[data-theme="dark"] .feed-widget-arrow {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+[data-theme="dark"] .feed-widget-arrow:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+[data-theme="dark"] .feed-widget-card-reel .feed-widget-reel-thumb {
+  background: #3a3b3c;
+}
+
+[data-theme="dark"] .feed-widget-card-btn-primary {
+  background: #7c3aed;
+  color: #fff;
+}
+
+[data-theme="dark"] .feed-widget-card-btn-primary:hover:not(:disabled) {
+  background: #6d28d9;
+}
+
+[data-theme="dark"] .feed-widget-card-btn-secondary {
+  background: #3a3b3c;
+  color: #b0b3b8;
+}
+
+[data-theme="dark"] .feed-widget-card-btn-secondary:hover:not(:disabled) {
+  background: #4e5052;
+  color: #fff;
+}
+
 [data-theme="dark"] .feed-post-reaction-picker {
   background: #242526;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);

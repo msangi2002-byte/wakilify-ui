@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { ImagePlus, Users, Video, MoreHorizontal, Plus, ThumbsUp, Heart, MessageCircle, Share2, Play, Sparkles, Globe, Lock, Film, TrendingUp } from 'lucide-react';
 import { UserProfileMenu } from '@/components/ui/UserProfileMenu';
@@ -8,9 +8,13 @@ import { CommentItem } from '@/components/social/CommentItem';
 import { VideoFullscreenOverlay } from '@/components/social/VideoFullscreenOverlay';
 import { ImagePostViewerOverlay } from '@/components/social/ImagePostViewerOverlay';
 import { useAuthStore } from '@/store/auth.store';
-import { getFeed, getPublicFeed, getStories, likePost, reactToPost, unlikePost, savePost, unsavePost, sharePostToStory, getComments, addComment, deleteComment, createPost, likeComment, unlikeComment } from '@/lib/api/posts';
+import { getFeed, getPublicFeed, getStories, getReels, likePost, reactToPost, unlikePost, savePost, unsavePost, sharePostToStory, getComments, addComment, deleteComment, createPost, likeComment, unlikeComment } from '@/lib/api/posts';
 import { followUser, unfollowUser } from '@/lib/api/friends';
-import { blockUser } from '@/lib/api/users';
+import { blockUser, getPeopleYouMayKnow } from '@/lib/api/users';
+import { getAllCommunities, getMyCommunities, joinCommunity } from '@/lib/api/communities';
+import { PeopleYouMayKnowCarousel } from '@/components/feed/PeopleYouMayKnowCarousel';
+import { ReelsCarousel } from '@/components/feed/ReelsCarousel';
+import { SuggestedGroupsCarousel } from '@/components/feed/SuggestedGroupsCarousel';
 import { createReport } from '@/lib/api/reports';
 import { parseApiDate, formatPostTime, formatCommentTime } from '@/lib/utils/dateUtils';
 import { ROLES } from '@/types/roles';
@@ -787,6 +791,9 @@ function isSingleVideoPost(post) {
 export default function Home() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [pymkAddLoadingId, setPymkAddLoadingId] = useState(null);
+  const [groupJoinLoadingId, setGroupJoinLoadingId] = useState(null);
 
   const {
     data: posts = [],
@@ -799,6 +806,54 @@ export default function Home() {
       return Array.isArray(list) ? list.map(normalizePost) : [];
     },
   });
+
+  const { data: pymkList = [], isLoading: pymkLoading } = useQuery({
+    queryKey: ['feed', 'pymk', user?.id],
+    queryFn: async () => {
+      const res = await getPeopleYouMayKnow({ page: 0, size: 10 });
+      return res?.content ?? (Array.isArray(res) ? res : []);
+    },
+    enabled: !!user?.id,
+  });
+
+  const { data: reelsList = [], isLoading: reelsLoading } = useQuery({
+    queryKey: ['feed', 'reels'],
+    queryFn: () => getReels({ page: 0, size: 10 }),
+    select: (list) => (Array.isArray(list) ? list : []),
+    enabled: !!user?.id,
+  });
+
+  const { data: suggestedGroups = [], isLoading: groupsLoading } = useQuery({
+    queryKey: ['feed', 'suggested-groups', user?.id],
+    queryFn: async () => {
+      const [myPage, allPage] = await Promise.all([
+        getMyCommunities({ size: 100 }),
+        getAllCommunities({ size: 30 }),
+      ]);
+      const myIds = new Set((myPage?.content ?? []).map((c) => c.id));
+      return (allPage?.content ?? []).filter((g) => !myIds.has(g.id)).slice(0, 10);
+    },
+    enabled: !!user?.id,
+  });
+
+  const feedItems = (() => {
+    if (!user?.id) return posts.map((p) => ({ type: 'post', id: p.id, data: p }));
+    const items = [];
+    let postIndex = 0;
+    for (let i = 0; i < 25; i++) {
+      if (i === 4) {
+        items.push({ type: 'friend_suggestion_widget', id: 'pymk', data: pymkList, loading: pymkLoading });
+      } else if (i === 8) {
+        items.push({ type: 'reels_widget', id: 'reels', data: reelsList, loading: reelsLoading });
+      } else if (i === 12) {
+        items.push({ type: 'group_suggestion_widget', id: 'groups', data: suggestedGroups, loading: groupsLoading });
+      } else {
+        if (postIndex < posts.length) items.push({ type: 'post', id: posts[postIndex].id, data: posts[postIndex] });
+        postIndex++;
+      }
+    }
+    return items;
+  })();
 
   const { data: storiesList = [], isLoading: storiesLoading } = useQuery({
     queryKey: ['stories', user?.id],
@@ -814,6 +869,41 @@ export default function Home() {
     const post = videoPosts[idx];
     if (post) navigate('/app/reels', { state: { fromFeedVideo: post } });
   }, [videoPosts, navigate]);
+
+  const handlePymkAdd = useCallback(async (u) => {
+    if (!u?.id || pymkAddLoadingId) return;
+    setPymkAddLoadingId(u.id);
+    try {
+      await followUser(String(u.id));
+      queryClient.setQueryData(['feed', 'pymk', user?.id], (old = []) => old.filter((p) => p.id !== u.id));
+    } finally {
+      setPymkAddLoadingId(null);
+    }
+  }, [pymkAddLoadingId, queryClient, user?.id]);
+
+  const handlePymkRemove = useCallback((u) => {
+    queryClient.setQueryData(['feed', 'pymk', user?.id], (old = []) => old.filter((p) => p.id !== u.id));
+  }, [queryClient, user?.id]);
+
+  const handleReelClick = useCallback((item) => {
+    const normalized = normalizePost(item);
+    navigate('/app/reels', { state: { fromFeedVideo: normalized } });
+  }, [navigate]);
+
+  const handleGroupJoin = useCallback(async (g) => {
+    if (!g?.id || groupJoinLoadingId) return;
+    setGroupJoinLoadingId(g.id);
+    try {
+      await joinCommunity(g.id);
+      queryClient.setQueryData(['feed', 'suggested-groups', user?.id], (old = []) => old.filter((c) => c.id !== g.id));
+    } finally {
+      setGroupJoinLoadingId(null);
+    }
+  }, [groupJoinLoadingId, queryClient, user?.id]);
+
+  const handleGroupRemove = useCallback((g) => {
+    queryClient.setQueryData(['feed', 'suggested-groups', user?.id], (old = []) => old.filter((c) => c.id !== g.id));
+  }, [queryClient, user?.id]);
 
   /* Facebook-style order: Composer first, then Stories, then Feed */
   return (
@@ -890,7 +980,7 @@ export default function Home() {
         </div>
       )}
       {loading && <FeedSkeleton postCount={3} />}
-      {!loading && !error && posts.length === 0 && (
+      {!loading && !error && feedItems.length === 0 && (
         <div className="user-app-card" style={{ padding: 24, textAlign: 'center', color: '#65676b' }}>
           <p>No posts yet. Be the first to post!</p>
           <Link to="/app/friends" className="home-discover-link" style={{ marginTop: 12, display: 'inline-block', color: '#7c3aed', fontWeight: 600 }}>
@@ -914,34 +1004,72 @@ export default function Home() {
           )}
         </div>
       )}
-      {!loading && posts.length > 0 && posts.map((p) => {
-        const videoIndex = videoPosts.findIndex((v) => v.id === p.id);
-        return (
-          <FeedPost
-            key={p.id ?? p.time + p.description?.slice(0, 20)}
-            id={p.id}
-            author={p.author}
-            time={p.time}
-            description={p.description}
-            media={p.media}
-            hashtags={p.hashtags}
-            visibility={p.visibility ?? null}
-            location={p.location ?? null}
-            feelingActivity={p.feelingActivity ?? null}
-            taggedUsers={p.taggedUsers ?? []}
-            topReactors={p.topReactors ?? []}
-            liked={p.liked}
-            userReaction={p.userReaction ?? null}
-            likesCount={p.likesCount}
-            commentsCount={p.commentsCount}
-            sharesCount={p.sharesCount}
-            saved={p.saved}
-            authorIsFollowed={p.authorIsFollowed}
-            isSponsored={p.isSponsored}
-            videoIndex={videoIndex >= 0 ? videoIndex : undefined}
-            onOpenVideo={videoIndex >= 0 ? openVideoInReels : undefined}
-          />
-        );
+      {!loading && feedItems.length > 0 && feedItems.map((item) => {
+        if (item.type === 'post') {
+          const p = item.data;
+          const videoIndex = videoPosts.findIndex((v) => v.id === p.id);
+          return (
+            <FeedPost
+              key={p.id ?? p.time + p.description?.slice(0, 20)}
+              id={p.id}
+              author={p.author}
+              time={p.time}
+              description={p.description}
+              media={p.media}
+              hashtags={p.hashtags}
+              visibility={p.visibility ?? null}
+              location={p.location ?? null}
+              feelingActivity={p.feelingActivity ?? null}
+              taggedUsers={p.taggedUsers ?? []}
+              topReactors={p.topReactors ?? []}
+              liked={p.liked}
+              userReaction={p.userReaction ?? null}
+              likesCount={p.likesCount}
+              commentsCount={p.commentsCount}
+              sharesCount={p.sharesCount}
+              saved={p.saved}
+              authorIsFollowed={p.authorIsFollowed}
+              isSponsored={p.isSponsored}
+              videoIndex={videoIndex >= 0 ? videoIndex : undefined}
+              onOpenVideo={videoIndex >= 0 ? openVideoInReels : undefined}
+            />
+          );
+        }
+        if (item.type === 'friend_suggestion_widget') {
+          return (
+            <PeopleYouMayKnowCarousel
+              key={item.id}
+              items={item.data}
+              loading={item.loading}
+              onAdd={handlePymkAdd}
+              onRemove={handlePymkRemove}
+              addLoadingId={pymkAddLoadingId}
+            />
+          );
+        }
+        if (item.type === 'reels_widget') {
+          return (
+            <ReelsCarousel
+              key={item.id}
+              items={item.data}
+              loading={item.loading}
+              onReelClick={handleReelClick}
+            />
+          );
+        }
+        if (item.type === 'group_suggestion_widget') {
+          return (
+            <SuggestedGroupsCarousel
+              key={item.id}
+              items={item.data}
+              loading={item.loading}
+              onJoin={handleGroupJoin}
+              onRemove={handleGroupRemove}
+              joinLoadingId={groupJoinLoadingId}
+            />
+          );
+        }
+        return null;
       })}
 
     </>
