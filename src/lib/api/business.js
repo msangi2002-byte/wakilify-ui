@@ -173,3 +173,21 @@ export async function getBusinessFeedback(params = {}) {
   const { data } = await api.get('/business/feedback', { params: { page: 0, size: 20, ...params } });
   return data?.data ?? data;
 }
+
+/**
+ * Mark a single feedback as read
+ * PUT /api/v1/business/feedback/:id/read
+ */
+export async function markBusinessFeedbackAsRead(id) {
+  const { data } = await api.put(`/business/feedback/${id}/read`);
+  return data?.data ?? data;
+}
+
+/**
+ * Mark all feedback as read
+ * POST /api/v1/business/feedback/read-all
+ */
+export async function markAllBusinessFeedbackAsRead() {
+  const { data } = await api.post('/business/feedback/read-all');
+  return data?.data ?? data;
+}

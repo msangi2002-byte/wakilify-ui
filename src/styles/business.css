@@ -1514,3 +1514,34 @@
 .business-orders-empty-icon { color: rgba(255, 255, 255, 0.35); margin-bottom: 16px; display: block; }
 .business-orders-empty-title { margin: 0 0 8px; font-size: 1.25rem; font-weight: 600; color: #f8fafc; }
 .business-orders-empty-desc { margin: 0; color: rgba(255, 255, 255, 0.6); font-size: 0.9375rem; }
+
+/* Feedback page – read / read all */
+.business-feedback-unread-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+}
+
+.business-feedback-card-unread {
+  border-left: 3px solid var(--business-primary-light);
+  background: rgba(99, 102, 241, 0.06);
+}
+
+.business-feedback-new-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--business-primary-light);
+  vertical-align: middle;
+}
+
+.business-feedback-mark-read {
+  flex-shrink: 0;
+  font-size: 0.8125rem;
+}

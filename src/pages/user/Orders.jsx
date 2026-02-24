@@ -1,11 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
 import { Package, Loader2, RefreshCw, CheckCircle, Truck, MapPin, Calendar, AlertCircle, X, ShoppingBag, Building2, Phone, User as UserIcon, Mail, Globe, MessageCircle } from 'lucide-react';
 import { getMyOrders, getOrderById, cancelOrder, confirmOrder, getOrderTracking } from '@/lib/api/orders';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import { OrdersListSkeleton } from '@/components/ui/OrdersListSkeleton';
 import { OrdersDetailSkeleton } from '@/components/ui/OrdersDetailSkeleton';
+import 'leaflet/dist/leaflet.css';
 import '@/styles/user-app.css';
 
 const ORDER_STATUSES = {
@@ -45,12 +48,24 @@ function formatDate(dateString) {
   }
 }
 
+// Fit map bounds to markers (used inside MapContainer)
+function FitBounds({ points }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!points || points.length === 0) return;
+    const bounds = L.latLngBounds(points.map((p) => [p.lat, p.lng]));
+    map.fitBounds(bounds, { padding: [24, 24], maxZoom: 14 });
+  }, [map, points]);
+  return null;
+}
+
 function OrderCard({ order, onOrderUpdate }) {
   const [expanded, setExpanded] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
+  const [userLocation, setUserLocation] = useState(null);
 
   const { data: orderDetails, isLoading: loadingDetails } = useQuery({
     queryKey: ['orders', 'detail', order.id],
@@ -101,6 +116,29 @@ function OrderCard({ order, onOrderUpdate }) {
   };
 
   const orderData = orderDetails ?? order;
+  const canTrackOrder = ['PROCESSING', 'SHIPPED', 'DELIVERED', 'COMPLETED'].includes(orderData?.status || order.status);
+
+  useEffect(() => {
+    if (!expanded || !canTrackOrder || !navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => {},
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  }, [expanded, canTrackOrder]);
+
+  const trackingPointsWithLocation = Array.isArray(trackingEvents) ? trackingEvents.filter((ev) => ev.latitude != null && ev.longitude != null) : [];
+  const mapPoints = [
+    ...trackingPointsWithLocation.map((ev) => ({ lat: ev.latitude, lng: ev.longitude })),
+    ...(userLocation ? [userLocation] : []),
+  ];
+  const mapCenter = mapPoints.length > 0
+    ? mapPoints.reduce((a, p) => ({ lat: a.lat + p.lat, lng: a.lng + p.lng }), { lat: 0, lng: 0 })
+    : { lat: -6.369, lng: 34.8888 };
+  if (mapPoints.length > 0) {
+    mapCenter.lat /= mapPoints.length;
+    mapCenter.lng /= mapPoints.length;
+  }
 
   return (
     <div className="orders-card">
@@ -568,6 +606,62 @@ function OrderCard({ order, onOrderUpdate }) {
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {canTrackOrder && (trackingPointsWithLocation.length > 0 || userLocation) && (
+                <div className="orders-card-section">
+                  <h4 className="orders-card-section-title">Track mzigo – map</h4>
+                  <div style={{ height: 280, borderRadius: 12, overflow: 'hidden', border: '1px solid #e5e7eb' }}>
+                    <MapContainer
+                      center={[mapCenter.lat, mapCenter.lng]}
+                      zoom={mapPoints.length === 1 ? 12 : 10}
+                      style={{ height: '100%', width: '100%' }}
+                      scrollWheelZoom={true}
+                    >
+                      <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      />
+                      {mapPoints.length > 0 && <FitBounds points={mapPoints} />}
+                      {trackingPointsWithLocation.map((ev, idx) => (
+                        <Marker
+                          key={ev.id || idx}
+                          position={[ev.latitude, ev.longitude]}
+                          icon={L.divIcon({
+                            className: 'orders-tracking-marker',
+                            html: `<div style="width:28px;height:28px;border-radius:50%;background:#6366f1;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);">${(idx + 1)}</div>`,
+                            iconSize: [28, 28],
+                            iconAnchor: [14, 14],
+                          })}
+                        >
+                          <Popup>
+                            <strong>{ev.eventType?.replace(/_/g, ' ')}</strong>
+                            {ev.note && <div>{ev.note}</div>}
+                            {ev.createdAt && <div style={{ fontSize: 12, color: '#6b7280' }}>{formatDate(ev.createdAt)}</div>}
+                          </Popup>
+                        </Marker>
+                      ))}
+                      {userLocation && (
+                        <Marker
+                          position={[userLocation.lat, userLocation.lng]}
+                          icon={L.divIcon({
+                            className: 'orders-tracking-marker-you',
+                            html: '<div style="width:32px;height:32px;border-radius:50%;background:#22c55e;color:#fff;font-size:14px;display:flex;align-items:center;justify-content:center;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.35);">You</div>',
+                            iconSize: [32, 32],
+                            iconAnchor: [16, 16],
+                          })}
+                        >
+                          <Popup><strong>You are here</strong></Popup>
+                        </Marker>
+                      )}
+                    </MapContainer>
+                  </div>
+                  {userLocation && (
+                    <p style={{ marginTop: 8, fontSize: '0.8125rem', color: '#6b7280' }}>
+                      Your location is used only to show you on the map. Mteja anaweza kuona mwendo wa mzigo kwa updates za seller.
+                    </p>
+                  )}
                 </div>
               )}
 
