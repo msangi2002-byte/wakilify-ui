@@ -74,3 +74,17 @@ export async function cancelPromotion(id) {
 export async function trackPromotionClick(promotionId) {
   await api.post(`${base}/${promotionId}/click`);
 }
+
+/** Record promotion impression (e.g. when shown in sidebar). */
+export async function trackPromotionImpression(promotionId) {
+  await api.post(`${base}/${promotionId}/impression`);
+}
+
+/**
+ * Get active boosted posts for sidebar "Sponsored" block (real data).
+ * GET /api/v1/promotions/sidebar?limit=5
+ */
+export async function getSidebarSponsored(params = {}) {
+  const { data } = await api.get(`${base}/sidebar`, { params: { limit: 5, ...params } });
+  return data?.data ?? data ?? [];
+}
