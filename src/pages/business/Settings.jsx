@@ -99,14 +99,14 @@ export default function Settings() {
   }
 
   return (
-    <div className="business-main">
+    <div className="business-main business-page">
       <div className="business-settings">
-        <header className="business-settings-header">
-          <h1>
-            <Building2 size={20} />
-            Business Settings
+        <header className="business-page-header business-settings-header">
+          <h1 className="business-page-title">
+            <Building2 size={26} />
+            Mipangilio ya biashara
           </h1>
-          <p>Manage your business profile and information</p>
+          <p className="business-page-subtitle">Simamia wasifu na taarifa za biashara yako</p>
         </header>
 
         {error && (

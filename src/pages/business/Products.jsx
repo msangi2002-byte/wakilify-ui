@@ -210,17 +210,17 @@ export default function Products() {
   }
 
   return (
-    <div className="business-main" style={{ padding: '24px' }}>
+    <div className="business-main business-page" style={{ padding: '24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
-        <div>
-          <h1 className="business-dashboard-title" style={{ margin: 0, marginBottom: '4px' }}>
-            <Package size={28} />
-            Products
+        <header className="business-page-header" style={{ marginBottom: 0 }}>
+          <h1 className="business-page-title">
+            <Package size={26} />
+            Bidhaa
           </h1>
-          <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: 0 }}>
-            {products.totalElements} {products.totalElements === 1 ? 'product' : 'products'}
+          <p className="business-page-subtitle">
+            {products.totalElements} {products.totalElements === 1 ? 'bidhaa' : 'bidhaa'}
           </p>
-        </div>
+        </header>
         <div style={{ display: 'flex', gap: '12px' }}>
           <button
             type="button"

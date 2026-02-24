@@ -87,20 +87,20 @@ export default function Feedback() {
   }
 
   return (
-    <div className="business-main" style={{ padding: '24px' }}>
+    <div className="business-main business-page" style={{ padding: '24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
-        <div>
-          <h1 className="business-dashboard-title" style={{ margin: 0, marginBottom: '4px' }}>
-            <MessageSquare size={28} />
-            Shop feedback
+        <header className="business-page-header" style={{ marginBottom: 0 }}>
+          <h1 className="business-page-title">
+            <MessageSquare size={26} />
+            Maoni ya wateja
             {unreadCount > 0 && (
-              <span className="business-feedback-unread-badge" style={{ marginLeft: 8 }}>{unreadCount} new</span>
+              <span className="business-feedback-unread-badge" style={{ marginLeft: 8 }}>{unreadCount} mpya</span>
             )}
           </h1>
-          <p className="business-orders-subtitle">
-            Feedback and advice from customers who visited your shop
+          <p className="business-page-subtitle">
+            Maoni na mapendekezo kutoka kwa wateja waliofikia duka lako
           </p>
-        </div>
+        </header>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           {unreadCount > 0 && (
             <button

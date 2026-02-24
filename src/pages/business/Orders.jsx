@@ -575,17 +575,17 @@ export default function Orders() {
   }
 
   return (
-    <div className="business-main" style={{ padding: '24px' }}>
+    <div className="business-main business-page" style={{ padding: '24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
-        <div>
-          <h1 className="business-dashboard-title" style={{ margin: 0, marginBottom: '4px' }}>
-            <Package size={28} />
-            Orders
+        <header className="business-page-header" style={{ marginBottom: 0 }}>
+          <h1 className="business-page-title">
+            <Package size={26} />
+            Maagizo
           </h1>
-          <p className="business-orders-subtitle">
-            {orders.totalElements} {orders.totalElements === 1 ? 'order' : 'orders'}
+          <p className="business-page-subtitle">
+            {orders.totalElements} {orders.totalElements === 1 ? 'agizo' : 'maagizo'}
           </p>
-        </div>
+        </header>
         <div style={{ display: 'flex', gap: '12px' }}>
           <button
             type="button"

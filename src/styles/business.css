@@ -544,6 +544,48 @@
   gap: 10px;
 }
 
+/* Shared page layout – all business pages */
+.business-page {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.business-page-header {
+  margin-bottom: 28px;
+}
+
+.business-page-title {
+  color: #f8fafc;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 6px 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.business-page-subtitle {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9375rem;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.business-quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.business-quick-actions .business-btn-primary,
+.business-quick-actions .business-btn-secondary,
+.business-quick-actions .business-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 /* Cards – glass (admin style) */
 .business-card {
   background: rgba(30, 41, 59, 0.5);

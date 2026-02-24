@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, DollarSign, ShoppingBag, Package, Users, Star, Calendar, Loader2, AlertCircle, ArrowUp, ArrowDown } from 'lucide-react';
+import { TrendingUp, DollarSign, ShoppingBag, Package, Users, Star, Calendar, Loader2, AlertCircle, ArrowUp, ArrowDown, BarChart3 } from 'lucide-react';
 import { getBusinessDashboard, getBusinessOrders, getBusinessProducts } from '@/lib/api/business';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import '@/styles/business.css';
@@ -143,17 +143,17 @@ export default function Stats() {
     .slice(0, 5);
 
   return (
-    <div className="business-main" style={{ padding: '16px', maxWidth: '1000px', margin: '0 auto' }}>
+    <div className="business-main business-page" style={{ padding: '24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
-        <div>
-          <h1 className="business-dashboard-title" style={{ margin: 0, marginBottom: '4px', fontSize: '1.5rem' }}>
-            <TrendingUp size={24} />
-            Analytics & Statistics
+        <header className="business-page-header" style={{ marginBottom: 0 }}>
+          <h1 className="business-page-title">
+            <BarChart3 size={26} />
+            Takwimu
           </h1>
-          <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0 }}>
-            Detailed insights into your business performance
+          <p className="business-page-subtitle">
+            Muhtasari wa utendaji wa biashara yako
           </p>
-        </div>
+        </header>
         <div style={{ display: 'flex', gap: '8px' }}>
           {['day', 'week', 'month', 'year'].map((range) => (
             <button
