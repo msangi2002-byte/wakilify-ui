@@ -836,19 +836,24 @@ export default function Home() {
     enabled: !!user?.id,
   });
 
+  // Dynamic feed injection: widgets at fixed indices, posts fill the rest.
+  // Index 3 = PYMK (after 3rd post), Index 8 = Reels (after 8th post), Index 15 = Groups (after 15th post).
   const feedItems = (() => {
     if (!user?.id) return posts.map((p) => ({ type: 'post', id: p.id, data: p }));
     const items = [];
     let postIndex = 0;
-    for (let i = 0; i < 25; i++) {
-      if (i === 4) {
+    const maxSlots = Math.max(20, posts.length + 3);
+    for (let mixedIndex = 0; mixedIndex < maxSlots; mixedIndex++) {
+      if (mixedIndex === 3) {
         items.push({ type: 'friend_suggestion_widget', id: 'pymk', data: pymkList, loading: pymkLoading });
-      } else if (i === 8) {
+      } else if (mixedIndex === 8) {
         items.push({ type: 'reels_widget', id: 'reels', data: reelsList, loading: reelsLoading });
-      } else if (i === 12) {
+      } else if (mixedIndex === 15) {
         items.push({ type: 'group_suggestion_widget', id: 'groups', data: suggestedGroups, loading: groupsLoading });
       } else {
-        if (postIndex < posts.length) items.push({ type: 'post', id: posts[postIndex].id, data: posts[postIndex] });
+        if (postIndex < posts.length) {
+          items.push({ type: 'post', id: posts[postIndex].id, data: posts[postIndex] });
+        }
         postIndex++;
       }
     }
@@ -986,22 +991,6 @@ export default function Home() {
           <Link to="/app/friends" className="home-discover-link" style={{ marginTop: 12, display: 'inline-block', color: '#7c3aed', fontWeight: 600 }}>
             Find people to follow →
           </Link>
-        </div>
-      )}
-      {/* Discover card: once above feed when there are posts (no duplicate in empty state) */}
-      {user?.id && !loading && posts.length > 0 && (
-        <div className="user-app-card home-discover-card" style={{ padding: '12px 16px', marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <Link to="/app/friends" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: 'inherit' }}>
-            <Users size={20} className="home-discover-icon" style={{ color: '#7c3aed' }} />
-            <span style={{ flex: 1, fontSize: 14 }}>Discover people near you</span>
-            <span style={{ fontSize: 13, color: '#7c3aed', fontWeight: 600 }}>Find People →</span>
-          </Link>
-          {String(user?.role ?? '').toLowerCase() !== ROLES.AGENT && (
-            <Link to="/app/register-agent" className="wk-btn-golden" style={{ marginTop: 8, width: '100%', justifyContent: 'center', boxSizing: 'border-box' }}>
-              <Sparkles size={20} />
-              <span>Become an agent</span>
-            </Link>
-          )}
         </div>
       )}
       {!loading && feedItems.length > 0 && feedItems.map((item) => {
