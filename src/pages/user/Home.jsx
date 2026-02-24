@@ -104,7 +104,7 @@ function Avatar({ user, size = 40, className = '' }) {
   );
 }
 
-function FeedPost({ id, author, time, description, media = [], hashtags = [], visibility, location, feelingActivity, taggedUsers = [], topReactors = [], liked: initialLiked = false, userReaction: initialUserReaction = null, likesCount: initialLikesCount = 0, commentsCount: initialCommentsCount = 0, sharesCount = 0, saved: initialSaved = false, authorIsFollowed: initialAuthorIsFollowed = false, isSponsored = false, sponsorCtaLink, promotionId, onFollowChange, onSaveChange, videoIndex, onOpenVideo }) {
+function FeedPost({ id, author, time, description, media = [], hashtags = [], visibility, location, feelingActivity, taggedUsers = [], topReactors = [], liked: initialLiked = false, userReaction: initialUserReaction = null, likesCount: initialLikesCount = 0, commentsCount: initialCommentsCount = 0, sharesCount = 0, saved: initialSaved = false, authorIsFollowed: initialAuthorIsFollowed = false, isSponsored = false, sponsorCtaLink, sponsorObjective, promotionId, onFollowChange, onSaveChange, videoIndex, onOpenVideo }) {
   const { user: currentUser } = useAuthStore();
   const navigate = useNavigate();
   const isSelf = currentUser?.id && author?.id && currentUser.id === author.id;
@@ -139,7 +139,9 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], vi
   const [feedVideoPlaying, setFeedVideoPlaying] = useState(false);
   const feedVideoRef = useRef(null);
   const feedVideoWrapRef = useRef(null);
+  const commentsSectionRef = useRef(null);
   const shortDesc = description && description.length > 120 ? description.slice(0, 120) + '...' : description;
+  const isEngagementSponsored = isSponsored && (sponsorObjective === 'ENGAGEMENT' || !sponsorObjective);
   const showSeeMore = description && description.length > 120 && !expanded;
   const rawVideoUrl = media?.length === 1 && media[0]?.isVideo
     ? (typeof media[0] === 'string' ? media[0] : media[0]?.url)
@@ -671,7 +673,21 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], vi
           </div>
         </div>
       </div>
-      {isSponsored && sponsorCtaLink && (() => {
+      {isSponsored && (isEngagementSponsored ? (
+        <div className="feed-post-sponsored-cta">
+          <button
+            type="button"
+            className="feed-post-sponsored-cta-btn"
+            onClick={() => {
+              if (promotionId) trackPromotionClick(promotionId).catch(() => {});
+              setShowComments(true);
+              setTimeout(() => commentsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+            }}
+          >
+            Comment & share
+          </button>
+        </div>
+      ) : sponsorCtaLink ? (() => {
         const isInternal = isInternalCtaLink(sponsorCtaLink);
         const href = normalizeCtaLink(sponsorCtaLink);
         return (
@@ -692,9 +708,9 @@ function FeedPost({ id, author, time, description, media = [], hashtags = [], vi
             </a>
           </div>
         );
-      })()}
+      })() : null)}
       {showComments && (
-        <div className="feed-post-comments">
+        <div className="feed-post-comments" ref={commentsSectionRef}>
           {commentsLoading ? (
             <p className="feed-post-comments-loading">Loading comments…</p>
           ) : (
@@ -802,6 +818,7 @@ function normalizePost(post) {
     isSponsored: !!post.isSponsored,
     sponsorCtaLink: post.sponsorCtaLink ?? post.sponsor_cta_link ?? null,
     promotionId: post.promotionId ?? post.promotion_id ?? null,
+    sponsorObjective: post.sponsorObjective ?? post.sponsor_objective ?? null,
   };
 }
 
@@ -1047,6 +1064,7 @@ export default function Home() {
               authorIsFollowed={p.authorIsFollowed}
               isSponsored={p.isSponsored}
               sponsorCtaLink={p.sponsorCtaLink}
+              sponsorObjective={p.sponsorObjective}
               promotionId={p.promotionId}
               videoIndex={videoIndex >= 0 ? videoIndex : undefined}
               onOpenVideo={videoIndex >= 0 ? openVideoInReels : undefined}
