@@ -36,6 +36,7 @@ import { SponsoredSkeleton } from '@/components/ui/SponsoredSkeleton';
 import { PymkSkeleton } from '@/components/ui/PymkSkeleton';
 import { APP_NAME, LOGO_PNG, LOGO_ICON } from '@/lib/constants/brand';
 import { formatPostTime } from '@/lib/utils/dateUtils';
+import { normalizeCtaLink, isInternalCtaLink } from '@/lib/utils/urlUtils';
 import { clearAuth } from '@/store/auth.store';
 import '@/styles/user-app.css';
 import '@/styles/theme-dark.css';
@@ -374,8 +375,8 @@ export default function UserLayout() {
     if (!item) return;
     if (item.id) trackPromotionClick(item.id).catch(() => {});
     if (item.targetUrl) {
-      if (item.targetUrl.startsWith('/')) navigate(item.targetUrl);
-      else window.open(item.targetUrl, '_blank', 'noopener');
+      if (isInternalCtaLink(item.targetUrl)) navigate(item.targetUrl);
+      else window.open(normalizeCtaLink(item.targetUrl), '_blank', 'noopener');
     }
   };
 
