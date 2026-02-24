@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Package, Loader2, RefreshCw, CheckCircle, Truck, MapPin, User, Calendar, AlertCircle, ChevronDown, X, Building2, Phone, Mail, Globe, MapPinned, Plus } from 'lucide-react';
+import { Package, Loader2, RefreshCw, CheckCircle, Truck, MapPin, User, Calendar, AlertCircle, ChevronDown, ChevronRight, X, Building2, Phone, Mail, Globe, MapPinned, Plus } from 'lucide-react';
 import { getBusinessOrders, updateOrderStatus, confirmOrder, shipOrder, deliverOrder } from '@/lib/api/business';
 import { getOrderTracking, addOrderTrackingEvent } from '@/lib/api/orders';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
@@ -53,6 +53,7 @@ const TRACKING_EVENT_TYPES = [
 
 function OrderCard({ order, onStatusUpdate }) {
   const queryClient = useQueryClient();
+  const [expanded, setExpanded] = useState(false);
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [trackingNumber, setTrackingNumber] = useState('');
@@ -161,17 +162,29 @@ function OrderCard({ order, onStatusUpdate }) {
   const nextStatuses = getNextStatuses();
 
   return (
-    <div className="business-card" style={{ marginBottom: '16px' }}>
-      <div className="business-orders-card-header">
-        <div style={{ flex: 1 }}>
-          <div className="business-orders-card-title-row">
-            <h3 className="business-orders-card-title">
+    <div className="business-card" style={{ marginBottom: '12px', overflow: 'hidden' }}>
+      {/* Compact header row – always visible, click to expand/collapse */}
+      <div
+        className="business-orders-card-header"
+        style={{ cursor: 'pointer', padding: '16px 20px' }}
+        onClick={() => setExpanded((e) => !e)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); setExpanded((e) => !e); } }}
+        aria-expanded={expanded}
+      >
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="business-orders-card-title-row" style={{ alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', color: 'rgba(255,255,255,0.7)', flexShrink: 0 }}>
+              {expanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+            </span>
+            <h3 className="business-orders-card-title" style={{ margin: 0 }}>
               {order.orderNumber || `Order #${order.id?.substring(0, 8)}`}
             </h3>
             <span
               style={{
-                padding: '4px 12px',
-                borderRadius: '12px',
+                padding: '4px 10px',
+                borderRadius: '8px',
                 fontSize: '0.75rem',
                 fontWeight: 600,
                 background: statusInfo.bg,
@@ -181,69 +194,72 @@ function OrderCard({ order, onStatusUpdate }) {
               {statusInfo.label}
             </span>
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '0.875rem', color: '#6b7280' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px 20px', fontSize: '0.8125rem', color: 'rgba(255,255,255,0.8)', marginTop: '6px', marginLeft: 32 }}>
             {order.createdAt && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Calendar size={14} />
-                {formatDate(order.createdAt)}
-              </div>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <Calendar size={12} /> {formatDate(order.createdAt)}
+              </span>
             )}
             {order.buyer && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <User size={14} />
-                {order.buyer.name || 'Customer'}
-              </div>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <User size={12} /> {order.buyer.name || 'Customer'}
+              </span>
             )}
-            {order.deliveryAddress && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <MapPin size={14} />
-                {order.deliveryAddress}
-              </div>
+            {order.total != null && (
+              <span style={{ fontWeight: 600, color: 'var(--business-primary-light)' }}>{formatCurrency(order.total)}</span>
             )}
           </div>
         </div>
-        <div style={{ position: 'relative' }}>
-          {nextStatuses.length > 0 && !updating && (
-            <button
-              type="button"
-              onClick={() => setStatusMenuOpen(!statusMenuOpen)}
-              className="business-btn-ghost"
-              style={{ position: 'relative' }}
-            >
-              Change Status
-              <ChevronDown size={16} style={{ marginLeft: '4px' }} />
-            </button>
-          )}
-          {statusMenuOpen && (
-            <div
-              className="business-orders-status-dropdown"
-            >
-              {nextStatuses.map((status) => (
-                <button
-                  key={status}
-                  type="button"
-                  onClick={() => handleStatusChange(status)}
-                  className="business-orders-status-dropdown-btn"
-                >
-                  {status === 'CONFIRMED' && <CheckCircle size={16} style={{ color: ORDER_STATUSES.CONFIRMED.color }} />}
-                  {status === 'SHIPPED' && <Truck size={16} style={{ color: ORDER_STATUSES.SHIPPED.color }} />}
-                  {status === 'DELIVERED' && <Package size={16} style={{ color: ORDER_STATUSES.DELIVERED.color }} />}
-                  {ORDER_STATUSES[status]?.label || status}
-                </button>
-              ))}
-            </div>
-          )}
-          {updating && (
-            <div className="business-orders-updating">
-              <Loader2 size={16} className="icon-spin" />
-              <span>Updating...</span>
-            </div>
-          )}
+        <div style={{ flexShrink: 0, fontSize: '0.8125rem', color: 'rgba(255,255,255,0.7)' }}>
+          {expanded ? 'Funga' : 'Fungua maelezo'}
         </div>
       </div>
 
+      {/* Expanded content – details + update actions */}
+      {expanded && (
+        <div style={{ padding: '0 20px 20px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-start', justifyContent: 'space-between', marginTop: 16 }}>
+            <div style={{ flex: 1, minWidth: 0 }} />
+            <div style={{ position: 'relative' }}>
+              {nextStatuses.length > 0 && !updating && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setStatusMenuOpen(!statusMenuOpen); }}
+                  className="business-btn-primary"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                >
+                  Update status
+                  <ChevronDown size={16} />
+                </button>
+              )}
+              {statusMenuOpen && (
+                <div className="business-orders-status-dropdown">
+                  {nextStatuses.map((status) => (
+                    <button
+                      key={status}
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleStatusChange(status); }}
+                      className="business-orders-status-dropdown-btn"
+                    >
+                      {status === 'CONFIRMED' && <CheckCircle size={16} style={{ color: ORDER_STATUSES.CONFIRMED.color }} />}
+                      {status === 'SHIPPED' && <Truck size={16} style={{ color: ORDER_STATUSES.SHIPPED.color }} />}
+                      {status === 'DELIVERED' && <Package size={16} style={{ color: ORDER_STATUSES.DELIVERED.color }} />}
+                      {ORDER_STATUSES[status]?.label || status}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {updating && (
+                <div className="business-orders-updating">
+                  <Loader2 size={16} className="icon-spin" />
+                  <span>Updating...</span>
+                </div>
+              )}
+            </div>
+          </div>
+
       {/* Client information */}
-      <div className="business-orders-block">
+      <div className="business-orders-block" style={{ marginTop: 20 }} onClick={(e) => e.stopPropagation()}>
         <h4 className="business-orders-block-title">
           <User size={18} />
           Client information
@@ -509,6 +525,8 @@ function OrderCard({ order, onStatusUpdate }) {
           {trackingError && (
             <p style={{ marginTop: 8, fontSize: '0.875rem', color: '#f87171' }}>{trackingError}</p>
           )}
+        </div>
+      )}
         </div>
       )}
     </div>
