@@ -43,6 +43,33 @@ import '@/styles/theme-dark.css';
 
 const POLL_INTERVAL_MS = 2500;
 
+/** Cover for Sponsored item: image, or video first frame (like reels/story), or placeholder */
+function SponsoredCardThumb({ imageUrl, videoUrl }) {
+  const [imgFailed, setImgFailed] = useState(false);
+  const useImage = imageUrl && !imgFailed;
+  const useVideo = !useImage && videoUrl;
+  return (
+    <div className="thumb">
+      {useImage ? (
+        <img src={imageUrl} alt="" onError={() => setImgFailed(true)} />
+      ) : useVideo ? (
+        <video
+          src={videoUrl}
+          preload="metadata"
+          muted
+          playsInline
+          aria-hidden
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        />
+      ) : (
+        <div className="user-app-sponsored-thumb-placeholder" aria-hidden>
+          <PlayCircle size={32} strokeWidth={1.5} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* Color coding: kila item rangi yake – vibrancy kama design original */
 const leftNav = [
   { to: '/app/profile', icon: User, label: 'Profile', iconStyle: 'profile' },
@@ -841,13 +868,7 @@ export default function UserLayout() {
                   onClick={() => handleSponsoredClick(item)}
                   ref={(el) => el && item.id && recordSponsoredImpression(item.id)}
                 >
-                  <div className="thumb">
-                    {item.imageUrl ? (
-                      <img src={item.imageUrl} alt="" />
-                    ) : (
-                      <div style={{ background: 'var(--surface)', width: '100%', height: '100%' }} />
-                    )}
-                  </div>
+                  <SponsoredCardThumb imageUrl={item.imageUrl} videoUrl={item.videoUrl} />
                   <div className="user-app-sponsored-card-content">
                     <div>
                       <span className="user-app-sponsored-label">Sponsored</span>
