@@ -8,6 +8,7 @@ import { trackPromotionClick } from '@/lib/api/promotions';
 import { formatPostTime, formatCommentTime } from '@/lib/utils/dateUtils';
 import { normalizeCtaLink, isInternalCtaLink } from '@/lib/utils/urlUtils';
 import { CommentItem } from '@/components/social/CommentItem';
+import MentionInput, { getSubmitContent, MentionContent } from '@/components/ui/MentionInput';
 import { ReelsSkeleton } from '@/components/ui/ReelsSkeleton';
 import { useAuthStore } from '@/store/auth.store';
 
@@ -16,11 +17,14 @@ function normalizeReel(post) {
   const media = post.media ?? post.attachments ?? post.images ?? [];
   const urls = Array.isArray(media) ? media.map((m) => (typeof m === 'string' ? m : m?.url ?? m?.src)) : [];
   const videoUrl = urls.find((u) => u && /\.(mp4|webm|ogg)(\?|$)/i.test(u)) ?? urls[0] ?? null;
+  const tagged = post.taggedUsers ?? [];
+  const taggedUsers = Array.isArray(tagged) ? tagged.map((u) => (typeof u === 'object' && u !== null ? { id: u.id, name: u.name ?? u.username, profilePic: u.profilePic } : null)).filter(Boolean) : [];
   return {
     id: post.id,
     author: { id: author.id, name: author.name ?? author.username ?? 'User', profilePic: author.profilePic ?? author.avatar },
     time: formatPostTime(post.createdAt ?? post.created_at),
     description: post.caption ?? post.content ?? post.description ?? '',
+    taggedUsers,
     videoUrl,
     likes: post.reactionsCount ?? post.likesCount ?? post.likes_count ?? post.likeCount ?? 0,
     comments: post.commentsCount ?? post.comments_count ?? post.commentCount ?? 0,
@@ -66,6 +70,8 @@ const SWIPE_THRESHOLD = 50;
 /** Comments drawer for a reel (post). Loads comments, add new, delete, like. Exported for use in Home video overlay. */
 export function ReelCommentsDrawer({ postId, onClose, onCommentCountChange }) {
   const { user: currentUser } = useAuthStore();
+  const commentMentionOrderRef = useRef([]);
+  const replyMentionOrderRef = useRef([]);
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [commentText, setCommentText] = useState('');
@@ -88,11 +94,12 @@ export function ReelCommentsDrawer({ postId, onClose, onCommentCountChange }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const content = commentText.trim();
-    if (!postId || !content || submitting) return;
+    const trimmed = commentText.trim();
+    if (!postId || !trimmed || submitting) return;
+    const { content, taggedUserIds } = getSubmitContent(trimmed, commentMentionOrderRef.current || []);
     setSubmitting(true);
     try {
-      await addComment(postId, content);
+      await addComment(postId, content, null, taggedUserIds?.length ? taggedUserIds : null);
       setCommentText('');
       const list = await getComments(postId, { page: 0, size: 50 });
       const next = Array.isArray(list) ? list : [];
@@ -106,11 +113,12 @@ export function ReelCommentsDrawer({ postId, onClose, onCommentCountChange }) {
 
   const handleSubmitReply = async (e, parentId) => {
     e.preventDefault();
-    const content = replyText.trim();
-    if (!postId || !content || !parentId || submitting) return;
+    const trimmed = replyText.trim();
+    if (!postId || !trimmed || !parentId || submitting) return;
+    const { content, taggedUserIds } = getSubmitContent(trimmed, replyMentionOrderRef.current || []);
     setSubmitting(true);
     try {
-      await addComment(postId, content, parentId);
+      await addComment(postId, content, parentId, taggedUserIds?.length ? taggedUserIds : null);
       setReplyText('');
       setReplyingTo(null);
       const list = await getComments(postId, { page: 0, size: 50 });
@@ -168,6 +176,7 @@ export function ReelCommentsDrawer({ postId, onClose, onCommentCountChange }) {
                 replyingTo={replyingTo}
                 replyText={replyText}
                 setReplyText={setReplyText}
+                replyMentionOrderRef={replyMentionOrderRef}
                 onSubmitReply={handleSubmitReply}
                 commentSubmitting={submitting}
                 formatTime={formatCommentTime}
@@ -176,14 +185,14 @@ export function ReelCommentsDrawer({ postId, onClose, onCommentCountChange }) {
           )}
         </ul>
         <form onSubmit={handleSubmit} className="reels-comments-input-wrap">
-          <input
-            type="text"
-            className="reels-comments-input"
-            placeholder="Add a comment..."
+          <MentionInput
             value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
+            onChange={setCommentText}
+            placeholder="Add a comment... Use @ to tag someone"
             maxLength={2000}
             disabled={submitting}
+            inputClassName="reels-comments-input"
+            mentionOrderRef={commentMentionOrderRef}
           />
           <button type="submit" className="reels-comments-submit" disabled={!commentText.trim() || submitting}>
             Post
@@ -273,6 +282,8 @@ function ReelCard({ item, index, onPlay, onLikeChange, onSaveChange, onCommentCo
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
+  const commentMentionOrderRef = useRef([]);
+  const replyMentionOrderRef = useRef([]);
   const [commentText, setCommentText] = useState('');
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null);
@@ -304,11 +315,12 @@ function ReelCard({ item, index, onPlay, onLikeChange, onSaveChange, onCommentCo
 
   const handleSubmitComment = async (e) => {
     e.preventDefault();
-    const content = commentText.trim();
-    if (!item.id || !content || commentSubmitting) return;
+    const trimmed = commentText.trim();
+    if (!item.id || !trimmed || commentSubmitting) return;
+    const { content, taggedUserIds } = getSubmitContent(trimmed, commentMentionOrderRef.current || []);
     setCommentSubmitting(true);
     try {
-      await addComment(item.id, content);
+      await addComment(item.id, content, null, taggedUserIds?.length ? taggedUserIds : null);
       setCommentText('');
       setCommentsCount((c) => c + 1);
       onCommentCountChange?.(item.id, commentsCount + 1);
@@ -321,11 +333,12 @@ function ReelCard({ item, index, onPlay, onLikeChange, onSaveChange, onCommentCo
 
   const handleSubmitReply = async (e, parentId) => {
     e.preventDefault();
-    const content = replyText.trim();
-    if (!item.id || !content || !parentId || commentSubmitting) return;
+    const trimmed = replyText.trim();
+    if (!item.id || !trimmed || !parentId || commentSubmitting) return;
+    const { content, taggedUserIds } = getSubmitContent(trimmed, replyMentionOrderRef.current || []);
     setCommentSubmitting(true);
     try {
-      await addComment(item.id, content, parentId);
+      await addComment(item.id, content, parentId, taggedUserIds?.length ? taggedUserIds : null);
       setReplyText('');
       setReplyingTo(null);
       setCommentsCount((c) => c + 1);
@@ -524,6 +537,7 @@ function ReelCard({ item, index, onPlay, onLikeChange, onSaveChange, onCommentCo
                   replyingTo={replyingTo}
                   replyText={replyText}
                   setReplyText={setReplyText}
+                  replyMentionOrderRef={replyMentionOrderRef}
                   onSubmitReply={handleSubmitReply}
                   commentSubmitting={commentSubmitting}
                   formatTime={formatCommentTime}
@@ -534,14 +548,14 @@ function ReelCard({ item, index, onPlay, onLikeChange, onSaveChange, onCommentCo
           <form onSubmit={handleSubmitComment} className="reels-card-comment-form">
             <Avatar user={currentUser} size={36} className="reels-card-comment-form-avatar" />
             <div className="reels-card-comment-form-wrap">
-              <input
-                type="text"
-                className="reels-card-comment-input"
-                placeholder="Add a comment..."
+              <MentionInput
                 value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
+                onChange={setCommentText}
+                placeholder="Add a comment... Use @ to tag someone"
                 maxLength={2000}
                 disabled={commentSubmitting}
+                inputClassName="reels-card-comment-input"
+                mentionOrderRef={commentMentionOrderRef}
               />
             </div>
             <button type="submit" className="reels-card-comment-submit" disabled={!commentText.trim() || commentSubmitting} aria-label="Post comment">
@@ -854,7 +868,11 @@ function ReelSlide({ item, isActive, onLikeChange, onSaveChange, onCommentClick,
             </button>
           )}
         </div>
-        {item.description && <p className="reels-info-caption">{item.description}</p>}
+        {item.description && (
+          <p className="reels-info-caption">
+            <MentionContent content={item.description} taggedUsers={item.taggedUsers ?? []} />
+          </p>
+        )}
         {item.isSponsored && (item.sponsorObjective === 'ENGAGEMENT' || !item.sponsorObjective) && (
           <button type="button" className="reels-sponsored-cta" onClick={() => { if (item.promotionId) trackPromotionClick(item.promotionId).catch(() => {}); onCommentClick?.(item); }}>
             Comment & share

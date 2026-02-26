@@ -4,6 +4,7 @@ import { ImagePlus, X, Loader2, Video } from 'lucide-react';
 import { createPost, uploadChunked, CHUNK_THRESHOLD_BYTES } from '@/lib/api/posts';
 import { UploadProgressBar } from '@/components/ui/UploadProgressBar';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
+import MentionInput, { getSubmitContent } from '@/components/ui/MentionInput';
 
 const VISIBILITY_OPTIONS = [
   { value: 'PUBLIC', label: 'Public' },
@@ -17,6 +18,7 @@ export default function Create() {
   const isReel = searchParams.get('type') === 'reel';
 
   const fileInputRef = useRef(null);
+  const mentionOrderRef = useRef([]);
   const [caption, setCaption] = useState('');
   const [visibility, setVisibility] = useState('PUBLIC');
   const [files, setFiles] = useState([]);
@@ -63,6 +65,7 @@ export default function Create() {
     }
     setSubmitting(true);
     setUploadProgress(0);
+    const { content: submitCaption, taggedUserIds } = getSubmitContent(caption.trim(), mentionOrderRef.current || []);
     const postType = isReel ? 'REEL' : 'POST';
     try {
       const hasLargeFile = files.some((f) => f.size > CHUNK_THRESHOLD_BYTES);
@@ -79,18 +82,20 @@ export default function Create() {
           thumbnailUrls.push(typeof result === 'object' && result.thumbnailUrl ? result.thumbnailUrl : null);
         }
         await createPost({
-          caption: caption.trim(),
+          caption: submitCaption,
           visibility,
           postType,
           mediaUrls,
           thumbnailUrls: thumbnailUrls.some(Boolean) ? thumbnailUrls : undefined,
+          taggedUserIds: taggedUserIds?.length ? taggedUserIds : undefined,
         });
       } else {
         await createPost({
-          caption: caption.trim(),
+          caption: submitCaption,
           visibility,
           postType,
           files,
+          taggedUserIds: taggedUserIds?.length ? taggedUserIds : undefined,
         });
       }
       navigate(isReel ? '/app/reels' : '/app');
@@ -114,13 +119,16 @@ export default function Create() {
         <h1 className="user-app-create-title">{isReel ? 'Create reel' : 'Create post'}</h1>
         <form onSubmit={handleSubmit} className="user-app-create-form">
           <div className="user-app-create-field">
-            <textarea
-              className="user-app-create-caption"
-              placeholder={isReel ? 'Add a description...' : "What's on your mind?"}
+            <MentionInput
               value={caption}
-              onChange={(e) => setCaption(e.target.value)}
+              onChange={setCaption}
+              placeholder={isReel ? 'Add a description... Use @ to tag someone' : "What's on your mind? Use @ to tag someone"}
+              multiline
               rows={4}
               maxLength={2000}
+              className="user-app-create-caption-wrap"
+              inputClassName="user-app-create-caption"
+              mentionOrderRef={mentionOrderRef}
             />
           </div>
           <div className="user-app-create-field">

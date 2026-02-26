@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { MoreHorizontal, ThumbsUp, MessageCircle, Share2, X } from 'lucide-react';
 import { UserProfileMenu } from '@/components/ui/UserProfileMenu';
 import { CommentItem } from '@/components/social/CommentItem';
 import { likePost, unlikePost, getComments, addComment, deleteComment, likeComment, unlikeComment } from '@/lib/api/posts';
+import MentionInput, { getSubmitContent, MentionContent } from '@/components/ui/MentionInput';
 import { useAuthStore } from '@/store/auth.store';
 import { formatCommentTime } from '@/lib/utils/dateUtils';
 
@@ -69,6 +70,7 @@ export function GroupPost({
   groupName,
   time,
   description,
+  taggedUsers = [],
   images = [],
   likesCount: initialLikesCount = 0,
   commentsCount: initialCommentsCount = 0,
@@ -87,6 +89,8 @@ export function GroupPost({
   const [comments, setComments] = useState([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentsCount, setCommentsCount] = useState(initialCommentsCount);
+  const commentMentionOrderRef = useRef([]);
+  const replyMentionOrderRef = useRef([]);
   const [commentText, setCommentText] = useState('');
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null);
@@ -134,11 +138,12 @@ export function GroupPost({
 
   const handleSubmitComment = async (e) => {
     e.preventDefault();
-    const content = commentText.trim();
-    if (!postId || !content || commentSubmitting) return;
+    const trimmed = commentText.trim();
+    if (!postId || !trimmed || commentSubmitting) return;
+    const { content, taggedUserIds } = getSubmitContent(trimmed, commentMentionOrderRef.current || []);
     setCommentSubmitting(true);
     try {
-      await addComment(postId, content);
+      await addComment(postId, content, null, taggedUserIds?.length ? taggedUserIds : null);
       setCommentText('');
       setCommentsCount((c) => c + 1);
       onCommentCountChange?.(postId);
@@ -150,11 +155,12 @@ export function GroupPost({
 
   const handleSubmitReply = async (e, parentId) => {
     e.preventDefault();
-    const content = replyText.trim();
-    if (!postId || !content || !parentId || commentSubmitting) return;
+    const trimmed = replyText.trim();
+    if (!postId || !trimmed || !parentId || commentSubmitting) return;
+    const { content, taggedUserIds } = getSubmitContent(trimmed, replyMentionOrderRef.current || []);
     setCommentSubmitting(true);
     try {
-      await addComment(postId, content, parentId);
+      await addComment(postId, content, parentId, taggedUserIds?.length ? taggedUserIds : null);
       setReplyText('');
       setReplyingTo(null);
       setCommentsCount((c) => c + 1);
@@ -229,7 +235,7 @@ export function GroupPost({
       </div>
       {description && (
         <div className="group-post-description">
-          {expanded ? description : shortDesc}
+          <MentionContent content={expanded ? description : shortDesc} taggedUsers={taggedUsers} />
           {showSeeMore && (
             <button type="button" className="group-post-see-more" onClick={() => setExpanded(true)}>
               See more
@@ -319,6 +325,7 @@ export function GroupPost({
                   replyingTo={replyingTo}
                   replyText={replyText}
                   setReplyText={setReplyText}
+                  replyMentionOrderRef={replyMentionOrderRef}
                   onSubmitReply={handleSubmitReply}
                   commentSubmitting={commentSubmitting}
                   formatTime={formatCommentTime}
@@ -338,13 +345,14 @@ export function GroupPost({
           <form onSubmit={handleSubmitComment} className="feed-post-comment-form">
             <Avatar user={currentUser} size={36} className="feed-post-comment-form-avatar" />
             <div className="feed-post-comment-form-wrap">
-              <input
-                type="text"
-                className="feed-post-comment-input"
-                placeholder="Add a comment..."
+              <MentionInput
                 value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
+                onChange={setCommentText}
+                placeholder="Add a comment... Use @ to tag someone"
                 maxLength={2000}
+                className="group-post-comment-mention-wrap"
+                inputClassName="feed-post-comment-input"
+                mentionOrderRef={commentMentionOrderRef}
               />
               <button type="button" className="feed-post-comment-gif" aria-label="GIF">GIF</button>
             </div>

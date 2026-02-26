@@ -2,6 +2,7 @@
  * Single comment with Like, Reply, nested replies. Used in FeedPost and GroupPost.
  */
 import { UserProfileMenu } from '@/components/ui/UserProfileMenu';
+import { MentionInput, MentionContent } from '@/components/ui/MentionInput';
 
 export function CommentItem({
   comment,
@@ -12,6 +13,7 @@ export function CommentItem({
   replyingTo,
   replyText,
   setReplyText,
+  replyMentionOrderRef,
   onSubmitReply,
   commentSubmitting,
   formatTime,
@@ -28,7 +30,9 @@ export function CommentItem({
         <div className="feed-post-comment-bubble">
           <UserProfileMenu user={author} showAvatar={false} className="feed-post-comment-author-inline" />
           {' '}
-          <span className="feed-post-comment-content">{comment.content ?? comment.text ?? ''}</span>
+          <span className="feed-post-comment-content">
+            <MentionContent content={comment.content ?? comment.text ?? ''} taggedUsers={comment.taggedUsers ?? []} />
+          </span>
         </div>
         <div className="feed-post-comment-actions">
           <span className="feed-post-comment-time">{formatTime(comment.createdAt ?? comment.created_at)}</span>
@@ -53,14 +57,13 @@ export function CommentItem({
         </div>
         {replyingTo === comment.id && (
           <form onSubmit={(e) => onSubmitReply(e, comment.id)} className="feed-post-reply-form">
-            <input
-              type="text"
-              className="feed-post-comment-input"
-              placeholder="Write a reply..."
+            <MentionInput
               value={replyText}
-              onChange={(e) => setReplyText(e.target.value)}
+              onChange={setReplyText}
+              placeholder="Write a reply... Use @ to tag someone"
               maxLength={2000}
-              autoFocus
+              inputClassName="feed-post-comment-input"
+              mentionOrderRef={replyMentionOrderRef}
             />
             <button type="submit" className="feed-post-comment-submit" disabled={!replyText.trim() || commentSubmitting}>
               Reply
@@ -83,6 +86,7 @@ export function CommentItem({
                 replyingTo={replyingTo}
                 replyText={replyText}
                 setReplyText={setReplyText}
+                replyMentionOrderRef={replyMentionOrderRef}
                 onSubmitReply={onSubmitReply}
                 commentSubmitting={commentSubmitting}
                 formatTime={formatTime}

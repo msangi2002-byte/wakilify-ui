@@ -19,6 +19,7 @@ import { trackPromotionClick } from '@/lib/api/promotions';
 import { useAuthStore } from '@/store/auth.store';
 import { parseApiDate, formatPostTime } from '@/lib/utils/dateUtils';
 import { normalizeCtaLink, isInternalCtaLink } from '@/lib/utils/urlUtils';
+import MentionInput, { getSubmitContent, MentionContent } from '@/components/ui/MentionInput';
 import '@/styles/user-app.css';
 
 const STORY_DURATION_MS = 5000;
@@ -125,6 +126,7 @@ export default function StoryViewer() {
   const [comments, setComments] = useState([]);
   const [commentsCount, setCommentsCount] = useState(0);
   const [commentsLoading, setCommentsLoading] = useState(false);
+  const commentMentionOrderRef = useRef([]);
   const [commentText, setCommentText] = useState('');
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [insightsOpen, setInsightsOpen] = useState(false);
@@ -358,11 +360,12 @@ export default function StoryViewer() {
     async (e) => {
       e.preventDefault();
       e.stopPropagation();
-      const content = commentText.trim();
-      if (!currentStory?.id || !content || commentSubmitting) return;
+      const trimmed = commentText.trim();
+      if (!currentStory?.id || !trimmed || commentSubmitting) return;
+      const { content, taggedUserIds } = getSubmitContent(trimmed, commentMentionOrderRef.current || []);
       setCommentSubmitting(true);
       try {
-        await addComment(currentStory.id, content);
+        await addComment(currentStory.id, content, null, taggedUserIds?.length ? taggedUserIds : null);
         setCommentText('');
         setCommentsCount((c) => c + 1);
         await loadComments();
@@ -917,22 +920,23 @@ export default function StoryViewer() {
                         <span className="story-viewer-comment-author">{comment.author?.name ?? comment.author?.username ?? 'User'}</span>
                         <span className="story-viewer-comment-time"> · {formatPostTime(comment.createdAt)}</span>
                       </div>
-                      <p className="story-viewer-comment-content">{comment.content}</p>
+                      <p className="story-viewer-comment-content">
+                        <MentionContent content={comment.content} taggedUsers={comment.taggedUsers ?? []} />
+                      </p>
                     </div>
                   </li>
                 ))
               )}
             </ul>
             <form onSubmit={handleSubmitComment} className="reels-comments-input-wrap">
-              <input
-                type="text"
-                className="reels-comments-input"
-                placeholder="Add a comment..."
+              <MentionInput
                 value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
+                onChange={setCommentText}
+                placeholder="Add a comment... Use @ to tag someone"
                 maxLength={2000}
                 disabled={commentSubmitting}
-                onFocus={(e) => e.stopPropagation()}
+                inputClassName="reels-comments-input"
+                mentionOrderRef={commentMentionOrderRef}
               />
               <button type="submit" className="reels-comments-submit" disabled={!commentText.trim() || commentSubmitting}>
                 {commentSubmitting ? <Loader2 size={18} className="spin" /> : 'Post'}
