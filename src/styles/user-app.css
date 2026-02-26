@@ -1366,6 +1366,21 @@ body:has(.user-app) {
   line-height: 1.4;
 }
 
+/* @mention links: lighted (highlighted), click → profile */
+.mention-link.mention-lighted {
+  color: #6366f1;
+  font-weight: 600;
+  text-decoration: none;
+  background: rgba(99, 102, 241, 0.15);
+  padding: 1px 6px;
+  border-radius: 6px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.mention-link.mention-lighted:hover {
+  background: rgba(99, 102, 241, 0.28);
+  color: #4f46e5;
+}
+
 .feed-post-see-more {
   background: none;
   border: none;

@@ -1,8 +1,10 @@
 /**
  * Input or textarea with @ mention support: typing @ triggers live user search dropdown.
  * Parent gets display value (with @Name); on submit use getSubmitContent(displayValue) for content + taggedUserIds.
+ * Dropdown is rendered in a portal so it is not hidden by overflow in comment sections.
  */
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { searchUsers } from '@/lib/api/users';
 
@@ -68,10 +70,27 @@ export function MentionInput({
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [dropdownIndex, setDropdownIndex] = useState(0);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 200, above: false });
   const inputRef = useRef(null);
   const dropdownRef = useRef(null);
   const searchTimeoutRef = useRef(null);
   const orderRef = useRef([]);
+
+  const DROPDOWN_MAX_HEIGHT = 240;
+
+  const updateDropdownPosition = useCallback(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const spaceBelow = typeof window !== 'undefined' ? window.innerHeight - rect.bottom : 300;
+    const above = spaceBelow < DROPDOWN_MAX_HEIGHT + 8 && rect.top > DROPDOWN_MAX_HEIGHT + 8;
+    setDropdownPosition({
+      top: above ? rect.top - DROPDOWN_MAX_HEIGHT - 2 : rect.bottom + 2,
+      left: rect.left,
+      width: Math.max(rect.width, 200),
+      above,
+    });
+  }, []);
 
   const triggerSearch = useCallback((q) => {
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
@@ -192,6 +211,18 @@ export function MentionInput({
     }
   }, [value, mentionOrderRef]);
 
+  useEffect(() => {
+    if (!showDropdown) return;
+    updateDropdownPosition();
+    const onScrollOrResize = () => updateDropdownPosition();
+    window.addEventListener('scroll', onScrollOrResize, true);
+    window.addEventListener('resize', onScrollOrResize);
+    return () => {
+      window.removeEventListener('scroll', onScrollOrResize, true);
+      window.removeEventListener('resize', onScrollOrResize);
+    };
+  }, [showDropdown, updateDropdownPosition, users.length, loading]);
+
   const InputComponent = multiline ? 'textarea' : 'input';
   const inputProps = {
     ref: inputRef,
@@ -206,93 +237,97 @@ export function MentionInput({
   };
   if (multiline) inputProps.rows = rows ?? 4;
 
+  const dropdownEl = showDropdown ? (
+    <div
+      ref={dropdownRef}
+      className="mention-input-dropdown"
+      role="listbox"
+      style={{
+        position: 'fixed',
+        top: dropdownPosition.top,
+        left: dropdownPosition.left,
+        width: dropdownPosition.width,
+        maxHeight: DROPDOWN_MAX_HEIGHT,
+        background: '#fff',
+        border: '1px solid #e5e7eb',
+        borderRadius: 8,
+        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+        overflow: 'auto',
+        zIndex: 10000,
+        color: '#111',
+      }}
+    >
+      {loading ? (
+        <div style={{ padding: 12, color: '#374151' }}>Searching…</div>
+      ) : users.length === 0 ? (
+        <div style={{ padding: 12, color: '#374151' }}>No users found</div>
+      ) : (
+        users.map((u, i) => (
+          <button
+            key={u.id}
+            type="button"
+            role="option"
+            aria-selected={i === dropdownIndex}
+            className="mention-input-option"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              width: '100%',
+              padding: '10px 12px',
+              border: 'none',
+              background: i === dropdownIndex ? '#f3f4f6' : 'transparent',
+              cursor: 'pointer',
+              textAlign: 'left',
+              fontSize: 14,
+              color: '#111',
+            }}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              insertMention(u);
+            }}
+          >
+            {u.profilePic ? (
+              <img
+                src={u.profilePic}
+                alt=""
+                style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: '50%',
+                  background: '#e5e7eb',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 14,
+                  color: '#6b7280',
+                }}
+              >
+                {(u.name || '?')[0]}
+              </div>
+            )}
+            <span style={{ color: '#111' }}>{u.name || 'User'}</span>
+          </button>
+        ))
+      )}
+    </div>
+  ) : null;
+
   return (
     <div className={`mention-input-wrap ${className}`} style={{ position: 'relative' }}>
       <InputComponent {...inputProps} />
-      {showDropdown && (
-        <div
-          ref={dropdownRef}
-          className="mention-input-dropdown"
-          role="listbox"
-          style={{
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            top: '100%',
-            marginTop: 2,
-            background: 'var(--bg-elevated, #fff)',
-            border: '1px solid var(--border, #e5e7eb)',
-            borderRadius: 8,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-            maxHeight: 240,
-            overflow: 'auto',
-            zIndex: 1000,
-          }}
-        >
-          {loading ? (
-            <div style={{ padding: 12, color: 'var(--text-secondary)' }}>Searching…</div>
-          ) : users.length === 0 ? (
-            <div style={{ padding: 12, color: 'var(--text-secondary)' }}>No users found</div>
-          ) : (
-            users.map((u, i) => (
-              <button
-                key={u.id}
-                type="button"
-                role="option"
-                aria-selected={i === dropdownIndex}
-                className="mention-input-option"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  width: '100%',
-                  padding: '10px 12px',
-                  border: 'none',
-                  background: i === dropdownIndex ? 'var(--bg-hover, #f3f4f6)' : 'transparent',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  fontSize: 14,
-                }}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  insertMention(u);
-                }}
-              >
-                {u.profilePic ? (
-                  <img
-                    src={u.profilePic}
-                    alt=""
-                    style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: '50%',
-                      background: 'var(--border)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: 14,
-                      color: 'var(--text-secondary)',
-                    }}
-                  >
-                    {(u.name || '?')[0]}
-                  </div>
-                )}
-                <span>{u.name || 'User'}</span>
-              </button>
-            ))
-          )}
-        </div>
-      )}
+      {typeof document !== 'undefined' && dropdownEl && createPortal(dropdownEl, document.body)}
     </div>
   );
 }
 
 /**
  * Renders post/comment content with @(uuid) turned into profile links.
+ * Mentions are highlighted ("lighted") and clickable → go to user profile.
  * taggedUsers: [{ id, name, profilePic }]
  */
 export function MentionContent({ content, taggedUsers = [], className = '', linkClass = '' }) {
@@ -306,8 +341,8 @@ export function MentionContent({ content, taggedUsers = [], className = '', link
           <Link
             key={i}
             to={`/app/profile/${p.id}`}
-            className={linkClass || 'mention-link'}
-            style={{ fontWeight: 600, color: 'var(--primary, #6366f1)', textDecoration: 'none' }}
+            className={linkClass || 'mention-link mention-lighted'}
+            title={`Go to ${p.name}'s profile`}
           >
             @{p.name}
           </Link>
