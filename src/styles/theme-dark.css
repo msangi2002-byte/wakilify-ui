@@ -270,6 +270,15 @@
   color: #fff;
 }
 
+[data-theme="dark"] .mention-link.mention-lighted {
+  color: #a5b4fc;
+  background: rgba(99, 102, 241, 0.25);
+}
+[data-theme="dark"] .mention-link.mention-lighted:hover {
+  background: rgba(99, 102, 241, 0.4);
+  color: #c7d2fe;
+}
+
 [data-theme="dark"] .feed-post-hashtag {
   color: #a78bfa;
 }
