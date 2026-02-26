@@ -170,11 +170,12 @@ export async function getComments(postId, params = {}) {
 /**
  * Add comment or reply (auth required)
  * POST /api/v1/posts/:postId/comments
- * Body: { content: "...", parentId?: "uuid" } - parentId for replies
+ * Body: { content: "...", parentId?: "uuid", taggedUserIds?: "uuid[]" } - parentId for replies
  */
-export async function addComment(postId, content, parentId = null) {
+export async function addComment(postId, content, parentId = null, taggedUserIds = null) {
   const body = { content };
   if (parentId) body.parentId = parentId;
+  if (taggedUserIds?.length) body.taggedUserIds = taggedUserIds;
   const { data } = await api.post(`/posts/${postId}/comments`, body);
   return data?.data ?? data;
 }
@@ -293,6 +294,7 @@ export async function createPost({
   originalPostId = null,
   communityId = null,
   productTags = null,
+  taggedUserIds = null,
   files = [],
   mediaUrls = null,
   thumbnailUrls = null,
@@ -303,6 +305,7 @@ export async function createPost({
     if (originalPostId) payload.originalPostId = originalPostId;
     if (communityId) payload.communityId = communityId;
     if (productTags?.length) payload.productTags = productTags;
+    if (taggedUserIds?.length) payload.taggedUserIds = taggedUserIds;
     if (thumbnailUrls && thumbnailUrls.length > 0) payload.thumbnailUrls = thumbnailUrls;
     if (storyGradient) payload.storyGradient = storyGradient;
     const { data } = await api.post('/posts', payload);
@@ -314,6 +317,7 @@ export async function createPost({
   if (originalPostId) dataPayload.originalPostId = originalPostId;
   if (communityId) dataPayload.communityId = communityId;
   if (productTags?.length) dataPayload.productTags = productTags;
+  if (taggedUserIds?.length) dataPayload.taggedUserIds = taggedUserIds;
   if (storyGradient) dataPayload.storyGradient = storyGradient;
   formData.append('data', new Blob([JSON.stringify(dataPayload)], { type: 'application/json' }));
   for (const file of files) {

@@ -43,6 +43,7 @@ import {
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import { formatPostTime, formatCommentTime } from '@/lib/utils/dateUtils';
 import { ProfileSkeleton } from '@/components/ui/ProfileSkeleton';
+import MentionInput, { getSubmitContent, MentionContent } from '@/components/ui/MentionInput';
 import { ProfileGridSkeleton } from '@/components/ui/ProfileGridSkeleton';
 import '@/styles/user-app.css';
 
@@ -104,6 +105,7 @@ function ProfileFeedPost({ post, currentUser, saved: initialSaved = false, onSav
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
+  const commentMentionOrderRef = useRef([]);
   const [commentText, setCommentText] = useState('');
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [commentsCount, setCommentsCount] = useState(post.commentsCount ?? 0);
@@ -160,11 +162,12 @@ function ProfileFeedPost({ post, currentUser, saved: initialSaved = false, onSav
 
   const handleSubmitComment = async (e) => {
     e.preventDefault();
-    const content = commentText.trim();
-    if (!post.id || !content || commentSubmitting) return;
+    const trimmed = commentText.trim();
+    if (!post.id || !trimmed || commentSubmitting) return;
+    const { content, taggedUserIds } = getSubmitContent(trimmed, commentMentionOrderRef.current || []);
     setCommentSubmitting(true);
     try {
-      await addComment(post.id, content);
+      await addComment(post.id, content, null, taggedUserIds?.length ? taggedUserIds : null);
       setCommentText('');
       setCommentsCount((c) => c + 1);
       await loadComments();
@@ -301,7 +304,9 @@ function ProfileFeedPost({ post, currentUser, saved: initialSaved = false, onSav
                           {likeCount > 0 && <span className="feed-post-comment-like-count">{likeCount}</span>}
                         </button>
                       </div>
-                      <p className="feed-post-comment-content">{c.content ?? c.text ?? ''}</p>
+                      <p className="feed-post-comment-content">
+                        <MentionContent content={c.content ?? c.text ?? ''} taggedUsers={c.taggedUsers ?? []} />
+                      </p>
                       <div className="feed-post-comment-actions">
                         <button type="button" className="feed-post-comment-reply">Reply</button>
                         {isOwn && (
@@ -339,13 +344,13 @@ function ProfileFeedPost({ post, currentUser, saved: initialSaved = false, onSav
           <form onSubmit={handleSubmitComment} className="feed-post-comment-form">
             <Avatar user={currentUser} size={36} className="feed-post-comment-form-avatar" />
             <div className="feed-post-comment-form-wrap">
-              <input
-                type="text"
-                placeholder="Add a comment..."
+              <MentionInput
                 value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                className="feed-post-comment-input"
+                onChange={setCommentText}
+                placeholder="Add a comment... Use @ to tag someone"
                 maxLength={2000}
+                inputClassName="feed-post-comment-input"
+                mentionOrderRef={commentMentionOrderRef}
               />
               <button type="button" className="feed-post-comment-gif" aria-label="GIF">GIF</button>
             </div>

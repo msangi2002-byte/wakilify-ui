@@ -15,12 +15,15 @@ import '@/styles/user-app.css';
 function mapPostToGroupPost(post, groupName) {
   const media = post.media ?? [];
   const images = media.map((m) => ({ url: m?.url ?? m?.thumbnailUrl ?? null }));
+  const tagged = post.taggedUsers ?? [];
+  const taggedUsers = Array.isArray(tagged) ? tagged.map((u) => (typeof u === 'object' && u !== null ? { id: u.id, name: u.name ?? u.username, profilePic: u.profilePic } : null)).filter(Boolean) : [];
   return {
     id: post.id,
     author: post.author ?? { name: 'User' },
     groupName: groupName ?? null,
     time: formatPostTime(post.createdAt),
     description: post.caption ?? '',
+    taggedUsers,
     images,
     likesCount: post.reactionsCount ?? 0,
     commentsCount: post.commentsCount ?? 0,
@@ -530,6 +533,7 @@ export default function GroupDetail() {
                   groupName={mapped.groupName}
                   time={mapped.time}
                   description={mapped.description}
+                  taggedUsers={mapped.taggedUsers ?? []}
                   images={mapped.images}
                   likesCount={mapped.likesCount}
                   commentsCount={mapped.commentsCount}

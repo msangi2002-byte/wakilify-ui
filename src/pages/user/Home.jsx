@@ -18,6 +18,7 @@ import { SuggestedGroupsCarousel } from '@/components/feed/SuggestedGroupsCarous
 import { createReport } from '@/lib/api/reports';
 import { trackPromotionClick } from '@/lib/api/promotions';
 import { parseApiDate, formatPostTime, formatCommentTime } from '@/lib/utils/dateUtils';
+import MentionInput, { getSubmitContent, MentionContent } from '@/components/ui/MentionInput';
 import { normalizeCtaLink, isInternalCtaLink } from '@/lib/utils/urlUtils';
 import { ROLES } from '@/types/roles';
 
@@ -129,6 +130,8 @@ export function FeedPost({ id, author, time, description, media = [], hashtags =
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
+  const commentMentionOrderRef = useRef([]);
+  const replyMentionOrderRef = useRef([]);
   const [commentText, setCommentText] = useState('');
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null);
@@ -217,11 +220,12 @@ export function FeedPost({ id, author, time, description, media = [], hashtags =
 
   const handleSubmitComment = async (e) => {
     e.preventDefault();
-    const content = commentText.trim();
-    if (!id || !content || commentSubmitting) return;
+    const trimmed = commentText.trim();
+    if (!id || !trimmed || commentSubmitting) return;
+    const { content, taggedUserIds } = getSubmitContent(trimmed, commentMentionOrderRef.current || []);
     setCommentSubmitting(true);
     try {
-      await addComment(id, content);
+      await addComment(id, content, null, taggedUserIds?.length ? taggedUserIds : null);
       setCommentText('');
       setCommentsCount((c) => c + 1);
       await loadComments();
@@ -232,11 +236,12 @@ export function FeedPost({ id, author, time, description, media = [], hashtags =
 
   const handleSubmitReply = async (e, parentId) => {
     e.preventDefault();
-    const content = replyText.trim();
-    if (!id || !content || !parentId || commentSubmitting) return;
+    const trimmed = replyText.trim();
+    if (!id || !trimmed || !parentId || commentSubmitting) return;
+    const { content, taggedUserIds } = getSubmitContent(trimmed, replyMentionOrderRef.current || []);
     setCommentSubmitting(true);
     try {
-      await addComment(id, content, parentId);
+      await addComment(id, content, parentId, taggedUserIds?.length ? taggedUserIds : null);
       setReplyText('');
       setReplyingTo(null);
       setCommentsCount((c) => c + 1);
@@ -478,7 +483,7 @@ export function FeedPost({ id, author, time, description, media = [], hashtags =
       )}
       {description && (
         <div className="feed-post-description">
-          {expanded ? description : shortDesc}
+          <MentionContent content={expanded ? description : shortDesc} taggedUsers={taggedUsers ?? []} />
           {showSeeMore && (
             <button type="button" className="feed-post-see-more" onClick={() => setExpanded(true)}>
               See more
@@ -726,6 +731,7 @@ export function FeedPost({ id, author, time, description, media = [], hashtags =
                   replyingTo={replyingTo}
                   replyText={replyText}
                   setReplyText={setReplyText}
+                  replyMentionOrderRef={replyMentionOrderRef}
                   onSubmitReply={handleSubmitReply}
                   commentSubmitting={commentSubmitting}
                   formatTime={formatCommentTime}
@@ -745,13 +751,14 @@ export function FeedPost({ id, author, time, description, media = [], hashtags =
           <form onSubmit={handleSubmitComment} className="feed-post-comment-form">
             <Avatar user={currentUser} size={36} className="feed-post-comment-form-avatar" />
             <div className="feed-post-comment-form-wrap">
-              <input
-                type="text"
-                className="feed-post-comment-input"
-                placeholder="Add a comment..."
+              <MentionInput
                 value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
+                onChange={setCommentText}
+                placeholder="Add a comment... Use @ to tag someone"
                 maxLength={2000}
+                className="feed-post-comment-mention-wrap"
+                inputClassName="feed-post-comment-input"
+                mentionOrderRef={commentMentionOrderRef}
               />
               <button type="button" className="feed-post-comment-gif" aria-label="GIF">GIF</button>
             </div>
