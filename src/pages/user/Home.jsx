@@ -61,13 +61,14 @@ function groupStoriesByAuthor(stories, currentUserId) {
 }
 
 function getStoryThumbnail(story) {
-  const media = story?.media;
+  // Use story's own media, or for "Share to story" use originalPost's media as cover/thumbnail
+  const media = story?.media ?? story?.originalPost?.media;
   if (!Array.isArray(media) || media.length === 0) return null;
   const first = media[0];
   if (typeof first === 'string') return first;
   const isVideo = (first?.type ?? '').toUpperCase() === 'VIDEO';
   // Video: only use thumbnailUrl (background-image can't use .mp4)
-  if (isVideo) return first?.thumbnailUrl ?? null;
+  if (isVideo) return first?.thumbnailUrl ?? first?.url ?? null;
   return first?.url ?? first?.thumbnailUrl ?? null;
 }
 
@@ -107,7 +108,7 @@ function Avatar({ user, size = 40, className = '' }) {
   );
 }
 
-export function FeedPost({ id, author, time, description, media = [], hashtags = [], visibility, location, feelingActivity, taggedUsers = [], topReactors = [], liked: initialLiked = false, userReaction: initialUserReaction = null, likesCount: initialLikesCount = 0, commentsCount: initialCommentsCount = 0, sharesCount = 0, saved: initialSaved = false, authorIsFollowed: initialAuthorIsFollowed = false, isSponsored = false, sponsorCtaLink, sponsorObjective, promotionId, onFollowChange, onSaveChange, videoIndex, onOpenVideo }) {
+export function FeedPost({ id, author, time, description, media = [], hashtags = [], visibility, location, feelingActivity, taggedUsers = [], topReactors = [], liked: initialLiked = false, userReaction: initialUserReaction = null, likesCount: initialLikesCount = 0, commentsCount: initialCommentsCount = 0, sharesCount = 0, saved: initialSaved = false, authorIsFollowed: initialAuthorIsFollowed = false, isSponsored = false, sponsorCtaLink, sponsorObjective, promotionId, originalPost = null, onFollowChange, onSaveChange, videoIndex, onOpenVideo }) {
   const { user: currentUser } = useAuthStore();
   const navigate = useNavigate();
   const isSelf = currentUser?.id && author?.id && currentUser.id === author.id;
@@ -384,6 +385,12 @@ export function FeedPost({ id, author, time, description, media = [], hashtags =
         <UserProfileMenu user={author} avatarSize={40} className="feed-post-avatar-wrap" />
         <div className="feed-post-meta">
           <div className="feed-post-meta-top">
+            {originalPost && (
+              <span className="feed-post-reposted-label" title="Reposted">
+                <Share2 size={12} />
+                <span>Reposted</span>
+              </span>
+            )}
             {isSponsored && (
               <span className="feed-post-sponsored" title="Sponsored post">
                 <TrendingUp size={12} />
@@ -805,16 +812,22 @@ export function normalizePost(post) {
   const taggedUsers = Array.isArray(tagged) ? tagged.map((u) => (typeof u === 'object' && u !== null ? { id: u.id, name: u.name ?? u.username, profilePic: u.profilePic } : null)).filter(Boolean) : [];
   const topR = post.topReactors ?? [];
   const topReactors = Array.isArray(topR) ? topR.map((u) => (typeof u === 'object' && u !== null ? { id: u.id, name: u.name ?? u.username, profilePic: u.profilePic } : null)).filter(Boolean) : [];
+  // Repost: use original post for description/media so the card shows the shared content
+  const originalPost = post.originalPost ? normalizePost(post.originalPost) : null;
+  const isRepost = !!originalPost;
+  const displayDescription = isRepost && !(post.caption ?? '').trim() ? originalPost.description : (post.caption ?? post.content ?? post.description ?? '');
+  const displayMedia = isRepost && mediaItems.length === 0 ? originalPost.media : mediaItems;
+
   return {
     id: post.id,
     author: { id: author.id, name, profilePic },
     time: formatPostTime(post.createdAt ?? post.created_at),
-    description: post.caption ?? post.content ?? post.description ?? '',
-    media: mediaItems,
-    hashtags: post.hashtags ?? [],
+    description: displayDescription,
+    media: displayMedia,
+    hashtags: isRepost ? (originalPost.hashtags ?? []) : (post.hashtags ?? []),
     visibility: post.visibility ? String(post.visibility).toUpperCase() : null,
-    location: post.location ? String(post.location).trim() : null,
-    feelingActivity: post.feelingActivity ? String(post.feelingActivity).trim() : null,
+    location: isRepost ? originalPost.location : (post.location ? String(post.location).trim() : null),
+    feelingActivity: isRepost ? originalPost.feelingActivity : (post.feelingActivity ? String(post.feelingActivity).trim() : null),
     taggedUsers,
     topReactors,
     liked: !!userReaction,
@@ -828,6 +841,7 @@ export function normalizePost(post) {
     sponsorCtaLink: post.sponsorCtaLink ?? post.sponsor_cta_link ?? null,
     promotionId: post.promotionId ?? post.promotion_id ?? null,
     sponsorObjective: post.sponsorObjective ?? post.sponsor_objective ?? null,
+    originalPost: originalPost ? { id: originalPost.id, author: originalPost.author, description: originalPost.description, media: originalPost.media } : null,
   };
 }
 
@@ -973,6 +987,15 @@ export default function Home() {
 
   const handleGroupRemove = useCallback((g) => {
     queryClient.setQueryData(['feed', 'suggested-groups', user?.id], (old = []) => old.filter((c) => c.id !== g.id));
+  }, [queryClient, user?.id]);
+
+  /** When user blocks someone from a post: refetch feed so their posts disappear. */
+  const handleFeedPostFollowChange = useCallback((action, payload) => {
+    if (action === 'blocked' && payload) {
+      queryClient.setQueryData(['feed', user?.id], (old = []) => old.filter((p) => p.author?.id !== payload));
+    } else if (action === 'reload') {
+      queryClient.invalidateQueries({ queryKey: ['feed', user?.id] });
+    }
   }, [queryClient, user?.id]);
 
   // Video post handlers
@@ -1268,11 +1291,13 @@ export default function Home() {
               saved={p.saved}
               authorIsFollowed={p.authorIsFollowed}
               isSponsored={p.isSponsored}
+              originalPost={p.originalPost}
               sponsorCtaLink={p.sponsorCtaLink}
               sponsorObjective={p.sponsorObjective}
               promotionId={p.promotionId}
               videoIndex={videoIndex >= 0 ? videoIndex : undefined}
               onOpenVideo={videoIndex >= 0 ? openVideoInReels : undefined}
+              onFollowChange={handleFeedPostFollowChange}
             />
           );
         }

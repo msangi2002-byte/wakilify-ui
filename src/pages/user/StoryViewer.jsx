@@ -87,14 +87,15 @@ function groupStoriesByAuthor(stories, currentUserId) {
 }
 
 function getMediaUrl(story) {
-  const media = story.media;
+  // For "Share to story", story has no media; use originalPost's first media for playback
+  const media = story?.media ?? story?.originalPost?.media;
   if (!Array.isArray(media) || media.length === 0) return null;
   const first = media[0];
-  return typeof first === 'string' ? first : first?.url ?? null;
+  return typeof first === 'string' ? first : first?.url ?? first?.thumbnailUrl ?? null;
 }
 
 function getMediaType(story) {
-  const media = story.media;
+  const media = story?.media ?? story?.originalPost?.media;
   if (!Array.isArray(media) || media.length === 0) return 'image';
   const first = media[0];
   if (typeof first === 'string') return 'image';
