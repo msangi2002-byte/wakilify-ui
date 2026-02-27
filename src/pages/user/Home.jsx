@@ -1,14 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
-import { ImagePlus, Users, Video, MoreHorizontal, Plus, ThumbsUp, Heart, MessageCircle, Share2, Play, Sparkles, Globe, Lock, Film, TrendingUp } from 'lucide-react';
+import { ImagePlus, Users, Video, MoreHorizontal, Plus, ThumbsUp, Heart, MessageCircle, Share2, Play, Sparkles, Globe, Lock, Film, TrendingUp, X, Loader2 } from 'lucide-react';
 import { UserProfileMenu } from '@/components/ui/UserProfileMenu';
 import { FeedSkeleton } from '@/components/ui/FeedSkeleton';
 import { CommentItem } from '@/components/social/CommentItem';
 import { VideoFullscreenOverlay } from '@/components/social/VideoFullscreenOverlay';
 import { ImagePostViewerOverlay } from '@/components/social/ImagePostViewerOverlay';
 import { useAuthStore } from '@/store/auth.store';
-import { getFeed, getPublicFeed, getStories, getReels, likePost, reactToPost, unlikePost, savePost, unsavePost, sharePostToStory, getComments, addComment, deleteComment, createPost, likeComment, unlikeComment } from '@/lib/api/posts';
+import { getFeed, getPublicFeed, getStories, getReels, likePost, reactToPost, unlikePost, savePost, unsavePost, sharePostToStory, getComments, addComment, deleteComment, createPost, likeComment, unlikeComment, uploadChunked, CHUNK_THRESHOLD_BYTES } from '@/lib/api/posts';
+import { UploadProgressBar } from '@/components/ui/UploadProgressBar';
+import { getApiErrorMessage } from '@/lib/utils/apiError';
 import { followUser, unfollowUser } from '@/lib/api/friends';
 import { blockUser, getPeopleYouMayKnow } from '@/lib/api/users';
 import { getAllCommunities, getMyCommunities, joinCommunity } from '@/lib/api/communities';
@@ -845,6 +847,18 @@ export default function Home() {
   const queryClient = useQueryClient();
   const [pymkAddLoadingId, setPymkAddLoadingId] = useState(null);
   const [groupJoinLoadingId, setGroupJoinLoadingId] = useState(null);
+  
+  // Video post state
+  const videoFileInputRef = useRef(null);
+  const videoMentionOrderRef = useRef([]);
+  const [videoFile, setVideoFile] = useState(null);
+  const [videoPreview, setVideoPreview] = useState(null);
+  const [videoCaption, setVideoCaption] = useState('');
+  const [videoVisibility, setVideoVisibility] = useState('PUBLIC');
+  const [videoPostModalOpen, setVideoPostModalOpen] = useState(false);
+  const [videoUploading, setVideoUploading] = useState(false);
+  const [videoUploadProgress, setVideoUploadProgress] = useState(0);
+  const [videoError, setVideoError] = useState('');
 
   const {
     data: posts = [],
@@ -961,6 +975,76 @@ export default function Home() {
     queryClient.setQueryData(['feed', 'suggested-groups', user?.id], (old = []) => old.filter((c) => c.id !== g.id));
   }, [queryClient, user?.id]);
 
+  // Video post handlers
+  const handleVideoFileSelect = useCallback((e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('video/')) {
+      setVideoError('Please select a video file.');
+      return;
+    }
+    setVideoFile(file);
+    setVideoPreview(URL.createObjectURL(file));
+    setVideoPostModalOpen(true);
+    setVideoError('');
+    e.target.value = '';
+  }, []);
+
+  const handleVideoFileClick = useCallback(() => {
+    videoFileInputRef.current?.click();
+  }, []);
+
+  const handleCloseVideoModal = useCallback(() => {
+    if (videoUploading) return;
+    setVideoPostModalOpen(false);
+    setVideoFile(null);
+    if (videoPreview) {
+      URL.revokeObjectURL(videoPreview);
+      setVideoPreview(null);
+    }
+    setVideoCaption('');
+    setVideoError('');
+  }, [videoUploading, videoPreview]);
+
+  const handlePostVideo = useCallback(async (e) => {
+    e.preventDefault();
+    if (!videoFile || videoUploading) return;
+    
+    setVideoError('');
+    setVideoUploading(true);
+    setVideoUploadProgress(0);
+    
+    try {
+      const { content: submitCaption, taggedUserIds } = getSubmitContent(videoCaption.trim(), videoMentionOrderRef.current || []);
+      
+      // Videos are typically large, so use chunked upload
+      const result = await uploadChunked(videoFile, 'posts', (pct) => setVideoUploadProgress(pct));
+      const mediaUrl = typeof result === 'string' ? result : result.url;
+      const thumbnailUrl = typeof result === 'object' && result.thumbnailUrl ? result.thumbnailUrl : null;
+      
+      await createPost({
+        caption: submitCaption,
+        visibility: videoVisibility,
+        postType: 'POST',
+        mediaUrls: [mediaUrl],
+        thumbnailUrls: thumbnailUrl ? [thumbnailUrl] : undefined,
+        taggedUserIds: taggedUserIds?.length ? taggedUserIds : undefined,
+      });
+      
+      // Refresh feed
+      queryClient.invalidateQueries({ queryKey: ['feed', user?.id] });
+      
+      // Close modal and reset
+      handleCloseVideoModal();
+    } catch (err) {
+      const msg = getApiErrorMessage(err, 'Failed to post video. Please try again.');
+      setVideoError(msg);
+    } finally {
+      setVideoUploading(false);
+      setVideoUploadProgress(0);
+    }
+  }, [videoFile, videoCaption, videoVisibility, videoUploading, queryClient, user?.id, handleCloseVideoModal]);
+
   /* Facebook-style order: Composer first, then Stories, then Feed */
   return (
     <>
@@ -973,13 +1057,27 @@ export default function Home() {
           </span>
         </Link>
         <div className="user-app-composer-actions-inline">
-          <Link to="/app/create" className="user-app-composer-icon video" title="Live / Video" aria-label="Video">
+          <input
+            ref={videoFileInputRef}
+            type="file"
+            accept="video/*"
+            style={{ display: 'none' }}
+            onChange={handleVideoFileSelect}
+            aria-label="Upload video"
+          />
+          <button
+            type="button"
+            className="user-app-composer-icon video"
+            title="Upload Video"
+            aria-label="Video"
+            onClick={handleVideoFileClick}
+          >
             <Video size={22} />
-          </Link>
+          </button>
           <Link to="/app/create" className="user-app-composer-icon post" title="Photo" aria-label="Photo">
             <ImagePlus size={22} />
           </Link>
-          <Link to="/app/create" className="user-app-composer-icon reel" title="Reel" aria-label="Reel">
+          <Link to="/app/create?type=reel" className="user-app-composer-icon reel" title="Reel" aria-label="Reel">
             <Film size={22} />
           </Link>
           <button type="button" className="user-app-composer-icon more" aria-label="More options">
@@ -990,6 +1088,106 @@ export default function Home() {
           </Link>
         </div>
       </div>
+
+      {/* Video Post Modal */}
+      {videoPostModalOpen && (
+        <div className="feed-post-report-overlay" onClick={handleCloseVideoModal} role="dialog">
+          <div className="feed-post-report-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px', width: '90%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0 }}>Post Video</h3>
+              <button
+                type="button"
+                onClick={handleCloseVideoModal}
+                disabled={videoUploading}
+                style={{ background: 'none', border: 'none', cursor: videoUploading ? 'not-allowed' : 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
+                aria-label="Close"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handlePostVideo}>
+              {videoPreview && (
+                <div style={{ marginBottom: '16px', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#000' }}>
+                  <video
+                    src={videoPreview}
+                    controls
+                    style={{ width: '100%', maxHeight: '400px', display: 'block' }}
+                  />
+                </div>
+              )}
+              <label className="feed-post-report-label" style={{ marginBottom: '16px' }}>
+                Caption
+                <MentionInput
+                  value={videoCaption}
+                  onChange={setVideoCaption}
+                  placeholder="What's on your mind? Use @ to tag someone"
+                  multiline
+                  rows={4}
+                  maxLength={2000}
+                  className="user-app-create-caption-wrap"
+                  inputClassName="user-app-create-caption"
+                  mentionOrderRef={videoMentionOrderRef}
+                />
+              </label>
+              <label className="feed-post-report-label">
+                Visibility
+                <select
+                  value={videoVisibility}
+                  onChange={(e) => setVideoVisibility(e.target.value)}
+                  disabled={videoUploading}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid #ddd',
+                    fontSize: '14px',
+                    marginTop: '8px',
+                  }}
+                >
+                  <option value="PUBLIC">Public</option>
+                  <option value="FRIENDS">Friends</option>
+                  <option value="PRIVATE">Only me</option>
+                </select>
+              </label>
+              {videoError && (
+                <p style={{ color: '#b91c1c', marginBottom: '16px', fontSize: '14px' }}>{videoError}</p>
+              )}
+              {videoUploading && videoUploadProgress > 0 && videoUploadProgress < 100 && (
+                <div style={{ marginBottom: '16px' }}>
+                  <UploadProgressBar progress={videoUploadProgress} label="Uploading video…" />
+                </div>
+              )}
+              <div className="feed-post-report-actions">
+                <button
+                  type="button"
+                  className="settings-btn settings-btn-secondary"
+                  onClick={handleCloseVideoModal}
+                  disabled={videoUploading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="settings-btn settings-btn-primary"
+                  disabled={videoUploading || !videoFile}
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                >
+                  {videoUploading ? (
+                    <>
+                      <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />
+                      {videoUploadProgress > 0 && videoUploadProgress < 100
+                        ? `Uploading ${Math.round(videoUploadProgress)}%…`
+                        : 'Posting…'}
+                    </>
+                  ) : (
+                    'Post Video'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* 2. Stories carousel - below composer like Facebook */}
       <div className="user-app-card">

@@ -7240,8 +7240,14 @@ body:has(.user-app) {
   color: #65676b;
 }
 
-.profile-post-detail-boost-btn {
+.profile-post-detail-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   margin: 0 20px 20px;
+}
+
+.profile-post-detail-boost-btn {
   padding: 12px 20px;
   border-radius: 8px;
   border: none;
@@ -7253,10 +7259,38 @@ body:has(.user-app) {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  width: 100%;
+  justify-content: center;
 }
 
 .profile-post-detail-boost-btn:hover {
   filter: brightness(1.05);
+}
+
+.profile-post-detail-delete-btn {
+  padding: 12px 20px;
+  border-radius: 8px;
+  border: none;
+  background: #dc2626;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.profile-post-detail-delete-btn:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.profile-post-detail-delete-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* Composer: Facebook style */

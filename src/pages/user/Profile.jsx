@@ -22,6 +22,7 @@ import {
   X,
   Eye,
   TrendingUp,
+  Trash2,
 } from 'lucide-react';
 import { ROLES } from '@/types/roles';
 import { useAuthStore, setAuth, getToken } from '@/store/auth.store';
@@ -39,6 +40,7 @@ import {
   deleteComment,
   getPostById,
   getPostInsights,
+  deletePost,
 } from '@/lib/api/posts';
 import { getApiErrorMessage } from '@/lib/utils/apiError';
 import { formatPostTime, formatCommentTime } from '@/lib/utils/dateUtils';
@@ -377,6 +379,7 @@ export default function Profile() {
   const [selectedPostForDetail, setSelectedPostForDetail] = useState(null);
   const [postDetailData, setPostDetailData] = useState(null);
   const [postDetailLoading, setPostDetailLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const avatarInputRef = useRef(null);
   const coverInputRef = useRef(null);
   const navigate = useNavigate();
@@ -893,16 +896,48 @@ export default function Profile() {
                     <Share2 size={20} /> {postDetailData.post.sharesCount ?? 0} shares
                   </span>
                 </div>
-                <button
-                  type="button"
-                  className="profile-post-detail-boost-btn"
-                  onClick={() => {
-                    setSelectedPostForDetail(null);
-                    navigate('/app/boost', { state: { postId: postDetailData.post.id } });
-                  }}
-                >
-                  <TrendingUp size={20} /> Boost this post
-                </button>
+                <div className="profile-post-detail-actions">
+                  <button
+                    type="button"
+                    className="profile-post-detail-boost-btn"
+                    onClick={() => {
+                      setSelectedPostForDetail(null);
+                      navigate('/app/boost', { state: { postId: postDetailData.post.id } });
+                    }}
+                  >
+                    <TrendingUp size={20} /> Boost this post
+                  </button>
+                  <button
+                    type="button"
+                    className="profile-post-detail-delete-btn"
+                    onClick={async () => {
+                      if (!postDetailData?.post?.id || deleteLoading) return;
+                      if (!confirm('Are you sure you want to delete this post? This action cannot be undone.')) return;
+                      
+                      setDeleteLoading(true);
+                      try {
+                        await deletePost(postDetailData.post.id);
+                        // Remove post from the list
+                        queryClient.setQueryData(['profile', userId, isOwnProfile], (old) => {
+                          if (!old) return old;
+                          return {
+                            ...old,
+                            posts: old.posts?.filter((p) => p.id !== postDetailData.post.id) ?? [],
+                          };
+                        });
+                        setSelectedPostForDetail(null);
+                      } catch (err) {
+                        const msg = getApiErrorMessage(err, 'Failed to delete post. Please try again.');
+                        alert(msg);
+                      } finally {
+                        setDeleteLoading(false);
+                      }
+                    }}
+                    disabled={deleteLoading}
+                  >
+                    <Trash2 size={20} /> {deleteLoading ? 'Deleting…' : 'Delete post'}
+                  </button>
+                </div>
               </>
             ) : null}
           </div>

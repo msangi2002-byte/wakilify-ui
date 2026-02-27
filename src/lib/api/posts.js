@@ -127,6 +127,15 @@ export async function getPostById(postId) {
 }
 
 /**
+ * Delete a post (auth required, author only)
+ * DELETE /api/v1/posts/:postId
+ */
+export async function deletePost(postId) {
+  const { data } = await api.delete(`/posts/${postId}`);
+  return data?.data ?? data;
+}
+
+/**
  * Like a post (auth required) – backward compat, same as reactToPost(postId, 'LIKE')
  * POST /api/v1/posts/:postId/like
  */
