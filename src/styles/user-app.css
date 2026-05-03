@@ -15059,7 +15059,7 @@ body:has(.user-app) {
 /* AliExpress-style unified buy column */
 .product-details-ax-card {
   padding: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .product-details-ax-head {
@@ -15537,6 +15537,176 @@ body:has(.user-app) {
 .product-details-ax-order-success {
   margin: 0;
   border-top: 1px solid var(--wk-border);
+}
+
+/* Buy column v2 — clean “store panel”: no clip, stacked CTAs, calmer type */
+.product-details-buy-pro.product-details-mic-card {
+  border-radius: 16px;
+  overflow: visible;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04), 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.product-details-buy-pro .product-details-ax-head {
+  padding: 18px 18px 12px;
+}
+
+.product-details-buy-pro .product-details-ax-title {
+  margin-top: 6px;
+  font-size: 1.1875rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--wk-text);
+}
+
+.product-details-buy-pro .product-details-ax-subrow {
+  margin-top: 8px;
+  gap: 6px 8px;
+}
+
+.product-details-buy-pro .product-details-ax-cat {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: var(--wk-bg-alt);
+  border: 1px solid var(--wk-border);
+  color: var(--wk-text-muted);
+}
+
+.product-details-buy-pro .product-details-ax-sold-pill,
+.product-details-buy-pro .product-details-ax-rating-pill {
+  font-size: 0.75rem;
+  padding: 4px 9px;
+}
+
+.product-details-buy-pro .product-details-ax-price-block {
+  padding: 14px 18px 12px;
+  border-top: 1px solid var(--wk-border);
+  background: var(--wk-bg-alt);
+}
+
+.product-details-buy-pro .product-details-mic-price {
+  align-items: baseline;
+  gap: 10px 14px;
+  flex-wrap: wrap;
+  margin-bottom: 0;
+}
+
+.product-details-buy-pro .product-details-ax-price-main {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.product-details-buy-pro .product-details-mic-price-compare {
+  font-size: 0.9375rem;
+}
+
+.product-details-buy-pro .product-details-ax-stock-row {
+  margin: 0;
+  padding: 10px 18px;
+  border-top: none;
+  border-bottom: 1px solid var(--wk-border);
+  background: rgba(0, 184, 148, 0.07);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.product-details-buy-pro .product-details-ax-qty-actions {
+  border-top: none;
+  padding: 14px;
+  background: var(--wk-bg-card);
+}
+
+.product-details-buy-pro .product-details-ax-qty {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--wk-border);
+  background: var(--wk-bg-alt);
+}
+
+.product-details-buy-pro .product-details-ax-qty-label {
+  font-size: 0.8125rem;
+  color: var(--wk-text-muted);
+  font-weight: 600;
+}
+
+.product-details-buy-pro .product-details-ax-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.product-details-buy-pro .product-details-ax-btn-buy,
+.product-details-buy-pro .product-details-ax-btn-rfq {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  justify-content: center;
+  text-align: center;
+  white-space: normal;
+  line-height: 1.25;
+  padding: 12px 14px;
+  font-size: 0.875rem;
+}
+
+.product-details-buy-pro .product-details-ax-btn-rfq {
+  border-width: 1px;
+  background: var(--wk-bg-card);
+}
+
+.product-details-buy-pro .product-details-ax-ship-hint,
+.product-details-buy-pro .product-details-ax-login-hint {
+  text-align: center;
+  font-size: 0.75rem;
+  max-width: 22rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.product-details-buy-pro .product-details-ax-store-row {
+  margin: 12px 14px 14px;
+  padding: 12px 12px;
+  flex-wrap: wrap;
+  row-gap: 8px;
+  border-radius: 12px;
+}
+
+.product-details-buy-pro .product-details-ax-store-text {
+  min-width: 0;
+}
+
+.product-details-buy-pro .product-details-ax-store-cta {
+  margin-left: auto;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.product-details-buy-pro .product-details-ax-panel {
+  margin: 0 14px 14px;
+}
+
+.product-details-buy-pro .product-details-ax-rfq,
+.product-details-buy-pro .product-details-ax-checkout,
+.product-details-buy-pro .product-details-ax-inquiry-done {
+  border-radius: 0 0 14px 14px;
+}
+
+@media (min-width: 520px) {
+  .product-details-buy-pro .product-details-ax-btns {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .product-details-buy-pro .product-details-ax-btn-buy,
+  .product-details-buy-pro .product-details-ax-btn-rfq {
+    flex: 1 1 calc(50% - 4px);
+    min-width: 140px;
+  }
 }
 
 /* Similar products – horizontal rail (AliExpress-style) */
