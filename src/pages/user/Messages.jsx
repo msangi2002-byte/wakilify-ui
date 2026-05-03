@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Send, ArrowLeft, Phone, Video, Mic, Reply, X } from 'lucide-react';
+import { Send, ArrowLeft, Phone, Video, Mic, Reply, X, Paperclip, Image as ImageIcon, FileText, MapPin, Sticker } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
 import { getConversations, getConversation, sendMessage, markConversationRead, uploadMessageMedia } from '@/lib/api/messages';
 import { initiateCall } from '@/lib/api/calls';
@@ -12,6 +12,7 @@ import { MessagesChatSkeleton } from '@/components/ui/MessagesChatSkeleton';
 import '@/styles/user-app.css';
 
 export default function Messages() {
+  const STICKERS = ['😀', '😂', '😍', '🔥', '👍', '🎉', '❤️', '🙏', '😎', '🥳', '🤝', '💯'];
   const { user: currentUser } = useAuthStore();
   const location = useLocation();
   const queryClient = useQueryClient();
@@ -27,6 +28,12 @@ export default function Messages() {
   const messagesEndRef = useRef(null);
   const messageRefs = useRef({});
   const pendingVoiceActionRef = useRef('send');
+  const imageInputRef = useRef(null);
+  const videoInputRef = useRef(null);
+  const documentInputRef = useRef(null);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [showStickerPicker, setShowStickerPicker] = useState(false);
+  const [sendingAttachment, setSendingAttachment] = useState(false);
 
   const currentUserId = currentUser?.id;
 
@@ -83,6 +90,78 @@ export default function Messages() {
       setSending(false);
     }
   };
+
+  const appendMessageToConversation = useCallback((userId, msg) => {
+    const newMsg = { ...msg, isMe: true };
+    queryClient.setQueryData(['messages', 'conversation', userId], (prev = []) => [...prev, newMsg]);
+    queryClient.invalidateQueries({ queryKey: ['messages', 'conversations'] });
+  }, [queryClient]);
+
+  const sendMediaAttachment = useCallback(async (file, type, fallbackText = '') => {
+    if (!selectedUser?.id || !file || sending || sendingAttachment) return;
+    const replyToId = replyTo?.id;
+    setReplyTo(null);
+    setSendingAttachment(true);
+    setShowAttachMenu(false);
+    setShowStickerPicker(false);
+    try {
+      const url = await uploadMessageMedia(file);
+      const msg = await sendMessage(selectedUser.id, fallbackText, { type, mediaUrl: url, ...(replyToId && { replyToId }) });
+      appendMessageToConversation(selectedUser.id, msg);
+    } catch (err) {
+      console.error(`Failed to send ${type} attachment`, err);
+      alert(`Failed to send ${type.toLowerCase()} attachment.`);
+    } finally {
+      setSendingAttachment(false);
+    }
+  }, [selectedUser?.id, sending, sendingAttachment, replyTo?.id, appendMessageToConversation]);
+
+  const handleAttachmentSelected = useCallback((type) => async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const fallbackText = type === 'DOCUMENT' ? file.name : '';
+    await sendMediaAttachment(file, type, fallbackText);
+  }, [sendMediaAttachment]);
+
+  const handleSendLocation = useCallback(() => {
+    if (!selectedUser?.id || sending || sendingAttachment) return;
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by this browser.');
+      return;
+    }
+    setShowAttachMenu(false);
+    navigator.geolocation.getCurrentPosition(
+      async ({ coords }) => {
+        const { latitude, longitude } = coords;
+        const mapsUrl = `https://maps.google.com/?q=${latitude},${longitude}`;
+        try {
+          const msg = await sendMessage(selectedUser.id, `📍 My location: ${mapsUrl}`);
+          appendMessageToConversation(selectedUser.id, msg);
+        } catch (err) {
+          console.error('Failed to send location', err);
+          alert('Failed to send location.');
+        }
+      },
+      () => alert('Unable to get your location. Please allow location permission and try again.'),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+    );
+  }, [selectedUser?.id, sending, sendingAttachment, appendMessageToConversation]);
+
+  const handleSendSticker = useCallback(async (sticker) => {
+    if (!selectedUser?.id || !sticker || sending || sendingAttachment) return;
+    setShowStickerPicker(false);
+    setShowAttachMenu(false);
+    const replyToId = replyTo?.id;
+    setReplyTo(null);
+    try {
+      const msg = await sendMessage(selectedUser.id, sticker, replyToId ? { replyToId } : {});
+      appendMessageToConversation(selectedUser.id, msg);
+    } catch (err) {
+      console.error('Failed to send sticker', err);
+      alert('Failed to send sticker.');
+    }
+  }, [selectedUser?.id, sending, sendingAttachment, replyTo?.id, appendMessageToConversation]);
 
   const startRecording = useCallback(async () => {
     if (!selectedUser?.id || recording || sending) return;
@@ -331,6 +410,24 @@ export default function Messages() {
                           {msg.createdAt ? formatPostTime(msg.createdAt) : ''}
                         </span>
                       </div>
+                    ) : (msg.type === 'IMAGE' && msg.mediaUrl) ? (
+                      <div className="messages-media-wrap">
+                        <img src={msg.mediaUrl} alt="Shared" className="messages-media-image" loading="lazy" />
+                        <span className="messages-bubble-time">{msg.createdAt ? formatPostTime(msg.createdAt) : ''}</span>
+                      </div>
+                    ) : (msg.type === 'VIDEO' && msg.mediaUrl) ? (
+                      <div className="messages-media-wrap">
+                        <video controls className="messages-media-video" src={msg.mediaUrl} />
+                        <span className="messages-bubble-time">{msg.createdAt ? formatPostTime(msg.createdAt) : ''}</span>
+                      </div>
+                    ) : (msg.type === 'DOCUMENT' && msg.mediaUrl) ? (
+                      <div className="messages-media-wrap">
+                        <a className="messages-document-link" href={msg.mediaUrl} target="_blank" rel="noreferrer">
+                          <FileText size={16} />
+                          <span>{msg.content || 'Open document'}</span>
+                        </a>
+                        <span className="messages-bubble-time">{msg.createdAt ? formatPostTime(msg.createdAt) : ''}</span>
+                      </div>
                     ) : (
                       <>
                         <span className="messages-bubble-text">{msg.content}</span>
@@ -398,6 +495,87 @@ export default function Messages() {
                 </div>
               ) : (
                 <>
+                  <div className="messages-chat-attach-wrap">
+                    <button
+                      type="button"
+                      className="messages-chat-attach-btn"
+                      onClick={() => {
+                        setShowAttachMenu((v) => !v);
+                        setShowStickerPicker(false);
+                      }}
+                      disabled={sending || sendingAttachment}
+                      title="Attach"
+                      aria-label="Attach"
+                    >
+                      <Paperclip size={20} />
+                    </button>
+                    {showAttachMenu && (
+                      <div className="messages-attach-menu">
+                        <button type="button" className="messages-attach-item" onClick={() => imageInputRef.current?.click()}>
+                          <ImageIcon size={16} />
+                          <span>Image</span>
+                        </button>
+                        <button type="button" className="messages-attach-item" onClick={() => videoInputRef.current?.click()}>
+                          <Video size={16} />
+                          <span>Video</span>
+                        </button>
+                        <button type="button" className="messages-attach-item" onClick={() => documentInputRef.current?.click()}>
+                          <FileText size={16} />
+                          <span>Document</span>
+                        </button>
+                        <button type="button" className="messages-attach-item" onClick={handleSendLocation}>
+                          <MapPin size={16} />
+                          <span>Location</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="messages-attach-item"
+                          onClick={() => {
+                            setShowStickerPicker((v) => !v);
+                          }}
+                        >
+                          <Sticker size={16} />
+                          <span>Sticker</span>
+                        </button>
+                      </div>
+                    )}
+                    {showStickerPicker && (
+                      <div className="messages-sticker-picker">
+                        {STICKERS.map((sticker) => (
+                          <button
+                            key={sticker}
+                            type="button"
+                            className="messages-sticker-btn"
+                            onClick={() => handleSendSticker(sticker)}
+                            aria-label={`Send sticker ${sticker}`}
+                          >
+                            {sticker}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <input
+                      ref={imageInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="messages-hidden-input"
+                      onChange={handleAttachmentSelected('IMAGE')}
+                    />
+                    <input
+                      ref={videoInputRef}
+                      type="file"
+                      accept="video/*"
+                      className="messages-hidden-input"
+                      onChange={handleAttachmentSelected('VIDEO')}
+                    />
+                    <input
+                      ref={documentInputRef}
+                      type="file"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,.csv"
+                      className="messages-hidden-input"
+                      onChange={handleAttachmentSelected('DOCUMENT')}
+                    />
+                  </div>
                   <button
                     type="button"
                     className="messages-chat-voice-btn"
