@@ -43,6 +43,7 @@ export default function ProductDetails() {
   const [inquirySuccess, setInquirySuccess] = useState(false);
   const [inquiryError, setInquiryError] = useState('');
   const [showOrderForm, setShowOrderForm] = useState(false);
+  const [showRfq, setShowRfq] = useState(false);
 
   const {
     data: product = null,
@@ -113,6 +114,7 @@ export default function ProductDetails() {
         quantity: Math.max(1, inquiryQuantity),
       });
       setInquirySuccess(true);
+      setShowRfq(false);
     } catch (err) {
       setInquiryError(getApiErrorMessage(err, 'Failed to send inquiry'));
     } finally {
@@ -284,202 +286,235 @@ export default function ProductDetails() {
         </div>
 
         <div className="product-details-info-col">
-          <div className="product-details-info-card product-details-mic-card">
-            <div className="product-details-badges">
-              {product.isFeatured && (
-                <span className="product-details-badge product-details-badge-featured">
-                  <StarIcon size={14} />
-                  Featured
-                </span>
-              )}
-              {(product.ordersCount ?? 0) > 0 && (
-                <span className="product-details-badge product-details-badge-sold">
-                  <TrendingUp size={14} />
-                  {product.ordersCount} sold
-                </span>
-              )}
-            </div>
-            <h1 className="product-title">
-              {product.name}
-            </h1>
-            {product.category && (
-              <span className="product-details-category">{product.category}</span>
-            )}
-            <div className="product-price product-details-mic-price">
-              <span className="product-details-mic-price-main">
-                {formatCurrency(product.price)}
-              </span>
-              {product.compareAtPrice && product.compareAtPrice > product.price && (
-                <span className="product-details-mic-price-compare">
-                  {formatCurrency(product.compareAtPrice)}
-                </span>
-              )}
-            </div>
-            {product.rating && product.rating > 0 && (
-              <div className="product-details-rating">
-                <Star size={20} style={{ fill: '#fbbf24', color: '#fbbf24' }} />
-                <span style={{ fontWeight: 600 }}>{product.rating.toFixed(1)}</span>
-                {product.reviewsCount > 0 && (
-                  <span style={{ color: '#65676b', fontSize: '0.875rem' }}>
-                    ({product.reviewsCount} {product.reviewsCount === 1 ? 'review' : 'reviews'})
+          <div className="product-details-ax-card product-details-mic-card">
+            <div className="product-details-ax-head">
+              <div className="product-details-badges">
+                {product.isFeatured && (
+                  <span className="product-details-badge product-details-badge-featured">
+                    <StarIcon size={14} />
+                    Featured
                   </span>
                 )}
               </div>
-            )}
-            {product.description && (
-              <div className="product-details-block">
-                <h3 className="product-details-block-title">Description</h3>
-                <p className="product-details-desc">{product.description}</p>
-              </div>
-            )}
-            {product.stockQuantity !== null && product.stockQuantity !== undefined && (
-              <div className="product-details-block">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Package size={20} style={{ color: isOutOfStock ? '#ef4444' : '#22c55e' }} />
-                  <span style={{ fontWeight: 600, color: isOutOfStock ? '#ef4444' : '#22c55e' }}>
-                    {isOutOfStock ? 'Out of Stock' : `${product.stockQuantity} in stock`}
+              <h1 className="product-title product-details-ax-title">
+                {product.name}
+              </h1>
+              <div className="product-details-ax-subrow">
+                {product.category ? (
+                  <span className="product-details-category product-details-ax-cat">{product.category}</span>
+                ) : null}
+                {(product.ordersCount ?? 0) > 0 ? (
+                  <span className="product-details-ax-sold-pill">
+                    <TrendingUp size={14} aria-hidden />
+                    {product.ordersCount} sold
                   </span>
-                </div>
+                ) : null}
+                {Number(product.rating) > 0 ? (
+                  <span className="product-details-ax-rating-pill">
+                    <Star size={14} style={{ fill: '#f59e0b', color: '#f59e0b' }} aria-hidden />
+                    {Number(product.rating).toFixed(1)}
+                    {product.reviewsCount > 0 ? (
+                      <span className="product-details-ax-rating-reviews">
+                        ({product.reviewsCount})
+                      </span>
+                    ) : null}
+                  </span>
+                ) : null}
               </div>
-            )}
-            {product.business && (
-              <div className="product-details-block">
-                <h3 className="product-details-block-title">Seller</h3>
-                <Link
-                  to={`/app/shop/business/${product.business.id}`}
-                  className="product-details-seller-link"
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    {product.business.logo ? (
-                      <img
-                        src={product.business.logo}
-                        alt={product.business.name}
-                        style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }}
-                      />
-                    ) : (
-                      <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#e4e6eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <ShoppingBag size={20} style={{ color: '#6b7280' }} />
-                      </div>
-                    )}
-                    <div>
-                      <p style={{ margin: 0, fontWeight: 600, color: 'inherit' }}>{product.business.name}</p>
-                      {(product.business.region || product.business.district) && (
-                        <p style={{ margin: 0, fontSize: '0.875rem', color: '#65676b' }}>
-                          <MapPin size={14} style={{ display: 'inline', verticalAlign: 'middle' }} /> {[product.business.district, product.business.region].filter(Boolean).join(', ')}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </Link>
-                <Link to={`/app/shop/business/${product.business.id}`} className="product-details-view-shop">
-                  View shop
-                </Link>
-              </div>
-            )}
-          </div>
+            </div>
 
-          {/* Contact Supplier (Request for Quotation) – primary CTA */}
-          {!inquirySuccess ? (
-            <div className="product-details-order-card" style={{ marginBottom: '24px' }}>
-              <h2 className="product-details-order-title">
-                <MessageCircle size={22} style={{ verticalAlign: 'middle', marginRight: '8px' }} />
-                Contact Supplier
-              </h2>
-              <p style={{ color: '#65676b', fontSize: '0.9375rem', marginBottom: '16px' }}>
-                Send a request for quotation. The seller will reply with price and terms. You can then confirm and pay.
-              </p>
-              <form onSubmit={handleInquirySubmit}>
-                {inquiryError && (
-                  <div style={{ padding: '12px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', borderRadius: '8px', marginBottom: '16px', color: '#ef4444' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <AlertCircle size={18} />
+            <div className="product-details-ax-price-block">
+              <div className="product-price product-details-mic-price">
+                <span className="product-details-mic-price-main product-details-ax-price-main">
+                  {formatCurrency(product.price)}
+                </span>
+                {product.compareAtPrice && product.compareAtPrice > product.price ? (
+                  <span className="product-details-mic-price-compare">
+                    {formatCurrency(product.compareAtPrice)}
+                  </span>
+                ) : null}
+              </div>
+              {product.minOrderQuantity != null && product.minOrderQuantity > 1 ? (
+                <p className="product-details-ax-moq">Min. order: {product.minOrderQuantity} units</p>
+              ) : null}
+            </div>
+
+            <div className="product-details-ax-stock-row">
+              <Package size={18} className={isOutOfStock ? 'product-details-ax-stock-ico out' : 'product-details-ax-stock-ico'} aria-hidden />
+              <span className={isOutOfStock ? 'product-details-ax-stock-txt out' : 'product-details-ax-stock-txt'}>
+                {isOutOfStock ? 'Out of stock' : product.stockQuantity != null ? `${product.stockQuantity} in stock` : 'In stock'}
+              </span>
+            </div>
+
+            {!inquirySuccess ? (
+              <div className="product-details-ax-qty-actions">
+                <div className="product-details-ax-qty">
+                  <span className="product-details-ax-qty-label">Quantity</span>
+                  <div className="product-details-ax-stepper">
+                    <button type="button" className="product-details-ax-step" onClick={() => handleQuantityChange(-1)} disabled={quantity <= 1 || isOutOfStock} aria-label="Decrease quantity">
+                      <Minus size={18} />
+                    </button>
+                    <input
+                      type="number"
+                      className="product-details-ax-qty-input"
+                      value={quantity}
+                      min={1}
+                      max={maxQuantity}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (!Number.isNaN(val) && val >= 1 && val <= maxQuantity) setQuantity(val);
+                      }}
+                      disabled={isOutOfStock}
+                      aria-label="Quantity"
+                    />
+                    <button type="button" className="product-details-ax-step" onClick={() => handleQuantityChange(1)} disabled={quantity >= maxQuantity || isOutOfStock} aria-label="Increase quantity">
+                      <Plus size={18} />
+                    </button>
+                  </div>
+                </div>
+                <div className="product-details-ax-btns">
+                  <button
+                    type="button"
+                    className="product-details-ax-btn-buy"
+                    disabled={isOutOfStock || !user}
+                    onClick={() => {
+                      setShowRfq(false);
+                      setShowOrderForm(true);
+                    }}
+                  >
+                    <ShoppingBag size={20} aria-hidden />
+                    Buy now
+                  </button>
+                  <button
+                    type="button"
+                    className="product-details-ax-btn-rfq"
+                    disabled={!user}
+                    onClick={() => {
+                      setShowOrderForm(false);
+                      setShowRfq((v) => !v);
+                    }}
+                  >
+                    <MessageCircle size={20} aria-hidden />
+                    Request quote
+                  </button>
+                </div>
+                {!user ? (
+                  <p className="product-details-ax-login-hint">Log in to purchase or message the seller.</p>
+                ) : (
+                  <p className="product-details-ax-ship-hint">Seller ships after payment · You can also request a custom quote below.</p>
+                )}
+              </div>
+            ) : null}
+
+            {product.business ? (
+              <Link to={`/app/shop/business/${product.business.id}`} className="product-details-ax-store-row">
+                {product.business.logo ? (
+                  <img src={product.business.logo} alt="" className="product-details-ax-store-logo" />
+                ) : (
+                  <span className="product-details-ax-store-logo-fallback">
+                    <ShoppingBag size={20} />
+                  </span>
+                )}
+                <div className="product-details-ax-store-text">
+                  <span className="product-details-ax-store-name">{product.business.name}</span>
+                  {(product.business.district || product.business.region) ? (
+                    <span className="product-details-ax-store-loc">
+                      <MapPin size={14} aria-hidden />
+                      {[product.business.district, product.business.region].filter(Boolean).join(', ')}
+                    </span>
+                  ) : null}
+                </div>
+                <span className="product-details-ax-store-cta">Visit store</span>
+              </Link>
+            ) : null}
+
+            {product.description ? (
+              <details className="product-details-ax-panel">
+                <summary className="product-details-ax-panel-sum">Description</summary>
+                <p className="product-details-desc product-details-ax-desc">{product.description}</p>
+              </details>
+            ) : null}
+
+            {inquirySuccess ? (
+              <div className="product-details-ax-inquiry-done">
+                <CheckCircle size={40} className="product-details-ax-inquiry-done-ico" aria-hidden />
+                <h2 className="product-details-ax-inquiry-done-title">Inquiry sent</h2>
+                <p className="product-details-ax-inquiry-done-txt">The seller will reply with a quote. Check My Inquiries for updates.</p>
+                <Link to="/app/inquiries" className="product-details-ax-inquiry-done-link">View My Inquiries</Link>
+              </div>
+            ) : showRfq ? (
+              <div className="product-details-ax-rfq">
+                <h2 className="product-details-ax-rfq-title">Request quotation</h2>
+                <p className="product-details-ax-rfq-lead">
+                  The seller will reply with price and terms. Track replies in{' '}
+                  <Link to="/app/inquiries">My Inquiries</Link>.
+                </p>
+                <form onSubmit={handleInquirySubmit} className="product-details-ax-rfq-form">
+                  {inquiryError ? (
+                    <div className="product-details-ax-alert product-details-ax-alert-err" role="alert">
+                      <AlertCircle size={18} aria-hidden />
                       <span>{inquiryError}</span>
                     </div>
+                  ) : null}
+                  <div className="product-details-ax-field">
+                    <label htmlFor="inquiry-qty">Quantity you need</label>
+                    <input
+                      id="inquiry-qty"
+                      type="number"
+                      min={1}
+                      max={maxQuantity}
+                      value={inquiryQuantity}
+                      onChange={(e) => {
+                        const v = parseInt(e.target.value, 10);
+                        if (!Number.isNaN(v) && v >= 1) setInquiryQuantity(Math.min(v, maxQuantity));
+                      }}
+                      className="product-details-ax-input product-details-ax-input-narrow"
+                      disabled={inquirySubmitting}
+                    />
                   </div>
-                )}
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Quantity you need</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max={maxQuantity}
-                    value={inquiryQuantity}
-                    onChange={(e) => {
-                      const v = parseInt(e.target.value, 10);
-                      if (!isNaN(v) && v >= 1) setInquiryQuantity(Math.min(v, maxQuantity));
-                    }}
-                    style={{ width: '100px', padding: '10px', border: '1px solid #e4e6eb', borderRadius: '8px', fontSize: '1rem' }}
-                    disabled={inquirySubmitting}
-                  />
-                </div>
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Message / requirements</label>
-                  <textarea
-                    value={inquiryMessage}
-                    onChange={(e) => setInquiryMessage(e.target.value)}
-                    placeholder="e.g. I need 50 units. Do you offer bulk discount? What is the delivery time?"
-                    rows={3}
-                    style={{ width: '100%', padding: '12px', border: '1px solid #e4e6eb', borderRadius: '8px', fontSize: '0.9375rem', fontFamily: 'inherit', resize: 'vertical' }}
-                    disabled={inquirySubmitting}
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={inquirySubmitting || !user}
-                  style={{
-                    width: '100%',
-                    padding: '14px',
-                    background: !user ? '#d1d5db' : '#0d9488',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '1rem',
-                    fontWeight: 600,
-                    cursor: !user ? 'not-allowed' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                  }}
-                >
-                  {inquirySubmitting ? (
-                    <>
-                      <Loader2 size={20} className="icon-spin" />
-                      Sending...
-                    </>
-                  ) : !user ? (
-                    'Log in to contact supplier'
-                  ) : (
-                    <>
-                      <MessageCircle size={20} />
-                      Request for Quotation
-                    </>
-                  )}
-                </button>
-              </form>
-              <p style={{ marginTop: '12px', fontSize: '0.875rem', color: '#65676b' }}>
-                Or{' '}
-                <button type="button" onClick={() => setShowOrderForm(true)} style={{ background: 'none', border: 'none', color: '#7c3aed', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}>
-                  buy now (direct checkout)
-                </button>
-              </p>
-            </div>
-          ) : (
-            <div className="product-details-order-card" style={{ marginBottom: '24px', background: 'rgba(13, 148, 136, 0.08)', border: '1px solid #0d9488' }}>
-              <CheckCircle size={48} style={{ color: '#0d9488', margin: '0 auto 12px', display: 'block' }} />
-              <h2 style={{ margin: '0 0 8px', fontSize: '1.25rem', fontWeight: 600, textAlign: 'center' }}>Inquiry sent</h2>
-              <p style={{ margin: '0 0 16px', color: '#65676b', textAlign: 'center' }}>The seller will reply with a quote. Check My Inquiries for updates.</p>
-              <Link to="/app/inquiries" style={{ display: 'block', textAlign: 'center', color: '#0d9488', fontWeight: 600 }}>View My Inquiries</Link>
-            </div>
-          )}
+                  <div className="product-details-ax-field">
+                    <label htmlFor="inquiry-msg">Message / requirements</label>
+                    <textarea
+                      id="inquiry-msg"
+                      value={inquiryMessage}
+                      onChange={(e) => setInquiryMessage(e.target.value)}
+                      placeholder="e.g. I need 50 units. Bulk discount? Delivery time?"
+                      rows={3}
+                      className="product-details-ax-textarea"
+                      disabled={inquirySubmitting}
+                    />
+                  </div>
+                  <button type="submit" className="product-details-ax-btn-submit-rfq" disabled={inquirySubmitting || !user}>
+                    {inquirySubmitting ? (
+                      <>
+                        <Loader2 size={20} className="icon-spin" aria-hidden />
+                        Sending…
+                      </>
+                    ) : !user ? (
+                      'Log in to send quote request'
+                    ) : (
+                      <>
+                        <MessageCircle size={20} aria-hidden />
+                        Send quote request
+                      </>
+                    )}
+                  </button>
+                </form>
+              </div>
+            ) : null}
 
-          {/* Order Form (direct checkout) – secondary */}
-          {(showOrderForm || orderSuccess) && !inquirySuccess && (
+          {(showOrderForm || orderSuccess) && !inquirySuccess ? (
           !orderSuccess ? (
-            <form onSubmit={handleOrderSubmit} className="product-details-order-card">
-              <h2 className="product-details-order-title">Place Order (direct checkout)</h2>
-              <p style={{ color: '#65676b', fontSize: '0.875rem', marginBottom: '16px' }}>
-                <button type="button" onClick={() => setShowOrderForm(false)} style={{ background: 'none', border: 'none', color: '#7c3aed', cursor: 'pointer', textDecoration: 'underline' }}>← Back to Contact Supplier</button>
+            <form onSubmit={handleOrderSubmit} className="product-details-ax-checkout">
+              <h2 className="product-details-ax-checkout-title">Checkout</h2>
+              <p className="product-details-ax-checkout-back">
+                <button
+                  type="button"
+                  className="product-details-ax-link-btn"
+                  onClick={() => { setShowOrderForm(false); }}
+                >
+                  ← Back to product
+                </button>
               </p>
               
               {orderError && (
@@ -491,75 +526,9 @@ export default function ProductDetails() {
                 </div>
               )}
 
-              {/* Quantity */}
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Quantity</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                  <button
-                    type="button"
-                    onClick={() => handleQuantityChange(-1)}
-                    disabled={quantity <= 1 || orderSubmitting}
-                    style={{
-                      width: '40px',
-                      height: '40px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: '1px solid #e4e6eb',
-                      borderRadius: '8px',
-                      background: '#fff',
-                      cursor: quantity <= 1 ? 'not-allowed' : 'pointer',
-                      opacity: quantity <= 1 ? 0.5 : 1,
-                    }}
-                  >
-                    <Minus size={18} />
-                  </button>
-                  <input
-                    type="number"
-                    value={quantity}
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value, 10);
-                      if (!isNaN(val) && val >= 1 && val <= maxQuantity) {
-                        setQuantity(val);
-                      }
-                    }}
-                    min="1"
-                    max={maxQuantity}
-                    style={{
-                      width: '80px',
-                      height: '40px',
-                      textAlign: 'center',
-                      border: '1px solid #e4e6eb',
-                      borderRadius: '8px',
-                      fontSize: '1rem',
-                      fontWeight: 600,
-                    }}
-                    disabled={orderSubmitting}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleQuantityChange(1)}
-                    disabled={quantity >= maxQuantity || orderSubmitting}
-                    style={{
-                      width: '40px',
-                      height: '40px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: '1px solid #e4e6eb',
-                      borderRadius: '8px',
-                      background: '#fff',
-                      cursor: quantity >= maxQuantity ? 'not-allowed' : 'pointer',
-                      opacity: quantity >= maxQuantity ? 0.5 : 1,
-                    }}
-                  >
-                    <Plus size={18} />
-                  </button>
-                  <span style={{ color: '#65676b', fontSize: '0.875rem', width: '100%' }}>
-                    {formatCurrency(product.price)} each
-                  </span>
-                </div>
-              </div>
+              <p className="product-details-ax-checkout-qty-note">
+                Quantity: <strong>{quantity}</strong> × {formatCurrency(product.price)} each
+              </p>
 
               {/* Delivery Name */}
               <div style={{ marginBottom: '16px' }}>
@@ -684,16 +653,19 @@ export default function ProductDetails() {
               </button>
             </form>
           ) : (
-            <div className="product-details-success-card">
+            <div className="product-details-success-card product-details-ax-order-success">
               <CheckCircle size={64} style={{ color: '#22c55e', margin: '0 auto 16px' }} />
-              <h2 style={{ margin: '0 0 8px', fontSize: '1.5rem', fontWeight: 600 }}>Order Placed Successfully!</h2>
-              <p style={{ margin: '0 0 24px', color: '#65676b' }}>Redirecting to your orders...</p>
+              <h2 style={{ margin: '0 0 8px', fontSize: '1.5rem', fontWeight: 600 }}>Order placed successfully</h2>
+              <p style={{ margin: '0 0 24px', color: '#65676b' }}>Redirecting to your orders…</p>
             </div>
-          ) )}
+          )
+          ) : null}
+
+        </div>
         </div>
       </div>
 
-      <section className="product-details-similar shop-mp-mic shop-mp-kikuu" aria-labelledby="product-details-similar-heading">
+      <section className="product-details-similar product-details-similar-ae shop-mp-mic shop-mp-kikuu" aria-labelledby="product-details-similar-heading">
         <div className="product-details-similar-head">
           <h2 id="product-details-similar-heading" className="product-details-similar-title">
             Similar products
@@ -705,9 +677,11 @@ export default function ProductDetails() {
         ) : similarProducts.length === 0 ? (
           <p className="product-details-similar-empty">No similar listings right now.</p>
         ) : (
-          <div className="shop-mp-grid">
+          <div className="product-details-similar-track">
             {similarProducts.map((p) => (
-              <MarketplaceProductCard key={p.id} product={p} showSoldBadge />
+              <div key={p.id} className="product-details-similar-slide">
+                <MarketplaceProductCard product={p} showSoldBadge />
+              </div>
             ))}
           </div>
         )}
