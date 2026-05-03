@@ -1,7 +1,35 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, ShoppingBag, Star, Package, MapPin, Loader2, AlertCircle, Plus, Minus, CheckCircle, Image as ImageIcon, Star as StarIcon, TrendingUp, MessageCircle } from 'lucide-react';
+import {
+  ArrowLeft,
+  ShoppingBag,
+  Star,
+  Package,
+  MapPin,
+  Loader2,
+  AlertCircle,
+  Plus,
+  Minus,
+  CheckCircle,
+  Image as ImageIcon,
+  Star as StarIcon,
+  TrendingUp,
+  MessageCircle,
+  Heart,
+  Share2,
+  ShieldCheck,
+  Truck,
+  RotateCcw,
+  Store,
+  ChevronRight,
+  ZoomIn,
+  X,
+  Check,
+  Clock,
+  Award,
+  BadgeCheck
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getProductById, getProductsByCategory, getProductsByBusiness, getProducts } from '@/lib/api/products';
 import { MarketplaceProductCard } from '@/components/marketplace/MarketplaceProductCard';
@@ -22,6 +50,12 @@ function formatCurrency(amount) {
   }).format(amount);
 }
 
+const TABS = [
+  { id: 'description', label: 'Description' },
+  { id: 'specifications', label: 'Specifications' },
+  { id: 'shipping', label: 'Shipping & Returns' },
+];
+
 export default function ProductDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -36,6 +70,13 @@ export default function ProductDetails() {
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [orderError, setOrderError] = useState('');
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [zoomPosition, setZoomPosition] = useState({ x: 50, y: 50 });
+  const [activeTab, setActiveTab] = useState('description');
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [showLightbox, setShowLightbox] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
   // Contact Supplier (Request for Quotation)
   const [inquiryMessage, setInquiryMessage] = useState('');
   const [inquiryQuantity, setInquiryQuantity] = useState(1);
@@ -44,6 +85,8 @@ export default function ProductDetails() {
   const [inquiryError, setInquiryError] = useState('');
   const [showOrderForm, setShowOrderForm] = useState(false);
   const [showRfq, setShowRfq] = useState(false);
+
+  const imageRef = useRef(null);
 
   const {
     data: product = null,
@@ -90,6 +133,18 @@ export default function ProductDetails() {
     }
   }, [user]);
 
+  // Handle keyboard navigation for lightbox
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (!showLightbox) return;
+      if (e.key === 'Escape') setShowLightbox(false);
+      if (e.key === 'ArrowLeft') navigateLightbox(-1);
+      if (e.key === 'ArrowRight') navigateLightbox(1);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showLightbox, lightboxIndex]);
+
   const handleQuantityChange = (delta) => {
     const newQuantity = Math.max(1, Math.min(quantity + delta, product?.stockQuantity || 999));
     setQuantity(newQuantity);
@@ -125,17 +180,17 @@ export default function ProductDetails() {
   const handleOrderSubmit = async (e) => {
     e.preventDefault();
     setOrderError('');
-    
+
     if (!orderForm.deliveryName.trim()) {
       setOrderError('Delivery name is required');
       return;
     }
-    
+
     if (!orderForm.deliveryAddress.trim()) {
       setOrderError('Delivery address is required');
       return;
     }
-    
+
     if (!orderForm.deliveryPhone.trim()) {
       setOrderError('Delivery phone number is required');
       return;
@@ -169,7 +224,6 @@ export default function ProductDetails() {
 
       const order = await createOrder(orderData);
       setOrderSuccess(true);
-      // Redirect to orders page after 2 seconds
       setTimeout(() => {
         navigate('/app/orders');
       }, 2000);
@@ -177,6 +231,27 @@ export default function ProductDetails() {
       setOrderError(getApiErrorMessage(err, 'Failed to create order'));
     } finally {
       setOrderSubmitting(false);
+    }
+  };
+
+  // Image zoom handlers
+  const handleMouseMove = (e) => {
+    if (!imageRef.current || !isZoomed) return;
+    const rect = imageRef.current.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setZoomPosition({ x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) });
+  };
+
+  const openLightbox = (index) => {
+    setLightboxIndex(index);
+    setShowLightbox(true);
+  };
+
+  const navigateLightbox = (direction) => {
+    const newIndex = lightboxIndex + direction;
+    if (newIndex >= 0 && newIndex < allImages.length) {
+      setLightboxIndex(newIndex);
     }
   };
 
@@ -221,467 +296,619 @@ export default function ProductDetails() {
   const totalPrice = product.price * quantity;
   const isOutOfStock = product.stockQuantity !== null && product.stockQuantity !== undefined && product.stockQuantity === 0;
   const maxQuantity = product.stockQuantity !== null && product.stockQuantity !== undefined ? product.stockQuantity : 999;
+  const discountPercentage = product.compareAtPrice && product.compareAtPrice > product.price
+    ? Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)
+    : null;
+
+  // Determine business badge level
+  const getBusinessBadge = () => {
+    if (product.business?.isVerified) return { icon: BadgeCheck, label: 'Verified', color: '#7c3aed' };
+    if (product.business?.isGold) return { icon: Award, label: 'Gold Supplier', color: '#f59e0b' };
+    return null;
+  };
+  const businessBadge = getBusinessBadge();
 
   return (
-    <div className="product-details-container product-details-mic">
-      <button
-        type="button"
-        onClick={() => navigate(-1)}
-        className="product-details-back"
-      >
-        <ArrowLeft size={20} />
-        Back
-      </button>
+    <div className="product-details-container product-details-pro">
+      {/* Lightbox */}
+      {showLightbox && (
+        <div className="product-lightbox" onClick={() => setShowLightbox(false)}>
+          <button className="product-lightbox-close" onClick={() => setShowLightbox(false)}>
+            <X size={24} />
+          </button>
+          {lightboxIndex > 0 && (
+            <button className="product-lightbox-nav product-lightbox-prev" onClick={(e) => { e.stopPropagation(); navigateLightbox(-1); }}>
+              <ArrowLeft size={24} />
+            </button>
+          )}
+          {lightboxIndex < allImages.length - 1 && (
+            <button className="product-lightbox-nav product-lightbox-next" onClick={(e) => { e.stopPropagation(); navigateLightbox(1); }}>
+              <ChevronRight size={24} />
+            </button>
+          )}
+          <div className="product-lightbox-content" onClick={(e) => e.stopPropagation()}>
+            <img src={allImages[lightboxIndex]?.url} alt={product.name} />
+            <div className="product-lightbox-counter">
+              {lightboxIndex + 1} / {allImages.length}
+            </div>
+          </div>
+        </div>
+      )}
 
-      <nav className="product-details-breadcrumb" aria-label="Breadcrumb">
-        <Link to="/app/shop">Marketplace</Link>
-        <span className="product-details-breadcrumb-sep" aria-hidden>
-          /
-        </span>
-        {product.category ? (
-          <>
-            <span className="product-details-breadcrumb-muted">{product.category}</span>
-            <span className="product-details-breadcrumb-sep" aria-hidden>
-              /
-            </span>
-          </>
-        ) : null}
-        <span className="product-details-breadcrumb-current">{product.name}</span>
-      </nav>
+      {/* Breadcrumb & Header */}
+      <div className="product-details-pro-header">
+        <button type="button" onClick={() => navigate(-1)} className="product-details-back">
+          <ArrowLeft size={18} />
+          Back
+        </button>
+        <nav className="product-details-breadcrumb" aria-label="Breadcrumb">
+          <Link to="/app/shop">Marketplace</Link>
+          <ChevronRight size={14} className="product-details-breadcrumb-sep" />
+          {product.category ? (
+            <>
+              <span className="product-details-breadcrumb-muted">{product.category}</span>
+              <ChevronRight size={14} className="product-details-breadcrumb-sep" />
+            </>
+          ) : null}
+          <span className="product-details-breadcrumb-current">{product.name}</span>
+        </nav>
+      </div>
 
-      <div className="product-details-grid product-details-mic-grid">
-        <div className="product-details-images-col">
-          <div className="product-details-image-card product-details-mic-card">
-            <div className="product-details-main-image-wrap">
+      {/* Main Content Grid */}
+      <div className="product-details-pro-grid">
+        {/* Left Column - Images */}
+        <div className="product-details-pro-images">
+          <div className="product-details-pro-main-image">
+            <div
+              ref={imageRef}
+              className={`product-details-pro-image-wrapper ${isZoomed ? 'zoomed' : ''}`}
+              onMouseEnter={() => setIsZoomed(true)}
+              onMouseLeave={() => setIsZoomed(false)}
+              onMouseMove={handleMouseMove}
+              onClick={() => openLightbox(selectedImageIndex)}
+            >
               {mainImage ? (
-                <img
-                  src={mainImage}
-                  alt={product.name}
-                  className="product-details-main-image"
-                />
+                <>
+                  <img
+                    src={mainImage}
+                    alt={product.name}
+                    className="product-details-pro-image"
+                    style={isZoomed ? {
+                      transform: `scale(2)`,
+                      transformOrigin: `${zoomPosition.x}% ${zoomPosition.y}%`,
+                    } : {}}
+                  />
+                  <div className="product-details-pro-zoom-hint">
+                    <ZoomIn size={16} />
+                    <span>Click to zoom</span>
+                  </div>
+                </>
               ) : (
-                <div className="product-details-main-image-placeholder">
+                <div className="product-details-pro-image-placeholder">
                   <ImageIcon size={64} />
+                </div>
+              )}
+              {discountPercentage && (
+                <div className="product-details-pro-discount-badge">
+                  -{discountPercentage}%
+                </div>
+              )}
+              {product.isFeatured && (
+                <div className="product-details-pro-featured-badge">
+                  <StarIcon size={12} />
+                  Featured
                 </div>
               )}
             </div>
           </div>
+
+          {/* Thumbnails */}
           {allImages.length > 1 && (
-            <div className="product-thumbnails">
+            <div className="product-details-pro-thumbnails">
               {allImages.map((img, index) => (
                 <button
                   key={index}
                   type="button"
                   onClick={() => setSelectedImageIndex(index)}
-                  className={`product-thumbnails-btn ${selectedImageIndex === index ? 'active' : ''}`}
+                  className={`product-details-pro-thumb ${selectedImageIndex === index ? 'active' : ''}`}
                 >
-                  <img
-                    src={img.url}
-                    alt={`${product.name} ${index + 1}`}
-                  />
+                  <img src={img.url} alt={`${product.name} ${index + 1}`} />
                 </button>
               ))}
             </div>
           )}
+
+          {/* Trust Badges */}
+          <div className="product-details-pro-trust">
+            <div className="trust-badge">
+              <ShieldCheck size={20} />
+              <span>Secure Payment</span>
+            </div>
+            <div className="trust-badge">
+              <Truck size={20} />
+              <span>Nationwide Delivery</span>
+            </div>
+            <div className="trust-badge">
+              <RotateCcw size={20} />
+              <span>Easy Returns</span>
+            </div>
+          </div>
         </div>
 
-        <div className="product-details-info-col">
-          <div className="product-details-ax-card product-details-mic-card product-details-buy-pro">
-            <div className="product-details-ax-head">
-              <div className="product-details-badges">
-                {product.isFeatured && (
-                  <span className="product-details-badge product-details-badge-featured">
-                    <StarIcon size={14} />
-                    Featured
-                  </span>
+        {/* Right Column - Product Info */}
+        <div className="product-details-pro-info">
+          {/* Title & Meta */}
+          <div className="product-details-pro-header-info">
+            <div className="product-details-pro-meta">
+              {product.category && (
+                <span className="product-details-pro-category">{product.category}</span>
+              )}
+              <div className="product-details-pro-rating-row">
+                {Number(product.rating) > 0 ? (
+                  <>
+                    <div className="product-details-pro-stars">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          size={14}
+                          className={i < Math.floor(product.rating) ? 'filled' : ''}
+                        />
+                      ))}
+                    </div>
+                    <span className="product-details-pro-rating-value">{Number(product.rating).toFixed(1)}</span>
+                    {product.reviewsCount > 0 && (
+                      <span className="product-details-pro-reviews">({product.reviewsCount} reviews)</span>
+                    )}
+                  </>
+                ) : (
+                  <span className="product-details-pro-no-rating">No ratings yet</span>
                 )}
-              </div>
-              <h1 className="product-title product-details-ax-title">
-                {product.name}
-              </h1>
-              <div className="product-details-ax-subrow">
-                {product.category ? (
-                  <span className="product-details-category product-details-ax-cat">{product.category}</span>
-                ) : null}
-                {(product.ordersCount ?? 0) > 0 ? (
-                  <span className="product-details-ax-sold-pill">
-                    <TrendingUp size={14} aria-hidden />
+                {(product.ordersCount ?? 0) > 0 && (
+                  <span className="product-details-pro-sold">
+                    <TrendingUp size={12} />
                     {product.ordersCount} sold
                   </span>
-                ) : null}
-                {Number(product.rating) > 0 ? (
-                  <span className="product-details-ax-rating-pill">
-                    <Star size={14} style={{ fill: '#f59e0b', color: '#f59e0b' }} aria-hidden />
-                    {Number(product.rating).toFixed(1)}
-                    {product.reviewsCount > 0 ? (
-                      <span className="product-details-ax-rating-reviews">
-                        ({product.reviewsCount})
-                      </span>
-                    ) : null}
-                  </span>
-                ) : null}
+                )}
               </div>
             </div>
+            <h1 className="product-details-pro-title">{product.name}</h1>
+          </div>
 
-            <div className="product-details-ax-price-block">
-              <div className="product-price product-details-mic-price">
-                <span className="product-details-mic-price-main product-details-ax-price-main">
-                  {formatCurrency(product.price)}
-                </span>
-                {product.compareAtPrice && product.compareAtPrice > product.price ? (
-                  <span className="product-details-mic-price-compare">
-                    {formatCurrency(product.compareAtPrice)}
-                  </span>
-                ) : null}
-              </div>
-              {product.minOrderQuantity != null && product.minOrderQuantity > 1 ? (
-                <p className="product-details-ax-moq">Min. order: {product.minOrderQuantity} units</p>
-              ) : null}
+          {/* Price Block */}
+          <div className="product-details-pro-price-block">
+            <div className="product-details-pro-price-main">
+              {formatCurrency(product.price)}
             </div>
+            {product.compareAtPrice && product.compareAtPrice > product.price && (
+              <div className="product-details-pro-price-compare">
+                {formatCurrency(product.compareAtPrice)}
+              </div>
+            )}
+            {discountPercentage && (
+              <div className="product-details-pro-save-badge">
+                Save {formatCurrency(product.compareAtPrice - product.price)}
+              </div>
+            )}
+          </div>
 
-            <div className="product-details-ax-stock-row">
-              <Package size={18} className={isOutOfStock ? 'product-details-ax-stock-ico out' : 'product-details-ax-stock-ico'} aria-hidden />
-              <span className={isOutOfStock ? 'product-details-ax-stock-txt out' : 'product-details-ax-stock-txt'}>
-                {isOutOfStock ? 'Out of stock' : product.stockQuantity != null ? `${product.stockQuantity} in stock` : 'In stock'}
+          {/* Stock Status */}
+          <div className="product-details-pro-stock">
+            <Package size={18} className={isOutOfStock ? 'out' : ''} />
+            <span className={isOutOfStock ? 'out' : ''}>
+              {isOutOfStock ? 'Out of stock' : product.stockQuantity != null ? `${product.stockQuantity} units available` : 'In stock'}
+            </span>
+            {product.minOrderQuantity > 1 && (
+              <span className="product-details-pro-moq">
+                Min. order: {product.minOrderQuantity} units
               </span>
-            </div>
+            )}
+          </div>
 
-            {!inquirySuccess ? (
-              <div className="product-details-ax-qty-actions">
-                <div className="product-details-ax-qty">
-                  <span className="product-details-ax-qty-label">Quantity</span>
-                  <div className="product-details-ax-stepper">
-                    <button type="button" className="product-details-ax-step" onClick={() => handleQuantityChange(-1)} disabled={quantity <= 1 || isOutOfStock} aria-label="Decrease quantity">
-                      <Minus size={18} />
-                    </button>
-                    <input
-                      type="number"
-                      className="product-details-ax-qty-input"
-                      value={quantity}
-                      min={1}
-                      max={maxQuantity}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value, 10);
-                        if (!Number.isNaN(val) && val >= 1 && val <= maxQuantity) setQuantity(val);
-                      }}
-                      disabled={isOutOfStock}
-                      aria-label="Quantity"
-                    />
-                    <button type="button" className="product-details-ax-step" onClick={() => handleQuantityChange(1)} disabled={quantity >= maxQuantity || isOutOfStock} aria-label="Increase quantity">
-                      <Plus size={18} />
-                    </button>
-                  </div>
-                </div>
-                <div className="product-details-ax-btns">
+          {/* Actions Card */}
+          {!inquirySuccess && (
+            <div className="product-details-pro-actions">
+              {/* Quantity Selector */}
+              <div className="product-details-pro-quantity">
+                <span className="quantity-label">Quantity</span>
+                <div className="quantity-stepper">
                   <button
                     type="button"
-                    className="product-details-ax-btn-buy"
-                    disabled={isOutOfStock || !user}
-                    onClick={() => {
-                      setShowRfq(false);
-                      setShowOrderForm(true);
-                    }}
+                    onClick={() => handleQuantityChange(-1)}
+                    disabled={quantity <= 1 || isOutOfStock}
+                    aria-label="Decrease quantity"
                   >
-                    <ShoppingBag size={20} aria-hidden />
-                    Buy now
+                    <Minus size={16} />
                   </button>
+                  <input
+                    type="number"
+                    value={quantity}
+                    min={1}
+                    max={maxQuantity}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      if (!Number.isNaN(val) && val >= 1 && val <= maxQuantity) setQuantity(val);
+                    }}
+                    disabled={isOutOfStock}
+                    aria-label="Quantity"
+                  />
                   <button
                     type="button"
-                    className="product-details-ax-btn-rfq"
-                    disabled={!user}
-                    onClick={() => {
-                      setShowOrderForm(false);
-                      setShowRfq((v) => !v);
-                    }}
+                    onClick={() => handleQuantityChange(1)}
+                    disabled={quantity >= maxQuantity || isOutOfStock}
+                    aria-label="Increase quantity"
                   >
-                    <MessageCircle size={20} aria-hidden />
-                    Get quote
+                    <Plus size={16} />
                   </button>
                 </div>
-                {!user ? (
-                  <p className="product-details-ax-login-hint">Log in to purchase or message the seller.</p>
-                ) : (
-                  <p className="product-details-ax-ship-hint">Seller ships after payment. Use Get quote for bulk or custom terms.</p>
+                {product.stockQuantity && product.stockQuantity <= 10 && product.stockQuantity > 0 && (
+                  <span className="stock-warning">Only {product.stockQuantity} left!</span>
                 )}
               </div>
-            ) : null}
 
-            {product.business ? (
-              <Link to={`/app/shop/business/${product.business.id}`} className="product-details-ax-store-row">
-                {product.business.logo ? (
-                  <img src={product.business.logo} alt="" className="product-details-ax-store-logo" />
-                ) : (
-                  <span className="product-details-ax-store-logo-fallback">
-                    <ShoppingBag size={20} />
-                  </span>
-                )}
-                <div className="product-details-ax-store-text">
-                  <span className="product-details-ax-store-name">{product.business.name}</span>
-                  {(product.business.district || product.business.region) ? (
-                    <span className="product-details-ax-store-loc">
-                      <MapPin size={14} aria-hidden />
-                      {[product.business.district, product.business.region].filter(Boolean).join(', ')}
-                    </span>
-                  ) : null}
-                </div>
-                <span className="product-details-ax-store-cta">Visit store</span>
-              </Link>
-            ) : null}
-
-            {product.description ? (
-              <details className="product-details-ax-panel">
-                <summary className="product-details-ax-panel-sum">Description</summary>
-                <p className="product-details-desc product-details-ax-desc">{product.description}</p>
-              </details>
-            ) : null}
-
-            {inquirySuccess ? (
-              <div className="product-details-ax-inquiry-done">
-                <CheckCircle size={40} className="product-details-ax-inquiry-done-ico" aria-hidden />
-                <h2 className="product-details-ax-inquiry-done-title">Inquiry sent</h2>
-                <p className="product-details-ax-inquiry-done-txt">The seller will reply with a quote. Check My Inquiries for updates.</p>
-                <Link to="/app/inquiries" className="product-details-ax-inquiry-done-link">View My Inquiries</Link>
-              </div>
-            ) : showRfq ? (
-              <div className="product-details-ax-rfq">
-                <h2 className="product-details-ax-rfq-title">Request quotation</h2>
-                <p className="product-details-ax-rfq-lead">
-                  The seller will reply with price and terms. Track replies in{' '}
-                  <Link to="/app/inquiries">My Inquiries</Link>.
-                </p>
-                <form onSubmit={handleInquirySubmit} className="product-details-ax-rfq-form">
-                  {inquiryError ? (
-                    <div className="product-details-ax-alert product-details-ax-alert-err" role="alert">
-                      <AlertCircle size={18} aria-hidden />
-                      <span>{inquiryError}</span>
-                    </div>
-                  ) : null}
-                  <div className="product-details-ax-field">
-                    <label htmlFor="inquiry-qty">Quantity you need</label>
-                    <input
-                      id="inquiry-qty"
-                      type="number"
-                      min={1}
-                      max={maxQuantity}
-                      value={inquiryQuantity}
-                      onChange={(e) => {
-                        const v = parseInt(e.target.value, 10);
-                        if (!Number.isNaN(v) && v >= 1) setInquiryQuantity(Math.min(v, maxQuantity));
-                      }}
-                      className="product-details-ax-input product-details-ax-input-narrow"
-                      disabled={inquirySubmitting}
-                    />
-                  </div>
-                  <div className="product-details-ax-field">
-                    <label htmlFor="inquiry-msg">Message / requirements</label>
-                    <textarea
-                      id="inquiry-msg"
-                      value={inquiryMessage}
-                      onChange={(e) => setInquiryMessage(e.target.value)}
-                      placeholder="e.g. I need 50 units. Bulk discount? Delivery time?"
-                      rows={3}
-                      className="product-details-ax-textarea"
-                      disabled={inquirySubmitting}
-                    />
-                  </div>
-                  <button type="submit" className="product-details-ax-btn-submit-rfq" disabled={inquirySubmitting || !user}>
-                    {inquirySubmitting ? (
-                      <>
-                        <Loader2 size={20} className="icon-spin" aria-hidden />
-                        Sending…
-                      </>
-                    ) : !user ? (
-                      'Log in to send quote request'
-                    ) : (
-                      <>
-                        <MessageCircle size={20} aria-hidden />
-                        Send quote request
-                      </>
-                    )}
-                  </button>
-                </form>
-              </div>
-            ) : null}
-
-          {(showOrderForm || orderSuccess) && !inquirySuccess ? (
-          !orderSuccess ? (
-            <form onSubmit={handleOrderSubmit} className="product-details-ax-checkout">
-              <h2 className="product-details-ax-checkout-title">Checkout</h2>
-              <p className="product-details-ax-checkout-back">
+              {/* Action Buttons */}
+              <div className="product-details-pro-buttons">
                 <button
                   type="button"
-                  className="product-details-ax-link-btn"
-                  onClick={() => { setShowOrderForm(false); }}
+                  className="btn-buy-now"
+                  disabled={isOutOfStock || !user}
+                  onClick={() => {
+                    setShowRfq(false);
+                    setShowOrderForm(true);
+                  }}
                 >
-                  ← Back to product
+                  <ShoppingBag size={20} />
+                  Buy Now
                 </button>
+                <button
+                  type="button"
+                  className="btn-get-quote"
+                  disabled={!user}
+                  onClick={() => {
+                    setShowOrderForm(false);
+                    setShowRfq((v) => !v);
+                  }}
+                >
+                  <MessageCircle size={20} />
+                  Get Quote
+                </button>
+              </div>
+
+              {/* Secondary Actions */}
+              <div className="product-details-pro-secondary-actions">
+                <button
+                  type="button"
+                  className={`btn-wishlist ${isWishlisted ? 'active' : ''}`}
+                  onClick={() => setIsWishlisted(!isWishlisted)}
+                >
+                  <Heart size={18} className={isWishlisted ? 'filled' : ''} />
+                  {isWishlisted ? 'Saved' : 'Save'}
+                </button>
+                <button type="button" className="btn-share">
+                  <Share2 size={18} />
+                  Share
+                </button>
+              </div>
+
+              {!user && (
+                <p className="login-hint">
+                  <Link to="/login">Log in</Link> to purchase or contact the seller
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Business Card */}
+          {product.business && (
+            <Link to={`/app/shop/business/${product.business.id}`} className="product-details-pro-business">
+              <div className="business-avatar">
+                {product.business.logo ? (
+                  <img src={product.business.logo} alt={product.business.name} />
+                ) : (
+                  <Store size={24} />
+                )}
+              </div>
+              <div className="business-info">
+                <div className="business-name">
+                  {product.business.name}
+                  {businessBadge && (
+                    <span className="business-badge" style={{ color: businessBadge.color }}>
+                      <businessBadge.icon size={14} />
+                      {businessBadge.label}
+                    </span>
+                  )}
+                </div>
+                <div className="business-meta">
+                  {(product.business.district || product.business.region) && (
+                    <span className="business-location">
+                      <MapPin size={12} />
+                      {[product.business.district, product.business.region].filter(Boolean).join(', ')}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <ChevronRight size={18} className="business-chevron" />
+            </Link>
+          )}
+
+          {/* RFQ Form */}
+          {showRfq && !inquirySuccess && (
+            <div className="product-details-pro-rfq">
+              <h3>Request a Quote</h3>
+              <p className="rfq-description">
+                Contact the seller for bulk pricing or custom requirements
               </p>
-              
-              {orderError && (
-                <div style={{ padding: '12px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', borderRadius: '8px', marginBottom: '16px', color: '#ef4444' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <AlertCircle size={18} />
-                    <span>{orderError}</span>
+              <form onSubmit={handleInquirySubmit}>
+                {inquiryError && (
+                  <div className="rfq-error" role="alert">
+                    <AlertCircle size={16} />
+                    <span>{inquiryError}</span>
                   </div>
+                )}
+                <div className="rfq-field">
+                  <label htmlFor="inquiry-qty">Quantity Needed</label>
+                  <input
+                    id="inquiry-qty"
+                    type="number"
+                    min={1}
+                    value={inquiryQuantity}
+                    onChange={(e) => {
+                      const v = parseInt(e.target.value, 10);
+                      if (!Number.isNaN(v) && v >= 1) setInquiryQuantity(v);
+                    }}
+                    disabled={inquirySubmitting}
+                  />
+                </div>
+                <div className="rfq-field">
+                  <label htmlFor="inquiry-msg">Message / Requirements</label>
+                  <textarea
+                    id="inquiry-msg"
+                    value={inquiryMessage}
+                    onChange={(e) => setInquiryMessage(e.target.value)}
+                    placeholder="Describe your requirements, delivery timeline, or ask for bulk discount..."
+                    rows={3}
+                    disabled={inquirySubmitting}
+                  />
+                </div>
+                <button type="submit" className="btn-submit-rfq" disabled={inquirySubmitting || !user}>
+                  {inquirySubmitting ? (
+                    <>
+                      <Loader2 size={18} className="spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <MessageCircle size={18} />
+                      Send Quote Request
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* Checkout Form */}
+          {showOrderForm && !orderSuccess && !inquirySuccess && (
+            <div className="product-details-pro-checkout">
+              <div className="checkout-header">
+                <h3>Checkout</h3>
+                <button type="button" className="btn-close-checkout" onClick={() => setShowOrderForm(false)}>
+                  <X size={18} />
+                </button>
+              </div>
+
+              {orderError && (
+                <div className="checkout-error" role="alert">
+                  <AlertCircle size={16} />
+                  <span>{orderError}</span>
                 </div>
               )}
 
-              <p className="product-details-ax-checkout-qty-note">
-                Quantity: <strong>{quantity}</strong> × {formatCurrency(product.price)} each
-              </p>
-
-              {/* Delivery Name */}
-              <div style={{ marginBottom: '16px' }}>
-                <label htmlFor="deliveryName" style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>
-                  Delivery Name <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  id="deliveryName"
-                  value={orderForm.deliveryName}
-                  onChange={(e) => setOrderForm(prev => ({ ...prev, deliveryName: e.target.value }))}
-                  required
-                  placeholder="Enter recipient name"
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    border: '1px solid #e4e6eb',
-                    borderRadius: '8px',
-                    fontSize: '0.9375rem',
-                    fontFamily: 'inherit',
-                  }}
-                  disabled={orderSubmitting || isOutOfStock}
-                />
-              </div>
-
-              {/* Delivery Address */}
-              <div style={{ marginBottom: '16px' }}>
-                <label htmlFor="deliveryAddress" style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>
-                  Delivery Address <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <textarea
-                  id="deliveryAddress"
-                  value={orderForm.deliveryAddress}
-                  onChange={(e) => setOrderForm(prev => ({ ...prev, deliveryAddress: e.target.value }))}
-                  required
-                  rows={3}
-                  placeholder="Enter your delivery address"
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    border: '1px solid #e4e6eb',
-                    borderRadius: '8px',
-                    fontSize: '0.9375rem',
-                    fontFamily: 'inherit',
-                    resize: 'vertical',
-                  }}
-                  disabled={orderSubmitting || isOutOfStock}
-                />
-              </div>
-
-              {/* Delivery Phone */}
-              <div style={{ marginBottom: '16px' }}>
-                <label htmlFor="deliveryPhone" style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>
-                  Delivery Phone <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <input
-                  type="tel"
-                  id="deliveryPhone"
-                  value={orderForm.deliveryPhone}
-                  onChange={(e) => setOrderForm(prev => ({ ...prev, deliveryPhone: e.target.value }))}
-                  required
-                  placeholder="+255712345678"
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    border: '1px solid #e4e6eb',
-                    borderRadius: '8px',
-                    fontSize: '0.9375rem',
-                    fontFamily: 'inherit',
-                  }}
-                  disabled={orderSubmitting || isOutOfStock}
-                />
-              </div>
-
-              {/* Total */}
-              <div style={{ padding: '16px', background: '#f9fafb', borderRadius: '8px', marginBottom: '16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span>Subtotal ({quantity} {quantity === 1 ? 'item' : 'items'})</span>
-                  <span style={{ fontWeight: 600 }}>{formatCurrency(totalPrice)}</span>
+              <div className="checkout-summary">
+                <div className="summary-row">
+                  <span>{quantity} × {formatCurrency(product.price)}</span>
+                  <span>{formatCurrency(totalPrice)}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.125rem', fontWeight: 700, paddingTop: '8px', borderTop: '1px solid #e4e6eb' }}>
+                <div className="summary-total">
                   <span>Total</span>
-                  <span style={{ color: '#7c3aed' }}>{formatCurrency(totalPrice)}</span>
+                  <span>{formatCurrency(totalPrice)}</span>
                 </div>
               </div>
 
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={orderSubmitting || isOutOfStock || !user}
-                style={{
-                  width: '100%',
-                  padding: '14px',
-                  background: isOutOfStock || !user ? '#d1d5db' : '#7c3aed',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '1rem',
-                  fontWeight: 600,
-                  cursor: isOutOfStock || !user ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                }}
-              >
-                {orderSubmitting ? (
-                  <>
-                    <Loader2 size={20} className="icon-spin" />
-                    Placing Order...
-                  </>
-                ) : isOutOfStock ? (
-                  'Out of Stock'
-                ) : !user ? (
-                  'Please login to order'
-                ) : (
-                  <>
-                    <ShoppingBag size={20} />
-                    Place Order
-                  </>
-                )}
-              </button>
-            </form>
-          ) : (
-            <div className="product-details-success-card product-details-ax-order-success">
-              <CheckCircle size={64} style={{ color: '#22c55e', margin: '0 auto 16px' }} />
-              <h2 style={{ margin: '0 0 8px', fontSize: '1.5rem', fontWeight: 600 }}>Order placed successfully</h2>
-              <p style={{ margin: '0 0 24px', color: '#65676b' }}>Redirecting to your orders…</p>
-            </div>
-          )
-          ) : null}
+              <form onSubmit={handleOrderSubmit}>
+                <div className="checkout-field">
+                  <label htmlFor="deliveryName">Full Name <span className="required">*</span></label>
+                  <input
+                    type="text"
+                    id="deliveryName"
+                    value={orderForm.deliveryName}
+                    onChange={(e) => setOrderForm(prev => ({ ...prev, deliveryName: e.target.value }))}
+                    placeholder="Enter your full name"
+                    disabled={orderSubmitting}
+                    required
+                  />
+                </div>
 
-        </div>
+                <div className="checkout-field">
+                  <label htmlFor="deliveryPhone">Phone Number <span className="required">*</span></label>
+                  <input
+                    type="tel"
+                    id="deliveryPhone"
+                    value={orderForm.deliveryPhone}
+                    onChange={(e) => setOrderForm(prev => ({ ...prev, deliveryPhone: e.target.value }))}
+                    placeholder="+255712345678"
+                    disabled={orderSubmitting}
+                    required
+                  />
+                </div>
+
+                <div className="checkout-field">
+                  <label htmlFor="deliveryAddress">Delivery Address <span className="required">*</span></label>
+                  <textarea
+                    id="deliveryAddress"
+                    value={orderForm.deliveryAddress}
+                    onChange={(e) => setOrderForm(prev => ({ ...prev, deliveryAddress: e.target.value }))}
+                    placeholder="Enter your complete delivery address"
+                    rows={2}
+                    disabled={orderSubmitting}
+                    required
+                  />
+                </div>
+
+                <button type="submit" className="btn-place-order" disabled={orderSubmitting || isOutOfStock || !user}>
+                  {orderSubmitting ? (
+                    <>
+                      <Loader2 size={18} className="spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <ShoppingBag size={18} />
+                      Place Order
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* Success States */}
+          {orderSuccess && (
+            <div className="product-details-pro-success">
+              <div className="success-icon">
+                <CheckCircle size={48} />
+              </div>
+              <h3>Order Placed!</h3>
+              <p>Redirecting to your orders...</p>
+            </div>
+          )}
+
+          {inquirySuccess && (
+            <div className="product-details-pro-success inquiry">
+              <div className="success-icon">
+                <CheckCircle size={48} />
+              </div>
+              <h3>Quote Request Sent!</h3>
+              <p>The seller will reply soon.</p>
+              <Link to="/app/inquiries" className="btn-view-inquiries">View My Inquiries</Link>
+            </div>
+          )}
         </div>
       </div>
 
-      <section className="product-details-similar product-details-similar-ae shop-mp-mic shop-mp-kikuu" aria-labelledby="product-details-similar-heading">
-        <div className="product-details-similar-head">
-          <h2 id="product-details-similar-heading" className="product-details-similar-title">
-            Similar products
-          </h2>
-          <p className="product-details-similar-sub">Same category or from this seller</p>
+      {/* Tabbed Content Section */}
+      <div className="product-details-pro-tabs-section">
+        <div className="product-details-pro-tabs">
+          {TABS.map(tab => (
+            <button
+              key={tab.id}
+              type="button"
+              className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="product-details-pro-tab-content">
+          {activeTab === 'description' && (
+            <div className="tab-panel description-panel">
+              {product.description ? (
+                <div className="description-content">
+                  <h4>About this product</h4>
+                  <p>{product.description}</p>
+                </div>
+              ) : (
+                <p className="no-content">No description available</p>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'specifications' && (
+            <div className="tab-panel specs-panel">
+              <div className="specs-grid">
+                <div className="spec-item">
+                  <span className="spec-label">Category</span>
+                  <span className="spec-value">{product.category || 'N/A'}</span>
+                </div>
+                <div className="spec-item">
+                  <span className="spec-label">Stock Available</span>
+                  <span className="spec-value">{product.stockQuantity ?? 'Unlimited'}</span>
+                </div>
+                <div className="spec-item">
+                  <span className="spec-label">Minimum Order</span>
+                  <span className="spec-value">{product.minOrderQuantity || 1} units</span>
+                </div>
+                <div className="spec-item">
+                  <span className="spec-label">Product ID</span>
+                  <span className="spec-value">#{product.id}</span>
+                </div>
+                {product.sku && (
+                  <div className="spec-item">
+                    <span className="spec-label">SKU</span>
+                    <span className="spec-value">{product.sku}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'shipping' && (
+            <div className="tab-panel shipping-panel">
+              <div className="shipping-info">
+                <div className="shipping-item">
+                  <Truck size={24} />
+                  <div>
+                    <h5>Nationwide Delivery</h5>
+                    <p>We deliver to all regions across the country. Delivery times vary by location.</p>
+                  </div>
+                </div>
+                <div className="shipping-item">
+                  <Clock size={24} />
+                  <div>
+                    <h5>Processing Time</h5>
+                    <p>Orders are typically processed within 1-2 business days.</p>
+                  </div>
+                </div>
+                <div className="shipping-item">
+                  <RotateCcw size={24} />
+                  <div>
+                    <h5>Return Policy</h5>
+                    <p>Returns accepted within 7 days of delivery if product is unused and in original packaging.</p>
+                  </div>
+                </div>
+                <div className="shipping-item">
+                  <ShieldCheck size={24} />
+                  <div>
+                    <h5>Secure Packaging</h5>
+                    <p>All items are carefully packaged to ensure they arrive in perfect condition.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Similar Products */}
+      <section className="product-details-pro-similar">
+        <div className="similar-header">
+          <div>
+            <h2>Similar Products</h2>
+            <p>More items from this category or seller</p>
+          </div>
+          <Link to="/app/shop" className="btn-view-all">
+            View All <ChevronRight size={16} />
+          </Link>
         </div>
         {similarLoading ? (
           <ShopGridSkeleton cards={6} />
         ) : similarProducts.length === 0 ? (
-          <p className="product-details-similar-empty">No similar listings right now.</p>
+          <p className="similar-empty">No similar products found</p>
         ) : (
-          <div className="product-details-similar-track">
+          <div className="similar-grid">
             {similarProducts.map((p) => (
-              <div key={p.id} className="product-details-similar-slide">
-                <MarketplaceProductCard product={p} showSoldBadge />
-              </div>
+              <MarketplaceProductCard key={p.id} product={p} showSoldBadge />
             ))}
           </div>
         )}
