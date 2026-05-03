@@ -3,7 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, ShoppingBag, Star, Package, MapPin, Loader2, AlertCircle, Plus, Minus, CheckCircle, Image as ImageIcon, Star as StarIcon, TrendingUp, MessageCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { getProductById } from '@/lib/api/products';
+import { getProductById, getProductsByCategory, getProductsByBusiness, getProducts } from '@/lib/api/products';
+import { MarketplaceProductCard } from '@/components/marketplace/MarketplaceProductCard';
+import { ShopGridSkeleton } from '@/components/ui/ShopGridSkeleton';
 import { createOrder } from '@/lib/api/orders';
 import { createInquiry } from '@/lib/api/inquiries';
 import { useAuthStore } from '@/store/auth.store';
@@ -51,6 +53,23 @@ export default function ProductDetails() {
     queryKey: ['product', id],
     queryFn: () => getProductById(id),
     enabled: !!id,
+  });
+
+  const { data: similarProducts = [], isPending: similarLoading } = useQuery({
+    queryKey: ['product', id, 'similar', product?.category ?? '', product?.business?.id ?? ''],
+    queryFn: async () => {
+      let data;
+      if (product.category) {
+        data = await getProductsByCategory(product.category, { page: 0, size: 24 });
+      } else if (product.business?.id) {
+        data = await getProductsByBusiness(product.business.id, { page: 0, size: 24 });
+      } else {
+        data = await getProducts({ page: 0, size: 24 });
+      }
+      const list = Array.isArray(data?.content) ? data.content : Array.isArray(data) ? data : [];
+      return list.filter((p) => p && String(p.id) !== String(id)).slice(0, 8);
+    },
+    enabled: !!product && !!id,
   });
 
   const error = !id
@@ -202,8 +221,7 @@ export default function ProductDetails() {
   const maxQuantity = product.stockQuantity !== null && product.stockQuantity !== undefined ? product.stockQuantity : 999;
 
   return (
-    <div className="product-details-container">
-      {/* Back button */}
+    <div className="product-details-container product-details-mic">
       <button
         type="button"
         onClick={() => navigate(-1)}
@@ -213,20 +231,35 @@ export default function ProductDetails() {
         Back
       </button>
 
-      <div className="product-details-grid">
-        {/* Product Images */}
+      <nav className="product-details-breadcrumb" aria-label="Breadcrumb">
+        <Link to="/app/shop">Marketplace</Link>
+        <span className="product-details-breadcrumb-sep" aria-hidden>
+          /
+        </span>
+        {product.category ? (
+          <>
+            <span className="product-details-breadcrumb-muted">{product.category}</span>
+            <span className="product-details-breadcrumb-sep" aria-hidden>
+              /
+            </span>
+          </>
+        ) : null}
+        <span className="product-details-breadcrumb-current">{product.name}</span>
+      </nav>
+
+      <div className="product-details-grid product-details-mic-grid">
         <div className="product-details-images-col">
-          <div className="product-details-image-card">
-            <div style={{ width: '100%', aspectRatio: 1, background: '#f0f2f5', position: 'relative' }}>
+          <div className="product-details-image-card product-details-mic-card">
+            <div className="product-details-main-image-wrap">
               {mainImage ? (
                 <img
                   src={mainImage}
                   alt={product.name}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  className="product-details-main-image"
                 />
               ) : (
-                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <ImageIcon size={64} style={{ color: '#d1d5db' }} />
+                <div className="product-details-main-image-placeholder">
+                  <ImageIcon size={64} />
                 </div>
               )}
             </div>
@@ -238,22 +271,11 @@ export default function ProductDetails() {
                   key={index}
                   type="button"
                   onClick={() => setSelectedImageIndex(index)}
-                  style={{
-                    width: '80px',
-                    height: '80px',
-                    padding: 0,
-                    border: selectedImageIndex === index ? '2px solid #7c3aed' : '2px solid #e4e6eb',
-                    borderRadius: '8px',
-                    overflow: 'hidden',
-                    background: '#f0f2f5',
-                    cursor: 'pointer',
-                    flexShrink: 0,
-                  }}
+                  className={`product-thumbnails-btn ${selectedImageIndex === index ? 'active' : ''}`}
                 >
                   <img
                     src={img.url}
                     alt={`${product.name} ${index + 1}`}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
                 </button>
               ))}
@@ -261,9 +283,8 @@ export default function ProductDetails() {
           )}
         </div>
 
-        {/* Product Info */}
         <div className="product-details-info-col">
-          <div className="product-details-info-card">
+          <div className="product-details-info-card product-details-mic-card">
             <div className="product-details-badges">
               {product.isFeatured && (
                 <span className="product-details-badge product-details-badge-featured">
@@ -284,12 +305,12 @@ export default function ProductDetails() {
             {product.category && (
               <span className="product-details-category">{product.category}</span>
             )}
-            <div className="product-price">
-              <span style={{ fontSize: '2rem', fontWeight: 700, color: '#7c3aed' }}>
+            <div className="product-price product-details-mic-price">
+              <span className="product-details-mic-price-main">
                 {formatCurrency(product.price)}
               </span>
               {product.compareAtPrice && product.compareAtPrice > product.price && (
-                <span style={{ fontSize: '1.25rem', color: '#65676b', textDecoration: 'line-through' }}>
+                <span className="product-details-mic-price-compare">
                   {formatCurrency(product.compareAtPrice)}
                 </span>
               )}
@@ -671,6 +692,26 @@ export default function ProductDetails() {
           ) )}
         </div>
       </div>
+
+      <section className="product-details-similar shop-mp-mic shop-mp-kikuu" aria-labelledby="product-details-similar-heading">
+        <div className="product-details-similar-head">
+          <h2 id="product-details-similar-heading" className="product-details-similar-title">
+            Similar products
+          </h2>
+          <p className="product-details-similar-sub">Same category or from this seller</p>
+        </div>
+        {similarLoading ? (
+          <ShopGridSkeleton cards={6} />
+        ) : similarProducts.length === 0 ? (
+          <p className="product-details-similar-empty">No similar listings right now.</p>
+        ) : (
+          <div className="shop-mp-grid">
+            {similarProducts.map((p) => (
+              <MarketplaceProductCard key={p.id} product={p} showSoldBadge />
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
