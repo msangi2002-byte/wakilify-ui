@@ -584,6 +584,14 @@ body:has(.user-app) {
   margin: 0 auto;
 }
 
+/* Marketplace: wider feed so product grid + filter column are not crushed */
+@media (min-width: 901px) {
+  .user-app-body:has(.shop-mp-page) {
+    grid-template-columns: 1fr minmax(0, min(880px, 100%)) 1fr;
+    max-width: 1400px;
+  }
+}
+
 .user-app-sidebar {
   position: sticky;
   top: calc(56px + env(safe-area-inset-top, 0));
@@ -11088,29 +11096,37 @@ body:has(.user-app) {
   margin-top: 0;
 }
 
-/* Grid – 5 cols desktop, 4 tablet, 3 small, 2 mobile (Alibaba-style) */
+/*
+ * Product grid: use auto-fill + min track width so columns follow *available*
+ * width (center column is max 680px minus filters — fixed repeat(5,1fr) was
+ * squeezing cards into ultra-narrow strips).
+ */
 .shop-mp-kikuu .shop-mp-grid {
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(min(152px, 100%), 1fr));
   gap: 12px;
+}
+
+.shop-mp-kikuu .shop-mp-grid > * {
+  min-width: 0;
 }
 
 @media (min-width: 480px) {
   .shop-mp-kikuu .shop-mp-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(min(158px, 100%), 1fr));
     gap: 14px;
   }
 }
 
 @media (min-width: 768px) {
   .shop-mp-kikuu .shop-mp-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(min(164px, 100%), 1fr));
     gap: 16px;
   }
 }
 
 @media (min-width: 1100px) {
   .shop-mp-kikuu .shop-mp-grid {
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(min(168px, 100%), 1fr));
     gap: 18px;
   }
 }
