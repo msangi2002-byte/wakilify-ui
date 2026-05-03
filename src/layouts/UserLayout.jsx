@@ -780,45 +780,41 @@ export default function UserLayout() {
         </div>
       </header>
 
-      <div className={`user-app-body ${location.pathname.startsWith('/app/shop') ? 'user-app-body-shop' : ''} user-app-body-hide-scrollbar`}>
-        {!location.pathname.startsWith('/app/shop') && (
-          <aside className="user-app-sidebar">
-            <ul className="user-app-sidebar-list">
-              {[
-                ...leftNav,
-                ...(String(user?.role ?? '').toLowerCase() === ROLES.AGENT
-                  ? [{ to: '/agent', icon: Building2, label: 'Agent Dashboard', iconStyle: 'profile' }]
-                  : [{ to: '/app/register-agent', icon: Sparkles, label: 'Become agent', iconStyle: 'golden' }]),
-                ...(String(user?.role ?? '').toLowerCase() === ROLES.ADMIN
-                  ? [{ to: '/admin', icon: Shield, label: 'Admin Dashboard', iconStyle: 'settings' }]
-                  : []),
-              ].map((item) => {
-                const Icon = item.icon;
-                const isActive = item.to === '/app'
-                  ? (location.pathname === '/app' || location.pathname === '/app/')
-                  : (location.pathname === item.to || location.pathname.startsWith(item.to + '/'));
-                const iconClass = item.iconStyle ? ` sidebar-icon-${item.iconStyle}` : '';
-                return (
-                  <li key={item.to + item.label}>
-                    <Link
-                      to={item.to}
-                      className={`user-app-sidebar-link${isActive ? ' active' : ''}${iconClass}`}
-                    >
-                      <span className="icon-wrap">
-                        <Icon size={20} strokeWidth={2.4} />
-                      </span>
-                      {item.label}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </aside>
-        )}
+      <div className="user-app-body user-app-body-hide-scrollbar">
+        <aside className="user-app-sidebar">
+          <ul className="user-app-sidebar-list">
+            {[
+              ...leftNav,
+              ...(String(user?.role ?? '').toLowerCase() === ROLES.AGENT
+                ? [{ to: '/agent', icon: Building2, label: 'Agent Dashboard', iconStyle: 'profile' }]
+                : [{ to: '/app/register-agent', icon: Sparkles, label: 'Become agent', iconStyle: 'golden' }]),
+              ...(String(user?.role ?? '').toLowerCase() === ROLES.ADMIN
+                ? [{ to: '/admin', icon: Shield, label: 'Admin Dashboard', iconStyle: 'settings' }]
+                : []),
+            ].map((item) => {
+              const Icon = item.icon;
+              const isActive = item.to === '/app'
+                ? (location.pathname === '/app' || location.pathname === '/app/')
+                : (location.pathname === item.to || location.pathname.startsWith(item.to + '/'));
+              const iconClass = item.iconStyle ? ` sidebar-icon-${item.iconStyle}` : '';
+              return (
+                <li key={item.to + item.label}>
+                  <Link
+                    to={item.to}
+                    className={`user-app-sidebar-link${isActive ? ' active' : ''}${iconClass}`}
+                  >
+                    <span className="icon-wrap">
+                      <Icon size={20} strokeWidth={2.4} />
+                    </span>
+                    {item.label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </aside>
 
-        <main
-          className={`user-app-main ${location.pathname.startsWith('/app/shop') ? 'user-app-main-no-left-sidebar' : ''} user-app-main-hide-scrollbar`}
-        >
+        <main className="user-app-main user-app-main-hide-scrollbar">
           <Outlet />
         </main>
 
