@@ -286,7 +286,7 @@ export default function ProductDetails() {
         </div>
 
         <div className="product-details-info-col">
-          <div className="product-details-ax-card product-details-mic-card">
+          <div className="product-details-ax-card product-details-mic-card product-details-buy-pro">
             <div className="product-details-ax-head">
               <div className="product-details-badges">
                 {product.isFeatured && (
@@ -395,13 +395,13 @@ export default function ProductDetails() {
                     }}
                   >
                     <MessageCircle size={20} aria-hidden />
-                    Request quote
+                    Get quote
                   </button>
                 </div>
                 {!user ? (
                   <p className="product-details-ax-login-hint">Log in to purchase or message the seller.</p>
                 ) : (
-                  <p className="product-details-ax-ship-hint">Seller ships after payment · You can also request a custom quote below.</p>
+                  <p className="product-details-ax-ship-hint">Seller ships after payment. Use Get quote for bulk or custom terms.</p>
                 )}
               </div>
             ) : null}
