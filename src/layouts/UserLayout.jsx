@@ -690,7 +690,7 @@ export default function UserLayout() {
                           onClick={() => setNavMenuOpen(false)}
                         >
                           <span className="user-app-nav-drawer-icon">
-                            <Icon size={22} />
+                            <Icon size={20} strokeWidth={2.4} />
                           </span>
                           <span className="user-app-nav-drawer-label">{item.label}</span>
                           {item.label === 'Notifications' && unreadNotificationCount > 0 && (
@@ -805,7 +805,7 @@ export default function UserLayout() {
                       className={`user-app-sidebar-link${isActive ? ' active' : ''}${iconClass}`}
                     >
                       <span className="icon-wrap">
-                        <Icon size={22} strokeWidth={3} />
+                        <Icon size={20} strokeWidth={2.4} />
                       </span>
                       {item.label}
                     </Link>

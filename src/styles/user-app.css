@@ -609,7 +609,7 @@ body:has(.user-app) {
   padding: 0;
 }
 
-/* Left sidebar – design original: icons hazina duara, kubwa kidogo, rangi tofauti */
+/* Left sidebar – custom minimal glyph style (distinct brand look) */
 .user-app-sidebar-list {
   display: flex;
   flex-direction: column;
@@ -626,83 +626,56 @@ body:has(.user-app) {
   gap: 14px;
   padding: 12px 14px;
   border-radius: 10px;
-  color: var(--wk-text);
+  color: #1f2937;
   text-decoration: none;
   font-weight: 500;
-  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s, transform 0.18s;
 }
 
 .user-app-sidebar-link:hover:not(.active) {
-  background: rgba(127, 90, 240, 0.06);
-  color: var(--wk-text);
+  background: rgba(124, 58, 237, 0.08);
+  color: #111827;
+  transform: translateX(1px);
 }
 
-/* Icons: Bulk/Filled look (nene, shiba) */
 .user-app-sidebar-link .icon-wrap {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: auto;
-  height: auto;
-  min-width: 28px;
-  min-height: 28px;
-  background: transparent;
-  border-radius: 0;
-  color: var(--wk-primary);
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: #111827;
+  color: #ffffff;
   flex-shrink: 0;
-  transition: color 0.2s;
+  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.18);
+  transition: background 0.2s, transform 0.2s;
 }
 .user-app-sidebar-link .icon-wrap svg {
-  fill: currentColor;
+  width: 18px;
+  height: 18px;
   stroke: currentColor;
-  width: 22px;
-  height: 22px;
-  stroke-width: 3;
+  fill: none;
+  stroke-width: 2.4;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
-/* Color coding – kila menu item utambulisho wake (Vibrancy) */
-.user-app-sidebar-link.sidebar-icon-profile .icon-wrap { color: #8A2BE2; }
-.user-app-sidebar-link.sidebar-icon-profile:hover:not(.active) .icon-wrap { color: #7C3AED; }
-.user-app-sidebar-link.sidebar-icon-friends .icon-wrap { color: #1877F2; }
-.user-app-sidebar-link.sidebar-icon-friends:hover:not(.active) .icon-wrap { color: #166FE5; }
-.user-app-sidebar-link.sidebar-icon-live .icon-wrap { color: #F02849; }
-.user-app-sidebar-link.sidebar-icon-live:hover:not(.active) .icon-wrap { color: #E11D48; }
-.user-app-sidebar-link.sidebar-icon-groups .icon-wrap { color: #00B894; }
-.user-app-sidebar-link.sidebar-icon-groups:hover:not(.active) .icon-wrap { color: #00A085; }
-.user-app-sidebar-link.sidebar-icon-marketplace .icon-wrap { color: #F2994A; }
-.user-app-sidebar-link.sidebar-icon-marketplace:hover:not(.active) .icon-wrap { color: #E08B3A; }
-.user-app-sidebar-link.sidebar-icon-gradient .icon-wrap { color: #7C3AED; }
-.user-app-sidebar-link.sidebar-icon-gradient:hover:not(.active) .icon-wrap { color: #6D28D9; }
-.user-app-sidebar-link.sidebar-icon-orders .icon-wrap { color: #8A2BE2; }
-.user-app-sidebar-link.sidebar-icon-orders:hover:not(.active) .icon-wrap { color: #7C3AED; }
-.user-app-sidebar-link.sidebar-icon-notifications .icon-wrap { color: #E11D48; }
-.user-app-sidebar-link.sidebar-icon-notifications:hover:not(.active) .icon-wrap { color: #BE123C; }
-.user-app-sidebar-link.sidebar-icon-settings .icon-wrap { color: #6B7280; }
-.user-app-sidebar-link.sidebar-icon-settings:hover:not(.active) .icon-wrap { color: #4B5563; }
-.user-app-sidebar-link.sidebar-icon-golden .icon-wrap { color: #F2994A; }
-.user-app-sidebar-link.sidebar-icon-golden:hover:not(.active) .icon-wrap { color: #E08B3A; }
-
 .user-app-sidebar-link:hover:not(.active) .icon-wrap {
-  color: inherit;
+  background: #374151;
+  transform: translateY(-1px);
 }
 
-/* Active tab – style ya button (gradient, nyeupe, kivuli) */
 .user-app-sidebar-link.active {
-  background: linear-gradient(90deg, #7F5AF0 0%, #F72585 100%);
-  color: #ffffff;
+  background: rgba(124, 58, 237, 0.13);
+  color: #5b21b6;
   font-weight: 600;
-  box-shadow: 0 4px 10px rgba(127, 90, 240, 0.3);
+  box-shadow: inset 0 0 0 1px rgba(124, 58, 237, 0.2);
 }
 .user-app-sidebar-link.active .icon-wrap {
-  color: #ffffff !important;
-  background: transparent;
-  box-shadow: none;
-}
-.user-app-sidebar-link.active .icon-wrap svg {
-  fill: #ffffff;
-  stroke: #ffffff;
+  background: #7c3aed;
+  color: #ffffff;
+  box-shadow: 0 4px 10px rgba(124, 58, 237, 0.28);
 }
 
 .user-app-main {
@@ -5938,15 +5911,22 @@ body:has(.user-app) {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
+    width: 34px;
+    height: 34px;
     border-radius: 10px;
-    background: #f0f2f5;
+    background: #111827;
+    color: #fff;
+    box-shadow: 0 1px 2px rgba(17, 24, 39, 0.18);
     flex-shrink: 0;
   }
+  .user-app-nav-drawer-icon svg {
+    width: 17px;
+    height: 17px;
+    stroke-width: 2.4;
+  }
   .user-app-nav-drawer-item.active .user-app-nav-drawer-icon {
-    background: rgba(124, 58, 237, 0.15);
-    color: #7c3aed;
+    background: #7c3aed;
+    color: #fff;
   }
   .user-app-nav-drawer-label {
     flex: 1;
