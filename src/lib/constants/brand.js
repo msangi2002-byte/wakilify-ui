@@ -1,12 +1,12 @@
 /**
  * Brand constants – Wakilfy
- * Logo: public/brand/wakilfy-logo.png (PNG with transparent background)
+ * Primary app icon/logo source: public/wakify-icon.svg
  */
 
 export const APP_NAME = 'Wakilfy';
 
-/** Primary logo (PNG with transparent background) */
-export const LOGO_PNG = '/brand/wakilfy-logo.png';
+/** Primary logo/icon */
+export const LOGO_PNG = '/wakify-icon.svg';
 
 /** Fallback icon (SVG) when logo is not available */
 export const LOGO_ICON = '/wakify-icon.svg';
