@@ -278,9 +278,15 @@ export default function Shop() {
 
   const sortLabel = SORT_OPTIONS.find((o) => o.id === sortBy)?.label ?? 'Sort';
   const showHeroSections = !search.trim() && category === 'all';
+  const listingTitle = search.trim()
+    ? 'Search results'
+    : category === 'all'
+      ? 'All listings'
+      : category;
+  const productCount = sortedProducts.length;
 
   return (
-    <div className="shop-mp-page shop-mp-kikuu">
+    <div className="shop-mp-page shop-mp-kikuu shop-mp-mic">
       {/* Top bar – Alibaba-style: title + search + actions */}
       <header className="shop-mp-topbar">
         <div className="shop-mp-topbar-inner">
@@ -358,50 +364,6 @@ export default function Shop() {
             </section>
           )}
 
-          {/* Toolbar: sort only (search is in top bar) */}
-          <div className="shop-mp-toolbar">
-            <div className="shop-mp-toolbar-right">
-            <div className="shop-mp-sort-wrap">
-              <span className="shop-mp-sort-label">Sort</span>
-              <button
-                type="button"
-                className="shop-mp-sort-btn"
-                onClick={() => setSortOpen((o) => !o)}
-                aria-expanded={sortOpen}
-                title="Sort products"
-              >
-                {sortLabel}
-                <ChevronDown size={18} />
-              </button>
-              {sortOpen && (
-                <>
-                  <div
-                    className="shop-mp-sort-backdrop"
-                    onClick={() => setSortOpen(false)}
-                    aria-hidden="true"
-                  />
-                  <div className="shop-mp-sort-dropdown" role="menu">
-                    {SORT_OPTIONS.map((opt) => (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        role="menuitem"
-                        className={`shop-mp-sort-item ${sortBy === opt.id ? 'active' : ''}`}
-                        onClick={() => {
-                          setSortBy(opt.id);
-                          setSortOpen(false);
-                        }}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-            </div>
-          </div>
-
         {/* Top Sells – only when no search, category all */}
         {showHeroSections && (topSelling.length > 0 || topSellingLoading) && (
           <section className="shop-mp-section shop-mp-section-highlight" aria-label="Top selling products">
@@ -462,15 +424,116 @@ export default function Shop() {
           </section>
         )}
 
-        {/* All listings / Search results */}
-        <section className="shop-mp-section" aria-label="All products">
-          <h2 className="shop-mp-section-title">
-            {search.trim()
-              ? 'Search results'
-              : category === 'all'
-                ? 'All listings'
-                : category}
-          </h2>
+        {/* Catalog: left filters (MIC-style) + main grid */}
+        <div className="shop-mp-catalog-layout">
+          <aside className="shop-mp-filters" aria-label="Refine results">
+            <details className="shop-mp-filters-mobile">
+              <summary className="shop-mp-filters-mobile-summary">Filter &amp; sort</summary>
+              <div className="shop-mp-filters-mobile-body">
+                <p className="shop-mp-filter-heading">Sort by</p>
+                <div className="shop-mp-filter-stack">
+                  {SORT_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      className={`shop-mp-filter-option ${sortBy === opt.id ? 'active' : ''}`}
+                      onClick={() => setSortBy(opt.id)}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </details>
+
+            <div className="shop-mp-filters-desktop">
+              <div className="shop-mp-filter-block">
+                <p className="shop-mp-filter-heading">Product categories</p>
+                <div className="shop-mp-filter-stack">
+                  {CATEGORIES.map((cat) => (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      className={`shop-mp-filter-option ${category === cat.id ? 'active' : ''}`}
+                      onClick={() => setCategory(cat.id)}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="shop-mp-filter-block">
+                <p className="shop-mp-filter-heading">Sort by</p>
+                <div className="shop-mp-filter-stack">
+                  {SORT_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      className={`shop-mp-filter-option ${sortBy === opt.id ? 'active' : ''}`}
+                      onClick={() => setSortBy(opt.id)}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          <div className="shop-mp-listing">
+            <div className="shop-mp-listing-header">
+              <div className="shop-mp-listing-heading">
+                <h2 className="shop-mp-listing-title">{listingTitle}</h2>
+                <p className="shop-mp-result-count">
+                  {productCount} product{productCount !== 1 ? 's' : ''}
+                  {search.trim() && matchingShops.length > 0
+                    ? ` · ${matchingShops.length} shop${matchingShops.length !== 1 ? 's' : ''}`
+                    : ''}
+                </p>
+              </div>
+              <div className="shop-mp-listing-sort-mobile">
+                <div className="shop-mp-sort-wrap">
+                  <span className="shop-mp-sort-label">Sort</span>
+                  <button
+                    type="button"
+                    className="shop-mp-sort-btn"
+                    onClick={() => setSortOpen((o) => !o)}
+                    aria-expanded={sortOpen}
+                    title="Sort products"
+                  >
+                    {sortLabel}
+                    <ChevronDown size={18} />
+                  </button>
+                  {sortOpen && (
+                    <>
+                      <div
+                        className="shop-mp-sort-backdrop"
+                        onClick={() => setSortOpen(false)}
+                        aria-hidden="true"
+                      />
+                      <div className="shop-mp-sort-dropdown" role="menu">
+                        {SORT_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            role="menuitem"
+                            className={`shop-mp-sort-item ${sortBy === opt.id ? 'active' : ''}`}
+                            onClick={() => {
+                              setSortBy(opt.id);
+                              setSortOpen(false);
+                            }}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+        <section className="shop-mp-section shop-mp-listing-section" aria-label="All products">
 
           {loading ? (
             <ShopGridSkeleton cards={8} />
@@ -604,6 +667,8 @@ export default function Shop() {
             </div>
           )}
         </section>
+          </div>
+        </div>
         </div>
       </main>
     </div>
