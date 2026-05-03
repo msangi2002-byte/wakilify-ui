@@ -12,87 +12,97 @@ import { RoleGuard } from '@/app/guards/RoleGuard';
 import { GuestOnly } from '@/app/guards/GuestOnly';
 import { OnboardingGuard } from '@/app/guards/OnboardingGuard';
 import { ROLES } from '@/types/roles';
+import { RouterErrorBoundary } from '@/components/RouterErrorBoundary';
+import { lazyWithRetry } from '@/lib/lazyWithRetry';
 
-const Register = lazy(() => import('@/pages/auth/Register'));
-const Otp = lazy(() => import('@/pages/auth/Otp'));
-const Login = lazy(() => import('@/pages/auth/Login'));
-const Impersonate = lazy(() => import('@/pages/auth/Impersonate'));
+const Register = lazy(() => lazyWithRetry(() => import('@/pages/auth/Register')));
+const Otp = lazy(() => lazyWithRetry(() => import('@/pages/auth/Otp')));
+const Login = lazy(() => lazyWithRetry(() => import('@/pages/auth/Login')));
+const Impersonate = lazy(() => lazyWithRetry(() => import('@/pages/auth/Impersonate')));
 
-const Home = lazy(() => import('@/pages/user/Home'));
-const Explore = lazy(() => import('@/pages/user/Explore'));
-const Create = lazy(() => import('@/pages/user/Create'));
-const Reels = lazy(() => import('@/pages/user/Reels'));
-const Stories = lazy(() => import('@/pages/user/Stories'));
-const StoryCreate = lazy(() => import('@/pages/user/StoryCreate'));
-const StoryViewer = lazy(() => import('@/pages/user/StoryViewer'));
-const Shop = lazy(() => import('@/pages/user/Shop'));
-const ShopBusiness = lazy(() => import('@/pages/user/ShopBusiness'));
-const ProductDetails = lazy(() => import('@/pages/user/ProductDetails'));
-const Cart = lazy(() => import('@/pages/user/Cart'));
-const Checkout = lazy(() => import('@/pages/user/Checkout'));
-const Orders = lazy(() => import('@/pages/user/Orders'));
-const Inquiries = lazy(() => import('@/pages/user/Inquiries'));
-const Live = lazy(() => import('@/pages/user/Live'));
-const LiveViewer = lazy(() => import('@/pages/user/LiveViewer'));
-const Wallet = lazy(() => import('@/pages/user/Wallet'));
-const BuyCoins = lazy(() => import('@/pages/user/BuyCoins'));
-const Messages = lazy(() => import('@/pages/user/Messages'));
-const Chat = lazy(() => import('@/pages/user/Chat'));
-const Call = lazy(() => import('@/pages/user/Call'));
-const Profile = lazy(() => import('@/pages/user/Profile'));
-const Friends = lazy(() => import('@/pages/user/Friends'));
-const Groups = lazy(() => import('@/pages/user/Groups'));
-const GroupDetail = lazy(() => import('@/pages/user/GroupDetail'));
-const GroupCreate = lazy(() => import('@/pages/user/GroupCreate'));
-const UserSettings = lazy(() => import('@/pages/user/Settings'));
-const RegisterAgent = lazy(() => import('@/pages/user/RegisterAgent'));
-const Notifications = lazy(() => import('@/pages/user/Notifications'));
-const Onboarding = lazy(() => import('@/pages/user/Onboarding'));
-const Boost = lazy(() => import('@/pages/user/Boost'));
-const PostDetail = lazy(() => import('@/pages/user/PostDetail'));
+const Home = lazy(() => lazyWithRetry(() => import('@/pages/user/Home')));
+const Explore = lazy(() => lazyWithRetry(() => import('@/pages/user/Explore')));
+const Create = lazy(() => lazyWithRetry(() => import('@/pages/user/Create')));
+const Reels = lazy(() => lazyWithRetry(() => import('@/pages/user/Reels')));
+const Stories = lazy(() => lazyWithRetry(() => import('@/pages/user/Stories')));
+const StoryCreate = lazy(() => lazyWithRetry(() => import('@/pages/user/StoryCreate')));
+const StoryViewer = lazy(() => lazyWithRetry(() => import('@/pages/user/StoryViewer')));
+const Shop = lazy(() => lazyWithRetry(() => import('@/pages/user/Shop')));
+const ShopBusiness = lazy(() => lazyWithRetry(() => import('@/pages/user/ShopBusiness')));
+const ProductDetails = lazy(() => lazyWithRetry(() => import('@/pages/user/ProductDetails')));
+const Cart = lazy(() => lazyWithRetry(() => import('@/pages/user/Cart')));
+const Checkout = lazy(() => lazyWithRetry(() => import('@/pages/user/Checkout')));
+const Orders = lazy(() => lazyWithRetry(() => import('@/pages/user/Orders')));
+const Inquiries = lazy(() => lazyWithRetry(() => import('@/pages/user/Inquiries')));
+const Live = lazy(() => lazyWithRetry(() => import('@/pages/user/Live')));
+const LiveViewer = lazy(() => lazyWithRetry(() => import('@/pages/user/LiveViewer')));
+const Wallet = lazy(() => lazyWithRetry(() => import('@/pages/user/Wallet')));
+const BuyCoins = lazy(() => lazyWithRetry(() => import('@/pages/user/BuyCoins')));
+const Messages = lazy(() => lazyWithRetry(() => import('@/pages/user/Messages')));
+const Chat = lazy(() => lazyWithRetry(() => import('@/pages/user/Chat')));
+const Call = lazy(() => lazyWithRetry(() => import('@/pages/user/Call')));
+const Profile = lazy(() => lazyWithRetry(() => import('@/pages/user/Profile')));
+const Friends = lazy(() => lazyWithRetry(() => import('@/pages/user/Friends')));
+const Groups = lazy(() => lazyWithRetry(() => import('@/pages/user/Groups')));
+const GroupDetail = lazy(() => lazyWithRetry(() => import('@/pages/user/GroupDetail')));
+const GroupCreate = lazy(() => lazyWithRetry(() => import('@/pages/user/GroupCreate')));
+const UserSettings = lazy(() => lazyWithRetry(() => import('@/pages/user/Settings')));
+const RegisterAgent = lazy(() => lazyWithRetry(() => import('@/pages/user/RegisterAgent')));
+const Notifications = lazy(() => lazyWithRetry(() => import('@/pages/user/Notifications')));
+const Onboarding = lazy(() => lazyWithRetry(() => import('@/pages/user/Onboarding')));
+const Boost = lazy(() => lazyWithRetry(() => import('@/pages/user/Boost')));
+const PostDetail = lazy(() => lazyWithRetry(() => import('@/pages/user/PostDetail')));
 
-const BusinessDashboard = lazy(() => import('@/pages/business/Dashboard'));
-const BusinessProducts = lazy(() => import('@/pages/business/Products'));
-const ProductNew = lazy(() => import('@/pages/business/ProductNew'));
-const ProductEdit = lazy(() => import('@/pages/business/ProductEdit'));
-const BusinessOrders = lazy(() => import('@/pages/business/Orders'));
-const BusinessInquiries = lazy(() => import('@/pages/business/Inquiries'));
-const BusinessFeedback = lazy(() => import('@/pages/business/Feedback'));
-const Stats = lazy(() => import('@/pages/business/Stats'));
-const BusinessSettings = lazy(() => import('@/pages/business/Settings'));
+const BusinessDashboard = lazy(() => lazyWithRetry(() => import('@/pages/business/Dashboard')));
+const BusinessProducts = lazy(() => lazyWithRetry(() => import('@/pages/business/Products')));
+const ProductNew = lazy(() => lazyWithRetry(() => import('@/pages/business/ProductNew')));
+const ProductEdit = lazy(() => lazyWithRetry(() => import('@/pages/business/ProductEdit')));
+const BusinessOrders = lazy(() => lazyWithRetry(() => import('@/pages/business/Orders')));
+const BusinessInquiries = lazy(() => lazyWithRetry(() => import('@/pages/business/Inquiries')));
+const BusinessFeedback = lazy(() => lazyWithRetry(() => import('@/pages/business/Feedback')));
+const Stats = lazy(() => lazyWithRetry(() => import('@/pages/business/Stats')));
+const BusinessSettings = lazy(() => lazyWithRetry(() => import('@/pages/business/Settings')));
 
-const AgentDashboard = lazy(() => import('@/pages/agent/Dashboard'));
-const AgentRequests = lazy(() => import('@/pages/agent/Requests'));
-const Activate = lazy(() => import('@/pages/agent/Activate'));
-const Commissions = lazy(() => import('@/pages/agent/Commissions'));
-const AgentWithdrawals = lazy(() => import('@/pages/agent/Withdrawals'));
-const AgentRequestDetail = lazy(() => import('@/pages/agent/RequestDetail'));
+const AgentDashboard = lazy(() => lazyWithRetry(() => import('@/pages/agent/Dashboard')));
+const AgentRequests = lazy(() => lazyWithRetry(() => import('@/pages/agent/Requests')));
+const Activate = lazy(() => lazyWithRetry(() => import('@/pages/agent/Activate')));
+const Commissions = lazy(() => lazyWithRetry(() => import('@/pages/agent/Commissions')));
+const AgentWithdrawals = lazy(() => lazyWithRetry(() => import('@/pages/agent/Withdrawals')));
+const AgentRequestDetail = lazy(() => lazyWithRetry(() => import('@/pages/agent/RequestDetail')));
 
-const AdminDashboard = lazy(() => import('@/pages/admin/Dashboard'));
-const Users = lazy(() => import('@/pages/admin/Users'));
-const Businesses = lazy(() => import('@/pages/admin/Businesses'));
-const Agents = lazy(() => import('@/pages/admin/Agents'));
-const AdminProducts = lazy(() => import('@/pages/admin/Products'));
-const AdminOrders = lazy(() => import('@/pages/admin/Orders'));
-const Payments = lazy(() => import('@/pages/admin/Payments'));
-const AdminWithdrawals = lazy(() => import('@/pages/admin/Withdrawals'));
-const Promotions = lazy(() => import('@/pages/admin/Promotions'));
-const Reports = lazy(() => import('@/pages/admin/Reports'));
-const AuditLogs = lazy(() => import('@/pages/admin/AuditLogs'));
-const AdminSettings = lazy(() => import('@/pages/admin/Settings'));
-const AgentPackages = lazy(() => import('@/pages/admin/AgentPackages'));
-const BusinessRegistrationPlans = lazy(() => import('@/pages/admin/BusinessRegistrationPlans'));
-const AdminRoles = lazy(() => import('@/pages/admin/AdminRoles'));
-const MapView = lazy(() => import('@/pages/admin/MapView'));
-const AudienceAnalytics = lazy(() => import('@/pages/admin/AudienceAnalytics'));
+const AdminDashboard = lazy(() => lazyWithRetry(() => import('@/pages/admin/Dashboard')));
+const Users = lazy(() => lazyWithRetry(() => import('@/pages/admin/Users')));
+const Businesses = lazy(() => lazyWithRetry(() => import('@/pages/admin/Businesses')));
+const Agents = lazy(() => lazyWithRetry(() => import('@/pages/admin/Agents')));
+const AdminProducts = lazy(() => lazyWithRetry(() => import('@/pages/admin/Products')));
+const AdminOrders = lazy(() => lazyWithRetry(() => import('@/pages/admin/Orders')));
+const Payments = lazy(() => lazyWithRetry(() => import('@/pages/admin/Payments')));
+const AdminWithdrawals = lazy(() => lazyWithRetry(() => import('@/pages/admin/Withdrawals')));
+const Promotions = lazy(() => lazyWithRetry(() => import('@/pages/admin/Promotions')));
+const Reports = lazy(() => lazyWithRetry(() => import('@/pages/admin/Reports')));
+const AuditLogs = lazy(() => lazyWithRetry(() => import('@/pages/admin/AuditLogs')));
+const AdminSettings = lazy(() => lazyWithRetry(() => import('@/pages/admin/Settings')));
+const AgentPackages = lazy(() => lazyWithRetry(() => import('@/pages/admin/AgentPackages'));
+const BusinessRegistrationPlans = lazy(() => lazyWithRetry(() => import('@/pages/admin/BusinessRegistrationPlans')));
+const AdminRoles = lazy(() => lazyWithRetry(() => import('@/pages/admin/AdminRoles')));
+const MapView = lazy(() => lazyWithRetry(() => import('@/pages/admin/MapView')));
+const AudienceAnalytics = lazy(() => lazyWithRetry(() => import('@/pages/admin/AudienceAnalytics')));
 
-const NotFound = lazy(() => import('@/pages/NotFound'));
+const NotFound = lazy(() => lazyWithRetry(() => import('@/pages/NotFound')));
 
-const Fallback = () => <div>Loading...</div>;
+const Fallback = () => (
+  <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="flex flex-col items-center gap-4">
+      <div className="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin" />
+      <span className="text-gray-500 font-medium">Loading...</span>
+    </div>
+  </div>
+);
 
 const router = createBrowserRouter([
   {
     element: <App />,
+    errorElement: <RouterErrorBoundary />,
     children: [
       {
         path: 'auth',
