@@ -64,6 +64,25 @@ function normalizeUser(u) {
   };
 }
 
+function updateUserFollowingState(oldData, targetUserId, nextFollowing) {
+  const applyToList = (list) =>
+    list.map((u) => (u.id === targetUserId ? { ...u, isFollowing: nextFollowing } : u));
+
+  if (Array.isArray(oldData)) {
+    return applyToList(oldData);
+  }
+
+  if (oldData && Array.isArray(oldData.content)) {
+    return { ...oldData, content: applyToList(oldData.content) };
+  }
+
+  if (oldData?.data && Array.isArray(oldData.data.content)) {
+    return { ...oldData, data: { ...oldData.data, content: applyToList(oldData.data.content) } };
+  }
+
+  return oldData;
+}
+
 export default function Friends() {
   const { user: currentUser } = useAuthStore();
   const navigate = useNavigate();
@@ -130,7 +149,9 @@ export default function Friends() {
       setContactsPhones('');
       setContactsEmails('');
       await queryClient.invalidateQueries({ queryKey: ['friends', 'pymk'] });
-    } catch (_) {}
+    } catch {
+      // keep modal open and allow retry
+    }
     finally {
       setContactsSubmitting(false);
     }
@@ -140,16 +161,12 @@ export default function Friends() {
     if (loadingId) return;
     setLoadingId(user.id);
     const nextFollowing = !user.isFollowing;
-    queryClient.setQueryData(queryKey, (old = []) =>
-      old.map((u) => (u.id === user.id ? { ...u, isFollowing: nextFollowing } : u))
-    );
     try {
+      queryClient.setQueryData(queryKey, (old) => updateUserFollowingState(old, user.id, nextFollowing));
       if (nextFollowing) await followUser(String(user.id));
       else await unfollowUser(String(user.id));
     } catch (err) {
-      queryClient.setQueryData(queryKey, (old = []) =>
-        old.map((u) => (u.id === user.id ? { ...u, isFollowing: user.isFollowing } : u))
-      );
+      queryClient.setQueryData(queryKey, (old) => updateUserFollowingState(old, user.id, user.isFollowing));
       alert(err.response?.data?.message || err.message || 'Action failed');
     } finally {
       setLoadingId(null);
@@ -231,15 +248,15 @@ export default function Friends() {
       <div className="friends-fb-sidebar">
         <h1 className="friends-fb-sidebar-title">Friends</h1>
         <nav className="friends-fb-tabs">
-          {TABS.map(({ id, label, icon: Icon }) => (
+          {TABS.map((tab) => (
             <button
-              key={id}
+              key={tab.id}
               type="button"
-              className={`friends-fb-tab ${activeTab === id ? 'active' : ''}`}
-              onClick={() => setActiveTab(id)}
+              className={`friends-fb-tab ${activeTab === tab.id ? 'active' : ''}`}
+              onClick={() => setActiveTab(tab.id)}
             >
-              <Icon size={22} />
-              <span>{label}</span>
+              <tab.icon size={22} />
+              <span>{tab.label}</span>
             </button>
           ))}
         </nav>

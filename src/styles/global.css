@@ -13,6 +13,29 @@
   --color-wk-purple: #4c1d95;
   --color-wk-gold-light: #fbbf24;
   --background-image-landing-gradient: linear-gradient(to right, #1e1b4b 0%, #312e81 25%, #4c1d95 50%, #831843 75%, #be185d 100%);
+
+  /* Instagram & Third-Party Fonts */
+  /* System Fonts */
+  --font-sf-pro: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", sans-serif;
+  --font-roboto: "Roboto", sans-serif;
+  --font-proxima: "Proxima Nova", sans-serif;
+
+  /* Third-Party Fonts */
+  --font-montserrat: "Montserrat", sans-serif;
+  --font-bebas: "Bebas Neue", sans-serif;
+  --font-playfair: "Playfair Display", serif;
+  --font-open-sans: "Open Sans", sans-serif;
+  --font-pinyon: "Pinyon Script", cursive;
+  --font-didot: "Libre Bodoni", "Didot", serif;
+  --font-space-mono: "Space Mono", monospace;
+  --font-caveat: "Caveat", cursive;
+  --font-pacifico: "Pacifico", cursive;
+  --font-fredoka: "Fredoka", sans-serif;
+  --font-anton: "Anton", sans-serif;
+  --font-orbitron: "Orbitron", sans-serif;
+  --font-syne: "Syne", sans-serif;
+  --font-crimson: "Crimson Text", serif;
+  --font-abril: "Abril Fatface", serif;
 }
 
 @import './tokens.css';
@@ -26,10 +49,44 @@
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: var(--font-montserrat), system-ui, -apple-system, sans-serif;
   background: #0f0c29;
   color: #fff;
 }
+
+/* Font utility classes */
+.font-montserrat { font-family: var(--font-montserrat); }
+.font-bebas { font-family: var(--font-bebas); }
+.font-playfair { font-family: var(--font-playfair); }
+.font-open-sans { font-family: var(--font-open-sans); }
+.font-pinyon { font-family: var(--font-pinyon); }
+.font-didot { font-family: var(--font-didot); }
+.font-space-mono { font-family: var(--font-space-mono); }
+.font-caveat { font-family: var(--font-caveat); }
+.font-pacifico { font-family: var(--font-pacifico); }
+.font-fredoka { font-family: var(--font-fredoka); }
+.font-anton { font-family: var(--font-anton); }
+.font-orbitron { font-family: var(--font-orbitron); }
+.font-syne { font-family: var(--font-syne); }
+.font-crimson { font-family: var(--font-crimson); }
+.font-abril { font-family: var(--font-abril); }
+.font-sf-pro { font-family: var(--font-sf-pro); }
+.font-roboto { font-family: var(--font-roboto); }
+.font-proxima { font-family: var(--font-proxima); }
+
+/* Instagram Story Style Classes */
+.story-classic { font-family: var(--font-montserrat); font-weight: 500; }
+.story-modern { font-family: var(--font-syne); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.story-neon { font-family: var(--font-pacifico); font-weight: 400; }
+.story-typewriter { font-family: var(--font-space-mono); font-weight: 400; }
+.story-strong { font-family: var(--font-syne); font-weight: 800; text-transform: uppercase; }
+.story-literature { font-family: var(--font-crimson); font-weight: 600; }
+.story-editor { font-family: var(--font-playfair); font-weight: 500; letter-spacing: 0.02em; }
+.story-poster { font-family: var(--font-abril); font-weight: 400; }
+.story-signature { font-family: var(--font-caveat); font-weight: 500; }
+.story-deco { font-family: var(--font-orbitron); font-weight: 600; letter-spacing: 0.1em; }
+.story-bubble { font-family: var(--font-fredoka); font-weight: 600; }
+.story-squeeze { font-family: var(--font-anton); font-weight: 400; text-transform: uppercase; letter-spacing: 0.02em; }
 
 #root {
   min-height: 100vh;
